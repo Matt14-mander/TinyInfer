@@ -1,0 +1,2 @@
+add_executable(tinyinfer_quickstart quickstart.cpp)
+target_link_libraries(tinyinfer_quickstart PRIVATE TinyInfer::tinyinfer)

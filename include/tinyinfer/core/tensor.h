@@ -1,0 +1,33 @@
+#pragma once
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <vector>
+#include "tinyinfer/core/dtype.h"
+
+namespace tinyinfer {
+using Shape = std::vector<std::int64_t>;
+using Strides = std::vector<std::int64_t>;
+
+class Tensor {
+public:
+    Tensor() = default;
+    explicit Tensor(Shape shape, DataType dtype = DataType::Float32);
+    const Shape& shape() const noexcept { return shape_; }
+    const Strides& strides() const noexcept { return strides_; }
+    DataType dtype() const noexcept { return dtype_; }
+    std::size_t rank() const noexcept { return shape_.size(); }
+    std::size_t numel() const noexcept;
+    std::size_t size_bytes() const noexcept;
+    bool is_contiguous() const noexcept;
+    void* data() noexcept { return storage_.get(); }
+    const void* data() const noexcept { return storage_.get(); }
+
+private:
+    static Strides contiguous_strides(const Shape& shape);
+    Shape shape_;
+    Strides strides_;
+    DataType dtype_{DataType::Float32};
+    std::shared_ptr<void> storage_;
+};
+}  // namespace tinyinfer
