@@ -5,4 +5,5 @@
 #include "tinyinfer/core/tensor.h"
 #include "tinyinfer/graph/graph.h"
 #include "tinyinfer/graph/node.h"
+#include "tinyinfer/ops/basic_ops.h"
 #include "tinyinfer/runtime/executor.h"

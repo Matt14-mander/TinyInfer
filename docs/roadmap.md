@@ -4,6 +4,8 @@
 
 Build a hand-written `Linear -> ReLU -> Linear -> Softmax` inference path and verify every operation with known inputs.
 
+Current status: complete as an eager FP32 reference path. The implementation deliberately uses readable loops and does not go through Graph or Backend dispatch.
+
 ## Phase 1 — v0.1 Tensor Engine
 
 - Tensor allocation, copying, views, and typed access.

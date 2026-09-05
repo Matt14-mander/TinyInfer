@@ -1,3 +1,7 @@
 add_executable(tinyinfer_tests scaffold_test.cpp)
 target_link_libraries(tinyinfer_tests PRIVATE TinyInfer::tinyinfer)
 add_test(NAME tinyinfer_tests COMMAND tinyinfer_tests)
+
+add_executable(tinyinfer_phase0_tests phase0_test.cpp)
+target_link_libraries(tinyinfer_phase0_tests PRIVATE TinyInfer::tinyinfer)
+add_test(NAME tinyinfer_phase0_tests COMMAND tinyinfer_phase0_tests)

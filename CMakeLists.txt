@@ -7,6 +7,7 @@ option(TINYINFER_BUILD_BENCHMARKS "Build TinyInfer benchmarks" OFF)
 
 add_library(tinyinfer
     src/core/tensor.cpp
+    src/ops/basic_ops.cpp
     src/graph/graph.cpp
     src/runtime/executor.cpp
     src/backend/cpu/cpu_backend.cpp

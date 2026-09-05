@@ -1,2 +1,5 @@
 add_executable(tinyinfer_quickstart quickstart.cpp)
 target_link_libraries(tinyinfer_quickstart PRIVATE TinyInfer::tinyinfer)
+
+add_executable(tinyinfer_phase0_mlp phase0_mlp.cpp)
+target_link_libraries(tinyinfer_phase0_mlp PRIVATE TinyInfer::tinyinfer)

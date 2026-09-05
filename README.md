@@ -2,7 +2,7 @@
 
 TinyInfer is a lightweight AI inference runtime built for learning and experimentation. Its long-term scope spans tensors, computation graphs, execution, kernel optimization, quantization, and hardware backends.
 
-The repository is currently an **architecture scaffold**: module boundaries and extension points are in place, while numerical kernels and graph optimizations are intentionally left for later milestones.
+The repository is currently in **Phase 0**. It includes a small FP32 Tensor, clear reference implementations of the operators needed by a two-layer MLP, and the original graph/runtime scaffold. Optimized kernels and graph execution remain later milestones.
 
 ## Roadmap
 
@@ -48,6 +48,12 @@ Run the scaffold example:
 ./build/examples/tinyinfer_quickstart
 ```
 
+Run the Phase 0 MLP:
+
+```bash
+./build/examples/tinyinfer_phase0_mlp
+```
+
 ## Design principles
 
 - Keep the public API small and explicit.
@@ -58,4 +64,4 @@ Run the scaffold example:
 
 ## Status
 
-The current API can describe tensor metadata and assemble a graph. Execution and numerical operators deliberately report that they are not implemented yet.
+The eager Phase 0 path can execute `Linear -> ReLU -> Linear -> Softmax` with FP32 reference operators. Graph nodes can be assembled, but graph-based numerical execution is not connected yet.

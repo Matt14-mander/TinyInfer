@@ -13,6 +13,7 @@ class Tensor {
 public:
     Tensor() = default;
     explicit Tensor(Shape shape, DataType dtype = DataType::Float32);
+    static Tensor from_vector(Shape shape, const std::vector<float>& values);
     const Shape& shape() const noexcept { return shape_; }
     const Strides& strides() const noexcept { return strides_; }
     DataType dtype() const noexcept { return dtype_; }
@@ -22,6 +23,10 @@ public:
     bool is_contiguous() const noexcept;
     void* data() noexcept { return storage_.get(); }
     const void* data() const noexcept { return storage_.get(); }
+    float* data_f32();
+    const float* data_f32() const;
+    float& at(std::size_t index);
+    const float& at(std::size_t index) const;
 
 private:
     static Strides contiguous_strides(const Shape& shape);
