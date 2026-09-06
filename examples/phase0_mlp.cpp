@@ -1,4 +1,3 @@
-#include <iomanip>
 #include <iostream>
 
 #include "tinyinfer/tinyinfer.h"
@@ -18,8 +17,7 @@ int main() {
     const auto logits = tinyinfer::ops::linear(hidden, w2, b2);
     const auto probabilities = tinyinfer::ops::softmax(logits);
 
-    std::cout << std::fixed << std::setprecision(6)
-              << "logits: [" << logits.at(0) << ", " << logits.at(1) << "]\n"
-              << "probabilities: [" << probabilities.at(0) << ", " << probabilities.at(1) << "]\n";
+    std::cout << "logits: " << logits << '\n'
+              << "probabilities: " << probabilities << '\n';
     return 0;
 }

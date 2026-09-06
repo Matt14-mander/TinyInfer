@@ -2,7 +2,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <initializer_list>
+#include <iosfwd>
 #include <memory>
+#include <string>
 #include <vector>
 #include "tinyinfer/core/dtype.h"
 
@@ -12,8 +14,14 @@ using Strides = std::vector<std::int64_t>;
 
 class Tensor {
 public:
-    Tensor() = default;
+    Tensor();
     explicit Tensor(Shape shape, DataType dtype = DataType::Float32);
+    Tensor(const Tensor& other);
+    Tensor& operator=(const Tensor& other);
+    Tensor(Tensor&& other) noexcept = default;
+    Tensor& operator=(Tensor&& other) noexcept = default;
+    ~Tensor() = default;
+
     static Tensor from_vector(Shape shape, const std::vector<float>& values);
     const Shape& shape() const noexcept { return shape_; }
     const Strides& strides() const noexcept { return strides_; }
@@ -34,6 +42,8 @@ public:
     const float& at(const Shape& indices) const;
     float& at(std::initializer_list<std::int64_t> indices);
     const float& at(std::initializer_list<std::int64_t> indices) const;
+    std::string to_string() const;
+    void swap(Tensor& other) noexcept;
 
 private:
     static Strides contiguous_strides(const Shape& shape);
@@ -42,4 +52,6 @@ private:
     DataType dtype_{DataType::Float32};
     std::shared_ptr<void> storage_;
 };
+
+std::ostream& operator<<(std::ostream& stream, const Tensor& tensor);
 }  // namespace tinyinfer
