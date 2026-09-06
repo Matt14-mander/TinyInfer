@@ -13,7 +13,7 @@ The repository is currently in **Phase 0**. It includes a small FP32 Tensor, cle
 | v0.3 Model Runtime | ONNX import, graph optimization, benchmarks |
 | v0.4 Accelerated | SIMD, Metal, CUDA, quantization |
 
-See [docs/architecture.md](docs/architecture.md) for module responsibilities and [docs/roadmap.md](docs/roadmap.md) for the phased development plan.
+See [docs/architecture.md](docs/architecture.md) for module responsibilities, [docs/tensor.md](docs/tensor.md) for the current Tensor model, and [docs/roadmap.md](docs/roadmap.md) for the phased development plan.
 
 ## Repository layout
 

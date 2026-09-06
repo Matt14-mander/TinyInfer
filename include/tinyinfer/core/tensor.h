@@ -1,6 +1,7 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
+#include <initializer_list>
 #include <memory>
 #include <vector>
 #include "tinyinfer/core/dtype.h"
@@ -25,8 +26,14 @@ public:
     const void* data() const noexcept { return storage_.get(); }
     float* data_f32();
     const float* data_f32() const;
+    std::size_t offset(const Shape& indices) const;
+    std::size_t offset(std::initializer_list<std::int64_t> indices) const;
     float& at(std::size_t index);
     const float& at(std::size_t index) const;
+    float& at(const Shape& indices);
+    const float& at(const Shape& indices) const;
+    float& at(std::initializer_list<std::int64_t> indices);
+    const float& at(std::initializer_list<std::int64_t> indices) const;
 
 private:
     static Strides contiguous_strides(const Shape& shape);

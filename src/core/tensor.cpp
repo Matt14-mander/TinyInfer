@@ -47,6 +47,26 @@ const float* Tensor::data_f32() const {
     return static_cast<const float*>(storage_.get());
 }
 
+std::size_t Tensor::offset(const Shape& indices) const {
+    if (indices.size() != rank()) {
+        throw std::invalid_argument("number of indices must match tensor rank");
+    }
+
+    std::size_t result = 0;
+    for (std::size_t dimension = 0; dimension < rank(); ++dimension) {
+        const auto index = indices[dimension];
+        if (index < 0 || index >= shape_[dimension]) {
+            throw std::out_of_range("tensor index is out of range");
+        }
+        result += static_cast<std::size_t>(index * strides_[dimension]);
+    }
+    return result;
+}
+
+std::size_t Tensor::offset(std::initializer_list<std::int64_t> indices) const {
+    return offset(Shape(indices));
+}
+
 float& Tensor::at(std::size_t index) {
     if (index >= numel()) throw std::out_of_range("tensor index is out of range");
     return data_f32()[index];
@@ -55,6 +75,18 @@ float& Tensor::at(std::size_t index) {
 const float& Tensor::at(std::size_t index) const {
     if (index >= numel()) throw std::out_of_range("tensor index is out of range");
     return data_f32()[index];
+}
+
+float& Tensor::at(const Shape& indices) { return data_f32()[offset(indices)]; }
+
+const float& Tensor::at(const Shape& indices) const { return data_f32()[offset(indices)]; }
+
+float& Tensor::at(std::initializer_list<std::int64_t> indices) {
+    return at(Shape(indices));
+}
+
+const float& Tensor::at(std::initializer_list<std::int64_t> indices) const {
+    return at(Shape(indices));
 }
 
 Strides Tensor::contiguous_strides(const Shape& shape) {
