@@ -41,3 +41,18 @@ Tensor(shape=[2, 2], dtype=float32, data=[[1, 2], [3.5, -4]])
 ```
 
 Printing supports every currently declared dtype: Float32, Float16, Int8, and Int32. Float16 storage is converted to readable Float32 values for display.
+
+## Reshape
+
+`reshape(new_shape)` changes the logical shape and recomputes contiguous strides without allocating or copying the data buffer:
+
+```cpp
+auto tensor = tinyinfer::Tensor::from_vector({2, 3}, values);
+tensor.reshape({3, 2});
+tensor.reshape({-1});       // Infer 6 and flatten the Tensor
+tensor.reshape({2, -1, 1}); // Infer the middle dimension as 3
+```
+
+The new shape must preserve `numel()`. At most one dimension may be `-1`; all other dimensions must be non-negative. Inference is rejected when the known dimensions multiply to zero because the result would be ambiguous.
+
+This operation mutates the Tensor itself and returns `Tensor&` for chaining. It is not a shared-storage View: introducing explicit View semantics remains a separate step.

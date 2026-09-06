@@ -42,6 +42,7 @@ public:
     const float& at(const Shape& indices) const;
     float& at(std::initializer_list<std::int64_t> indices);
     const float& at(std::initializer_list<std::int64_t> indices) const;
+    Tensor& reshape(Shape new_shape);
     std::string to_string() const;
     void swap(Tensor& other) noexcept;
 

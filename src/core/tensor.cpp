@@ -176,6 +176,57 @@ const float& Tensor::at(std::initializer_list<std::int64_t> indices) const {
     return at(Shape(indices));
 }
 
+Tensor& Tensor::reshape(Shape new_shape) {
+    std::size_t known_elements = 1;
+    std::size_t inferred_dimension = new_shape.size();
+
+    for (std::size_t dimension = 0; dimension < new_shape.size(); ++dimension) {
+        const auto size = new_shape[dimension];
+        if (size == -1) {
+            if (inferred_dimension != new_shape.size()) {
+                throw std::invalid_argument("reshape allows at most one inferred dimension");
+            }
+            inferred_dimension = dimension;
+            continue;
+        }
+        if (size < 0) {
+            throw std::invalid_argument("reshape dimensions must be non-negative or -1");
+        }
+
+        const auto unsigned_size = static_cast<std::size_t>(size);
+        if (unsigned_size != 0 &&
+            known_elements > std::numeric_limits<std::size_t>::max() / unsigned_size) {
+            throw std::overflow_error("reshape element count overflows size_t");
+        }
+        known_elements *= unsigned_size;
+    }
+
+    const auto current_elements = numel();
+    if (inferred_dimension != new_shape.size()) {
+        if (known_elements == 0) {
+            throw std::invalid_argument("cannot infer a reshape dimension when known dimensions multiply to zero");
+        }
+        if (current_elements % known_elements != 0) {
+            throw std::invalid_argument("reshape cannot infer an integral dimension");
+        }
+        const auto inferred_size = current_elements / known_elements;
+        if (inferred_size > static_cast<std::size_t>(std::numeric_limits<std::int64_t>::max())) {
+            throw std::overflow_error("inferred reshape dimension overflows int64_t");
+        }
+        new_shape[inferred_dimension] = static_cast<std::int64_t>(inferred_size);
+        known_elements *= inferred_size;
+    }
+
+    if (known_elements != current_elements) {
+        throw std::invalid_argument("reshape must preserve the number of elements");
+    }
+
+    auto new_strides = contiguous_strides(new_shape);
+    shape_ = std::move(new_shape);
+    strides_ = std::move(new_strides);
+    return *this;
+}
+
 std::string Tensor::to_string() const {
     std::ostringstream stream;
     stream << "Tensor(shape=[";
