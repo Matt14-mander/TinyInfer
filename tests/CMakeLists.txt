@@ -17,3 +17,7 @@ add_test(NAME tinyinfer_tensor_value_tests COMMAND tinyinfer_tensor_value_tests)
 add_executable(tinyinfer_tensor_reshape_tests tensor_reshape_test.cpp)
 target_link_libraries(tinyinfer_tensor_reshape_tests PRIVATE TinyInfer::tinyinfer)
 add_test(NAME tinyinfer_tensor_reshape_tests COMMAND tinyinfer_tensor_reshape_tests)
+
+add_executable(tinyinfer_tensor_transpose_tests tensor_transpose_test.cpp)
+target_link_libraries(tinyinfer_tensor_transpose_tests PRIVATE TinyInfer::tinyinfer)
+add_test(NAME tinyinfer_tensor_transpose_tests COMMAND tinyinfer_tensor_transpose_tests)

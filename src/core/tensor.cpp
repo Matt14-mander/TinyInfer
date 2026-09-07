@@ -177,6 +177,10 @@ const float& Tensor::at(std::initializer_list<std::int64_t> indices) const {
 }
 
 Tensor& Tensor::reshape(Shape new_shape) {
+    if (!is_contiguous()) {
+        throw std::logic_error("reshape requires a contiguous tensor");
+    }
+
     std::size_t known_elements = 1;
     std::size_t inferred_dimension = new_shape.size();
 
@@ -224,6 +228,17 @@ Tensor& Tensor::reshape(Shape new_shape) {
     auto new_strides = contiguous_strides(new_shape);
     shape_ = std::move(new_shape);
     strides_ = std::move(new_strides);
+    return *this;
+}
+
+Tensor& Tensor::transpose(std::size_t dimension0, std::size_t dimension1) {
+    if (dimension0 >= rank() || dimension1 >= rank()) {
+        throw std::out_of_range("transpose dimension is out of range");
+    }
+    if (dimension0 == dimension1) return *this;
+
+    std::swap(shape_[dimension0], shape_[dimension1]);
+    std::swap(strides_[dimension0], strides_[dimension1]);
     return *this;
 }
 

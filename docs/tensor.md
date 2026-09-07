@@ -56,3 +56,19 @@ tensor.reshape({2, -1, 1}); // Infer the middle dimension as 3
 The new shape must preserve `numel()`. At most one dimension may be `-1`; all other dimensions must be non-negative. Inference is rejected when the known dimensions multiply to zero because the result would be ambiguous.
 
 This operation mutates the Tensor itself and returns `Tensor&` for chaining. It is not a shared-storage View: introducing explicit View semantics remains a separate step.
+
+## Transpose
+
+`transpose(dimension0, dimension1)` swaps two dimensions in place by exchanging their shape and stride entries. It does not allocate or move tensor data:
+
+```cpp
+auto matrix = tinyinfer::Tensor::from_vector({2, 3}, values);
+matrix.transpose(0, 1);
+```
+
+```text
+before: shape=[2, 3], strides=[3, 1], data=[[1, 2, 3], [4, 5, 6]]
+after:  shape=[3, 2], strides=[1, 3], data=[[1, 4], [2, 5], [3, 6]]
+```
+
+The transposed Tensor is normally non-contiguous. Multidimensional indexing, printing, and the Phase 0 reference operators respect its strides. Calling `reshape` on a non-contiguous Tensor is rejected because merely replacing its strides would change the logical element order; transpose it back or introduce an explicit contiguous copy in a later step.
