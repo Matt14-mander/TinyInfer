@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 #include "tinyinfer/core/dtype.h"
+#include "tinyinfer/core/memory/allocator.h"
 
 namespace tinyinfer {
 using Shape = std::vector<std::int64_t>;
@@ -19,7 +20,8 @@ using Strides = std::vector<std::int64_t>;
 class Tensor {
 public:
     Tensor();
-    explicit Tensor(Shape shape, DataType dtype = DataType::Float32);
+    explicit Tensor(Shape shape, DataType dtype = DataType::Float32,
+                    std::shared_ptr<Allocator> allocator = default_allocator());
     Tensor(const Tensor& other);
     Tensor& operator=(const Tensor& other);
     Tensor(Tensor&& other) noexcept = default;
@@ -32,6 +34,7 @@ public:
     const Shape& shape() const noexcept { return shape_; }
     const Strides& strides() const noexcept { return strides_; }
     DataType dtype() const noexcept { return dtype_; }
+    const std::shared_ptr<Allocator>& allocator() const noexcept { return allocator_; }
     std::size_t rank() const noexcept { return shape_.size(); }
     std::size_t numel() const noexcept;
     std::size_t size_bytes() const noexcept;
@@ -75,6 +78,7 @@ private:
     Shape shape_;
     Strides strides_;
     DataType dtype_{DataType::Float32};
+    std::shared_ptr<Allocator> allocator_;
     std::shared_ptr<void> storage_;
 };
 

@@ -6,6 +6,7 @@ option(TINYINFER_BUILD_TESTS "Build TinyInfer tests" ON)
 option(TINYINFER_BUILD_BENCHMARKS "Build TinyInfer benchmarks" OFF)
 
 add_library(tinyinfer
+    src/core/memory/allocator.cpp
     src/core/tensor.cpp
     src/ops/basic_ops.cpp
     src/graph/graph.cpp

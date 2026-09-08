@@ -12,6 +12,26 @@
 namespace tinyinfer {
 namespace {
 
+constexpr std::size_t kTensorAlignment = alignof(std::max_align_t);
+
+std::shared_ptr<void> allocate_storage(const std::shared_ptr<Allocator>& allocator,
+                                       std::size_t bytes) {
+    if (bytes == 0) return {};
+
+    void* pointer = allocator->allocate(bytes, kTensorAlignment);
+    if (pointer == nullptr) throw std::bad_alloc();
+
+    try {
+        return std::shared_ptr<void>(
+            pointer, [allocator, bytes](void* storage) noexcept {
+                allocator->deallocate(storage, bytes, kTensorAlignment);
+            });
+    } catch (...) {
+        allocator->deallocate(pointer, bytes, kTensorAlignment);
+        throw;
+    }
+}
+
 float float16_to_float32(std::uint16_t bits) {
     const bool negative = (bits & 0x8000U) != 0;
     const auto exponent = static_cast<unsigned>((bits >> 10U) & 0x1FU);
@@ -73,23 +93,30 @@ void write_data(std::ostream& stream, const Tensor& tensor, std::size_t dimensio
 
 Tensor::Tensor() : Tensor(Shape{}) {}
 
-Tensor::Tensor(Shape shape, DataType dtype)
-    : shape_(std::move(shape)), strides_(contiguous_strides(shape_)), dtype_(dtype) {
+Tensor::Tensor(Shape shape, DataType dtype, std::shared_ptr<Allocator> allocator)
+    : shape_(std::move(shape)),
+      strides_(contiguous_strides(shape_)),
+      dtype_(dtype),
+      allocator_(std::move(allocator)) {
+    if (!allocator_) throw std::invalid_argument("tensor allocator must not be null");
     if (std::any_of(shape_.begin(), shape_.end(), [](std::int64_t dim) { return dim < 0; })) {
         throw std::invalid_argument("tensor dimensions must be non-negative");
     }
     const auto bytes = size_bytes();
     if (bytes > 0) {
-        storage_.reset(::operator new(bytes), [](void* ptr) { ::operator delete(ptr); });
+        storage_ = allocate_storage(allocator_, bytes);
         std::memset(storage_.get(), 0, bytes);
     }
 }
 
 Tensor::Tensor(const Tensor& other)
-    : shape_(other.shape_), strides_(other.strides_), dtype_(other.dtype_) {
+    : shape_(other.shape_),
+      strides_(other.strides_),
+      dtype_(other.dtype_),
+      allocator_(other.allocator_ ? other.allocator_ : default_allocator()) {
     const auto bytes = size_bytes();
     if (bytes > 0) {
-        storage_.reset(::operator new(bytes), [](void* ptr) { ::operator delete(ptr); });
+        storage_ = allocate_storage(allocator_, bytes);
         if (other.storage_) {
             std::memcpy(storage_.get(), other.storage_.get(), bytes);
         } else {
@@ -247,7 +274,7 @@ Tensor& Tensor::contiguous() {
     const auto element_size = size_of(dtype_);
 
     if (bytes > 0) {
-        new_storage.reset(::operator new(bytes), [](void* ptr) { ::operator delete(ptr); });
+        new_storage = allocate_storage(allocator_, bytes);
         const auto* source = static_cast<const unsigned char*>(storage_.get());
         auto* destination = static_cast<unsigned char*>(new_storage.get());
 
@@ -288,6 +315,7 @@ void Tensor::swap(Tensor& other) noexcept {
     swap(shape_, other.shape_);
     swap(strides_, other.strides_);
     swap(dtype_, other.dtype_);
+    swap(allocator_, other.allocator_);
     swap(storage_, other.storage_);
 }
 

@@ -29,3 +29,7 @@ add_test(NAME tinyinfer_tensor_contiguous_tests COMMAND tinyinfer_tensor_contigu
 add_executable(tinyinfer_tensor_dtype_tests tensor_dtype_test.cpp)
 target_link_libraries(tinyinfer_tensor_dtype_tests PRIVATE TinyInfer::tinyinfer)
 add_test(NAME tinyinfer_tensor_dtype_tests COMMAND tinyinfer_tensor_dtype_tests)
+
+add_executable(tinyinfer_allocator_tests allocator_test.cpp)
+target_link_libraries(tinyinfer_allocator_tests PRIVATE TinyInfer::tinyinfer)
+add_test(NAME tinyinfer_allocator_tests COMMAND tinyinfer_allocator_tests)
