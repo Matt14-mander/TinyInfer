@@ -86,3 +86,26 @@ tensor.reshape({-1});   // Reshape is now valid
 For the transposed matrix `[[1, 4], [2, 5], [3, 6]]`, the physical buffer changes from `[1, 2, 3, 4, 5, 6]` to `[1, 4, 2, 5, 3, 6]`, and strides change from `[1, 3]` to `[2, 1]`. Shape, dtype, and logical values remain unchanged.
 
 The operation mutates the Tensor and returns `Tensor&`. Calling it on an already-contiguous Tensor is a no-op and preserves the existing data pointer. All currently declared dtypes are supported because elements are reordered as raw byte ranges using their dtype size.
+
+## Type-safe data access
+
+The templated access API checks both the supported C++ storage type and the Tensor dtype:
+
+```cpp
+auto tensor = tinyinfer::Tensor::from_vector<std::int32_t>(
+    {2, 2}, std::vector<std::int32_t>{1, 2, 3, 4});
+
+std::int32_t* storage = tensor.data<std::int32_t>();
+auto value = tensor.at<std::int32_t>({1, 0});
+```
+
+The current mapping is:
+
+| C++ storage type | TinyInfer dtype |
+| --- | --- |
+| `float` | Float32 |
+| `std::uint16_t` | Float16 raw IEEE 754 binary16 bits |
+| `std::int8_t` | Int8 |
+| `std::int32_t` | Int32 |
+
+Unsupported C++ types fail at compile time. A supported but mismatched type, such as `data<float>()` on an Int32 Tensor, throws `std::logic_error` at runtime. The untyped `data()` remains available as a low-level escape hatch, while `data_f32()` and the non-template `at()` overloads remain Float32 convenience APIs.

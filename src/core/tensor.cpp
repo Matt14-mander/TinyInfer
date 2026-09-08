@@ -33,16 +33,16 @@ float float16_to_float32(std::uint16_t bits) {
 void write_value(std::ostream& stream, const Tensor& tensor, std::size_t index) {
     switch (tensor.dtype()) {
         case DataType::Float32:
-            stream << static_cast<const float*>(tensor.data())[index];
+            stream << tensor.data<float>()[index];
             return;
         case DataType::Float16:
-            stream << float16_to_float32(static_cast<const std::uint16_t*>(tensor.data())[index]);
+            stream << float16_to_float32(tensor.data<std::uint16_t>()[index]);
             return;
         case DataType::Int8:
-            stream << static_cast<int>(static_cast<const std::int8_t*>(tensor.data())[index]);
+            stream << static_cast<int>(tensor.data<std::int8_t>()[index]);
             return;
         case DataType::Int32:
-            stream << static_cast<const std::int32_t*>(tensor.data())[index];
+            stream << tensor.data<std::int32_t>()[index];
             return;
     }
 }
@@ -125,13 +125,11 @@ std::size_t Tensor::size_bytes() const noexcept { return numel() * size_of(dtype
 bool Tensor::is_contiguous() const noexcept { return strides_ == contiguous_strides(shape_); }
 
 float* Tensor::data_f32() {
-    if (dtype_ != DataType::Float32) throw std::logic_error("tensor data type is not float32");
-    return static_cast<float*>(storage_.get());
+    return data<float>();
 }
 
 const float* Tensor::data_f32() const {
-    if (dtype_ != DataType::Float32) throw std::logic_error("tensor data type is not float32");
-    return static_cast<const float*>(storage_.get());
+    return data<float>();
 }
 
 std::size_t Tensor::offset(const Shape& indices) const {
@@ -155,18 +153,16 @@ std::size_t Tensor::offset(std::initializer_list<std::int64_t> indices) const {
 }
 
 float& Tensor::at(std::size_t index) {
-    if (index >= numel()) throw std::out_of_range("tensor index is out of range");
-    return data_f32()[index];
+    return at<float>(index);
 }
 
 const float& Tensor::at(std::size_t index) const {
-    if (index >= numel()) throw std::out_of_range("tensor index is out of range");
-    return data_f32()[index];
+    return at<float>(index);
 }
 
-float& Tensor::at(const Shape& indices) { return data_f32()[offset(indices)]; }
+float& Tensor::at(const Shape& indices) { return at<float>(indices); }
 
-const float& Tensor::at(const Shape& indices) const { return data_f32()[offset(indices)]; }
+const float& Tensor::at(const Shape& indices) const { return at<float>(indices); }
 
 float& Tensor::at(std::initializer_list<std::int64_t> indices) {
     return at(Shape(indices));

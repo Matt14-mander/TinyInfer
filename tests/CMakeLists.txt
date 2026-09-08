@@ -25,3 +25,7 @@ add_test(NAME tinyinfer_tensor_transpose_tests COMMAND tinyinfer_tensor_transpos
 add_executable(tinyinfer_tensor_contiguous_tests tensor_contiguous_test.cpp)
 target_link_libraries(tinyinfer_tensor_contiguous_tests PRIVATE TinyInfer::tinyinfer)
 add_test(NAME tinyinfer_tensor_contiguous_tests COMMAND tinyinfer_tensor_contiguous_tests)
+
+add_executable(tinyinfer_tensor_dtype_tests tensor_dtype_test.cpp)
+target_link_libraries(tinyinfer_tensor_dtype_tests PRIVATE TinyInfer::tinyinfer)
+add_test(NAME tinyinfer_tensor_dtype_tests COMMAND tinyinfer_tensor_dtype_tests)
