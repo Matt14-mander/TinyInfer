@@ -1,6 +1,6 @@
 # Tensor fundamentals
 
-The current Tensor owns contiguous row-major storage. Its shape describes the logical dimensions, while its strides map a multidimensional coordinate to a flat storage offset.
+The current Tensor owns row-major storage. A Tensor starts contiguous but metadata-only operations such as transpose can produce a non-contiguous layout. Its shape describes the logical dimensions, while its strides map a multidimensional coordinate to a flat storage offset.
 
 For a Tensor with shape `[2, 3, 4]`, contiguous strides are `[12, 4, 1]`. Coordinate `[1, 2, 3]` maps to:
 
@@ -72,3 +72,17 @@ after:  shape=[3, 2], strides=[1, 3], data=[[1, 4], [2, 5], [3, 6]]
 ```
 
 The transposed Tensor is normally non-contiguous. Multidimensional indexing, printing, and the Phase 0 reference operators respect its strides. Calling `reshape` on a non-contiguous Tensor is rejected because merely replacing its strides would change the logical element order; transpose it back or introduce an explicit contiguous copy in a later step.
+
+## Contiguous conversion
+
+`contiguous()` materializes the current logical order into standard row-major storage:
+
+```cpp
+tensor.transpose(0, 1); // Metadata only; usually non-contiguous
+tensor.contiguous();    // Reorders data into a new contiguous buffer
+tensor.reshape({-1});   // Reshape is now valid
+```
+
+For the transposed matrix `[[1, 4], [2, 5], [3, 6]]`, the physical buffer changes from `[1, 2, 3, 4, 5, 6]` to `[1, 4, 2, 5, 3, 6]`, and strides change from `[1, 3]` to `[2, 1]`. Shape, dtype, and logical values remain unchanged.
+
+The operation mutates the Tensor and returns `Tensor&`. Calling it on an already-contiguous Tensor is a no-op and preserves the existing data pointer. All currently declared dtypes are supported because elements are reordered as raw byte ranges using their dtype size.

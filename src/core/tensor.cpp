@@ -242,6 +242,38 @@ Tensor& Tensor::transpose(std::size_t dimension0, std::size_t dimension1) {
     return *this;
 }
 
+Tensor& Tensor::contiguous() {
+    if (is_contiguous()) return *this;
+
+    auto new_strides = contiguous_strides(shape_);
+    std::shared_ptr<void> new_storage;
+    const auto bytes = size_bytes();
+    const auto element_size = size_of(dtype_);
+
+    if (bytes > 0) {
+        new_storage.reset(::operator new(bytes), [](void* ptr) { ::operator delete(ptr); });
+        const auto* source = static_cast<const unsigned char*>(storage_.get());
+        auto* destination = static_cast<unsigned char*>(new_storage.get());
+
+        for (std::size_t logical_index = 0; logical_index < numel(); ++logical_index) {
+            std::size_t remaining = logical_index;
+            std::size_t source_offset = 0;
+            for (std::size_t dimension = rank(); dimension > 0; --dimension) {
+                const auto size = static_cast<std::size_t>(shape_[dimension - 1]);
+                const auto coordinate = remaining % size;
+                remaining /= size;
+                source_offset += coordinate * static_cast<std::size_t>(strides_[dimension - 1]);
+            }
+            std::memcpy(destination + logical_index * element_size,
+                        source + source_offset * element_size, element_size);
+        }
+    }
+
+    storage_ = std::move(new_storage);
+    strides_ = std::move(new_strides);
+    return *this;
+}
+
 std::string Tensor::to_string() const {
     std::ostringstream stream;
     stream << "Tensor(shape=[";

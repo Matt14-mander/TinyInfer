@@ -44,6 +44,7 @@ public:
     const float& at(std::initializer_list<std::int64_t> indices) const;
     Tensor& reshape(Shape new_shape);
     Tensor& transpose(std::size_t dimension0, std::size_t dimension1);
+    Tensor& contiguous();
     std::string to_string() const;
     void swap(Tensor& other) noexcept;
 
