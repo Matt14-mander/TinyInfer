@@ -11,7 +11,7 @@
 #include <utility>
 #include <vector>
 #include "tinyinfer/core/dtype.h"
-#include "tinyinfer/core/memory/allocator.h"
+#include "tinyinfer/core/memory/storage.h"
 
 namespace tinyinfer {
 using Shape = std::vector<std::int64_t>;
@@ -34,13 +34,14 @@ public:
     const Shape& shape() const noexcept { return shape_; }
     const Strides& strides() const noexcept { return strides_; }
     DataType dtype() const noexcept { return dtype_; }
-    const std::shared_ptr<Allocator>& allocator() const noexcept { return allocator_; }
+    const std::shared_ptr<Allocator>& allocator() const { return storage_.allocator(); }
+    const Storage& storage() const noexcept { return storage_; }
     std::size_t rank() const noexcept { return shape_.size(); }
     std::size_t numel() const noexcept;
     std::size_t size_bytes() const noexcept;
     bool is_contiguous() const noexcept;
-    void* data() noexcept { return storage_.get(); }
-    const void* data() const noexcept { return storage_.get(); }
+    void* data() noexcept { return storage_.data(); }
+    const void* data() const noexcept { return storage_.data(); }
     template <typename T>
     T* data();
     template <typename T>
@@ -78,8 +79,7 @@ private:
     Shape shape_;
     Strides strides_;
     DataType dtype_{DataType::Float32};
-    std::shared_ptr<Allocator> allocator_;
-    std::shared_ptr<void> storage_;
+    Storage storage_;
 };
 
 std::ostream& operator<<(std::ostream& stream, const Tensor& tensor);
@@ -105,7 +105,7 @@ T* Tensor::data() {
     if (dtype_ != data_type_of<StorageType>()) {
         throw std::logic_error("tensor dtype does not match requested C++ storage type");
     }
-    return static_cast<StorageType*>(storage_.get());
+    return static_cast<StorageType*>(storage_.data());
 }
 
 template <typename T>
@@ -117,7 +117,7 @@ const T* Tensor::data() const {
     if (dtype_ != data_type_of<StorageType>()) {
         throw std::logic_error("tensor dtype does not match requested C++ storage type");
     }
-    return static_cast<const StorageType*>(storage_.get());
+    return static_cast<const StorageType*>(storage_.data());
 }
 
 template <typename T>

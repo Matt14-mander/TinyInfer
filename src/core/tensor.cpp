@@ -3,7 +3,6 @@
 #include <cstring>
 #include <cmath>
 #include <limits>
-#include <new>
 #include <ostream>
 #include <sstream>
 #include <stdexcept>
@@ -11,26 +10,6 @@
 
 namespace tinyinfer {
 namespace {
-
-constexpr std::size_t kTensorAlignment = alignof(std::max_align_t);
-
-std::shared_ptr<void> allocate_storage(const std::shared_ptr<Allocator>& allocator,
-                                       std::size_t bytes) {
-    if (bytes == 0) return {};
-
-    void* pointer = allocator->allocate(bytes, kTensorAlignment);
-    if (pointer == nullptr) throw std::bad_alloc();
-
-    try {
-        return std::shared_ptr<void>(
-            pointer, [allocator, bytes](void* storage) noexcept {
-                allocator->deallocate(storage, bytes, kTensorAlignment);
-            });
-    } catch (...) {
-        allocator->deallocate(pointer, bytes, kTensorAlignment);
-        throw;
-    }
-}
 
 float float16_to_float32(std::uint16_t bits) {
     const bool negative = (bits & 0x8000U) != 0;
@@ -96,31 +75,27 @@ Tensor::Tensor() : Tensor(Shape{}) {}
 Tensor::Tensor(Shape shape, DataType dtype, std::shared_ptr<Allocator> allocator)
     : shape_(std::move(shape)),
       strides_(contiguous_strides(shape_)),
-      dtype_(dtype),
-      allocator_(std::move(allocator)) {
-    if (!allocator_) throw std::invalid_argument("tensor allocator must not be null");
+      dtype_(dtype) {
     if (std::any_of(shape_.begin(), shape_.end(), [](std::int64_t dim) { return dim < 0; })) {
         throw std::invalid_argument("tensor dimensions must be non-negative");
     }
     const auto bytes = size_bytes();
-    if (bytes > 0) {
-        storage_ = allocate_storage(allocator_, bytes);
-        std::memset(storage_.get(), 0, bytes);
-    }
+    storage_ = Storage(bytes, std::move(allocator));
+    if (bytes > 0) std::memset(storage_.data(), 0, bytes);
 }
 
 Tensor::Tensor(const Tensor& other)
     : shape_(other.shape_),
       strides_(other.strides_),
-      dtype_(other.dtype_),
-      allocator_(other.allocator_ ? other.allocator_ : default_allocator()) {
+      dtype_(other.dtype_) {
     const auto bytes = size_bytes();
+    const auto allocator = other.storage_.valid() ? other.storage_.allocator() : default_allocator();
+    storage_ = Storage(bytes, allocator);
     if (bytes > 0) {
-        storage_ = allocate_storage(allocator_, bytes);
-        if (other.storage_) {
-            std::memcpy(storage_.get(), other.storage_.get(), bytes);
+        if (other.storage_.valid() && other.storage_.data()) {
+            std::memcpy(storage_.data(), other.storage_.data(), bytes);
         } else {
-            std::memset(storage_.get(), 0, bytes);
+            std::memset(storage_.data(), 0, bytes);
         }
     }
 }
@@ -269,14 +244,14 @@ Tensor& Tensor::contiguous() {
     if (is_contiguous()) return *this;
 
     auto new_strides = contiguous_strides(shape_);
-    std::shared_ptr<void> new_storage;
+    Storage new_storage;
     const auto bytes = size_bytes();
     const auto element_size = size_of(dtype_);
 
     if (bytes > 0) {
-        new_storage = allocate_storage(allocator_, bytes);
-        const auto* source = static_cast<const unsigned char*>(storage_.get());
-        auto* destination = static_cast<unsigned char*>(new_storage.get());
+        new_storage = Storage(bytes, allocator());
+        const auto* source = static_cast<const unsigned char*>(storage_.data());
+        auto* destination = static_cast<unsigned char*>(new_storage.data());
 
         for (std::size_t logical_index = 0; logical_index < numel(); ++logical_index) {
             std::size_t remaining = logical_index;
@@ -292,6 +267,7 @@ Tensor& Tensor::contiguous() {
         }
     }
 
+    if (bytes == 0) new_storage = Storage(0, allocator());
     storage_ = std::move(new_storage);
     strides_ = std::move(new_strides);
     return *this;
@@ -315,7 +291,6 @@ void Tensor::swap(Tensor& other) noexcept {
     swap(shape_, other.shape_);
     swap(strides_, other.strides_);
     swap(dtype_, other.dtype_);
-    swap(allocator_, other.allocator_);
     swap(storage_, other.storage_);
 }
 
