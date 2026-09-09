@@ -33,3 +33,7 @@ add_test(NAME tinyinfer_tensor_dtype_tests COMMAND tinyinfer_tensor_dtype_tests)
 add_executable(tinyinfer_allocator_tests allocator_test.cpp)
 target_link_libraries(tinyinfer_allocator_tests PRIVATE TinyInfer::tinyinfer)
 add_test(NAME tinyinfer_allocator_tests COMMAND tinyinfer_allocator_tests)
+
+add_executable(tinyinfer_arena_allocator_tests arena_allocator_test.cpp)
+target_link_libraries(tinyinfer_arena_allocator_tests PRIVATE TinyInfer::tinyinfer)
+add_test(NAME tinyinfer_arena_allocator_tests COMMAND tinyinfer_arena_allocator_tests)

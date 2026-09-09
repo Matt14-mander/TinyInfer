@@ -3,6 +3,7 @@
 #include "tinyinfer/backend/cpu_backend.h"
 #include "tinyinfer/core/dtype.h"
 #include "tinyinfer/core/memory/allocator.h"
+#include "tinyinfer/core/memory/arena_allocator.h"
 #include "tinyinfer/core/tensor.h"
 #include "tinyinfer/graph/graph.h"
 #include "tinyinfer/graph/node.h"
