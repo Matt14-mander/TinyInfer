@@ -71,10 +71,17 @@ public:
     Tensor& reshape(Shape new_shape);
     Tensor& transpose(std::size_t dimension0, std::size_t dimension1);
     Tensor& contiguous();
+    Tensor view(Shape new_shape) const;
+    Tensor narrow(std::size_t dimension, std::int64_t start,
+                  std::int64_t length) const;
     std::string to_string() const;
     void swap(Tensor& other) noexcept;
 
 private:
+    struct ViewTag {};
+    Tensor(ViewTag, Shape shape, Strides strides, DataType dtype, Storage storage);
+    Tensor as_strided_view(Shape shape, Strides strides,
+                           std::size_t storage_offset_elements) const;
     static Strides contiguous_strides(const Shape& shape);
     Shape shape_;
     Strides strides_;

@@ -41,3 +41,7 @@ add_test(NAME tinyinfer_arena_allocator_tests COMMAND tinyinfer_arena_allocator_
 add_executable(tinyinfer_buffer_storage_tests buffer_storage_test.cpp)
 target_link_libraries(tinyinfer_buffer_storage_tests PRIVATE TinyInfer::tinyinfer)
 add_test(NAME tinyinfer_buffer_storage_tests COMMAND tinyinfer_buffer_storage_tests)
+
+add_executable(tinyinfer_tensor_view_tests tensor_view_test.cpp)
+target_link_libraries(tinyinfer_tensor_view_tests PRIVATE TinyInfer::tinyinfer)
+add_test(NAME tinyinfer_tensor_view_tests COMMAND tinyinfer_tensor_view_tests)

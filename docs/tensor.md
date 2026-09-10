@@ -109,3 +109,18 @@ The current mapping is:
 | `std::int32_t` | Int32 |
 
 Unsupported C++ types fail at compile time. A supported but mismatched type, such as `data<float>()` on an Int32 Tensor, throws `std::logic_error` at runtime. The untyped `data()` remains available as a low-level escape hatch, while `data_f32()` and the non-template `at()` overloads remain Float32 convenience APIs.
+
+## Tensor views
+
+`view(new_shape)` returns a new Tensor metadata object that shares the source Buffer. It requires contiguous input, preserves the element count, and supports one inferred `-1` dimension:
+
+```cpp
+auto tensor = tinyinfer::Tensor::from_vector({2, 3}, values);
+auto view = tensor.view({3, -1});
+```
+
+Mutating either Tensor changes the shared data. The two Tensor objects can have different shapes and strides, but their `storage().buffer()` values are equal. The Buffer is reference-counted, so a view remains valid after the source Tensor is destroyed.
+
+`narrow(dimension, start, length)` creates a bounded subrange view using the same Buffer, original strides, and a Storage byte offset. It works with contiguous and non-contiguous tensors.
+
+Normal C++ copy construction remains a deep copy. Copying any view creates an independent, contiguous Buffer in logical element order. Calling `contiguous()` on a non-contiguous view also detaches it into a new Buffer; calling it on an already-contiguous view keeps sharing the existing Buffer.

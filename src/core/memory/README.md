@@ -17,6 +17,8 @@ Tensor retains a shared reference to its allocator so the allocator remains aliv
 
 Tensor now owns a `Storage` rather than an allocator and raw pointer separately. Tensor deep copy creates a new Buffer, transpose keeps the same Buffer, and contiguous materialization replaces it with a new Buffer. Zero-byte Storage still retains its allocator through a zero-capacity Buffer.
 
+Tensor `view()` and `narrow()` now copy Storage metadata instead of Buffer contents. Reshaped views share the full range, while narrowed views use a validated byte offset and span. Ordinary Tensor copy construction deliberately materializes an independent contiguous Buffer.
+
 ## Arena allocation
 
 `ArenaAllocator` obtains one buffer from a backing allocator and serves aligned suballocations by advancing an offset. Individual deallocation only updates the active-allocation count; memory becomes reusable after every allocation is released and `reset()` is called. Reset is rejected while live Tensor buffers remain, preventing accidental invalidation.
