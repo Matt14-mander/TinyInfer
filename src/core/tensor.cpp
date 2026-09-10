@@ -351,6 +351,36 @@ Tensor Tensor::narrow(std::size_t dimension, std::int64_t start,
     return as_strided_view(std::move(new_shape), strides_, storage_offset);
 }
 
+Tensor Tensor::slice(std::size_t dimension, std::int64_t start,
+                     std::int64_t end, std::int64_t step) const {
+    if (dimension >= rank()) throw std::out_of_range("slice dimension is out of range");
+    if (step <= 0) throw std::invalid_argument("slice step must be positive");
+    if (start < 0 || end < 0) {
+        throw std::invalid_argument("slice start and end must be non-negative");
+    }
+    if (start > end) throw std::invalid_argument("slice start must not exceed end");
+    if (end > shape_[dimension]) throw std::out_of_range("slice end exceeds tensor dimension");
+
+    const auto distance = end - start;
+    const auto length = distance / step + (distance % step != 0 ? 1 : 0);
+    if (strides_[dimension] != 0 &&
+        step > std::numeric_limits<std::int64_t>::max() / strides_[dimension]) {
+        throw std::overflow_error("slice stride overflows int64_t");
+    }
+    if (strides_[dimension] != 0 &&
+        start > std::numeric_limits<std::int64_t>::max() / strides_[dimension]) {
+        throw std::overflow_error("slice storage offset overflows int64_t");
+    }
+
+    auto new_shape = shape_;
+    auto new_strides = strides_;
+    new_shape[dimension] = length;
+    new_strides[dimension] *= step;
+    const auto storage_offset = static_cast<std::size_t>(start * strides_[dimension]);
+    return as_strided_view(std::move(new_shape), std::move(new_strides),
+                           storage_offset);
+}
+
 Tensor Tensor::as_strided_view(Shape shape, Strides strides,
                                std::size_t storage_offset_elements) const {
     const auto element_size = size_of(dtype_);
@@ -360,7 +390,9 @@ Tensor Tensor::as_strided_view(Shape shape, Strides strides,
         throw std::overflow_error("view byte range overflows size_t");
     }
 
-    const auto relative_byte_offset = storage_offset_elements * element_size;
+    const auto relative_byte_offset = required_elements == 0
+                                          ? 0
+                                          : storage_offset_elements * element_size;
     const auto required_bytes = required_elements * element_size;
     if (relative_byte_offset > storage_.size_bytes() ||
         required_bytes > storage_.size_bytes() - relative_byte_offset) {

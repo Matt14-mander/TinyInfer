@@ -19,6 +19,8 @@ Tensor now owns a `Storage` rather than an allocator and raw pointer separately.
 
 Tensor `view()` and `narrow()` now copy Storage metadata instead of Buffer contents. Reshaped views share the full range, while narrowed views use a validated byte offset and span. Ordinary Tensor copy construction deliberately materializes an independent contiguous Buffer.
 
+Tensor `slice()` uses the same mechanism with an additional positive step encoded in the selected dimension's stride. Chained slices accumulate Storage byte offsets while continuing to share the original Buffer.
+
 ## Arena allocation
 
 `ArenaAllocator` obtains one buffer from a backing allocator and serves aligned suballocations by advancing an offset. Individual deallocation only updates the active-allocation count; memory becomes reusable after every allocation is released and `reset()` is called. Reset is rejected while live Tensor buffers remain, preventing accidental invalidation.

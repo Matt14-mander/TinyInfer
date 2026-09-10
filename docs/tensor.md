@@ -124,3 +124,20 @@ Mutating either Tensor changes the shared data. The two Tensor objects can have 
 `narrow(dimension, start, length)` creates a bounded subrange view using the same Buffer, original strides, and a Storage byte offset. It works with contiguous and non-contiguous tensors.
 
 Normal C++ copy construction remains a deep copy. Copying any view creates an independent, contiguous Buffer in logical element order. Calling `contiguous()` on a non-contiguous view also detaches it into a new Buffer; calling it on an already-contiguous view keeps sharing the existing Buffer.
+
+## Slice views
+
+`slice(dimension, start, end, step)` creates a shared-buffer View using the half-open interval `[start, end)`. The default step is one; this first version supports positive steps only:
+
+```cpp
+auto tensor = tinyinfer::Tensor::from_vector({2, 6}, values);
+auto slice = tensor.slice(1, 1, 6, 2);
+```
+
+```text
+source: shape=[2, 6], strides=[6, 1]
+slice:  shape=[2, 3], strides=[6, 2]
+data:   [[1, 3, 5], [7, 9, 11]]
+```
+
+Slice does not copy elements. It advances the Storage byte offset by `start * old_stride * element_size`, sets the sliced shape to `ceil((end - start) / step)`, and multiplies that dimension's stride by `step`. Slices can be chained and can originate from non-contiguous tensors. Deep copy or `contiguous()` materializes the logical values into independent row-major storage.

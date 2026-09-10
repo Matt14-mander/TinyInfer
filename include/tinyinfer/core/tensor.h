@@ -74,6 +74,8 @@ public:
     Tensor view(Shape new_shape) const;
     Tensor narrow(std::size_t dimension, std::int64_t start,
                   std::int64_t length) const;
+    Tensor slice(std::size_t dimension, std::int64_t start,
+                 std::int64_t end, std::int64_t step = 1) const;
     std::string to_string() const;
     void swap(Tensor& other) noexcept;
 
