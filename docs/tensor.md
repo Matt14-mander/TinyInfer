@@ -1,6 +1,17 @@
 # Tensor fundamentals
 
-The current Tensor owns row-major storage. A Tensor starts contiguous but metadata-only operations such as transpose can produce a non-contiguous layout. Its shape describes the logical dimensions, while its strides map a multidimensional coordinate to a flat storage offset.
+Tensor separates logical layout from physical memory. `TensorLayout` owns shape and strides and derives rank, element count, storage span, byte size, and contiguity. `Storage` owns the shared byte range, while `Tensor` combines a layout, dtype, and storage. Metadata-only operations can therefore change layout without moving data.
+
+## TensorLayout
+
+`TensorLayout` is an independently testable value object. A shape-only constructor creates standard row-major strides; a shape-and-strides constructor represents transpose, narrow, and stepped slice layouts:
+
+```cpp
+tinyinfer::TensorLayout contiguous({2, 3, 4});
+tinyinfer::TensorLayout sliced({2, 3}, {6, 2});
+```
+
+It validates dimensions and strides, checks arithmetic overflow, and caches `numel()`, `storage_span()`, and `is_contiguous()`. `storage_span()` is the number of physical elements from offset zero through the furthest reachable element; unlike `numel()`, it can include gaps. For shape `[2, 3]` and strides `[6, 2]`, `numel` is 6 while `storage_span` is 11.
 
 For a Tensor with shape `[2, 3, 4]`, contiguous strides are `[12, 4, 1]`. Coordinate `[1, 2, 3]` maps to:
 
@@ -20,7 +31,7 @@ tensor.at(index) = 42.0F;
 
 `offset(indices)` exposes the coordinate conversion for learning and debugging. It rejects a coordinate with the wrong rank, a negative index, or an index outside its dimension.
 
-This first version intentionally supports only contiguous storage. Negative indexing, slicing, views, and non-contiguous strides will be introduced separately so their ownership and layout semantics remain explicit.
+Negative strides and negative indexing are intentionally unsupported for now. Transpose, reshape, narrow, slice, and contiguous conversion all reuse the same `TensorLayout` rules.
 
 ## Value semantics
 

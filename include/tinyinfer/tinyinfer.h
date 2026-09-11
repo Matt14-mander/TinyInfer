@@ -6,6 +6,7 @@
 #include "tinyinfer/core/memory/arena_allocator.h"
 #include "tinyinfer/core/memory/buffer.h"
 #include "tinyinfer/core/memory/storage.h"
+#include "tinyinfer/core/tensor_layout.h"
 #include "tinyinfer/core/tensor.h"
 #include "tinyinfer/graph/graph.h"
 #include "tinyinfer/graph/node.h"

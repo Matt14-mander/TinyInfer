@@ -10,6 +10,7 @@ add_library(tinyinfer
     src/core/memory/arena_allocator.cpp
     src/core/memory/buffer.cpp
     src/core/memory/storage.cpp
+    src/core/tensor_layout.cpp
     src/core/tensor.cpp
     src/ops/basic_ops.cpp
     src/graph/graph.cpp

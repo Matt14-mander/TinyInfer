@@ -12,11 +12,9 @@
 #include <vector>
 #include "tinyinfer/core/dtype.h"
 #include "tinyinfer/core/memory/storage.h"
+#include "tinyinfer/core/tensor_layout.h"
 
 namespace tinyinfer {
-using Shape = std::vector<std::int64_t>;
-using Strides = std::vector<std::int64_t>;
-
 class Tensor {
 public:
     Tensor();
@@ -31,15 +29,16 @@ public:
     static Tensor from_vector(Shape shape, const std::vector<float>& values);
     template <typename T>
     static Tensor from_vector(Shape shape, const std::vector<T>& values);
-    const Shape& shape() const noexcept { return shape_; }
-    const Strides& strides() const noexcept { return strides_; }
+    const Shape& shape() const noexcept { return layout_.shape(); }
+    const Strides& strides() const noexcept { return layout_.strides(); }
+    const TensorLayout& layout() const noexcept { return layout_; }
     DataType dtype() const noexcept { return dtype_; }
     const std::shared_ptr<Allocator>& allocator() const { return storage_.allocator(); }
     const Storage& storage() const noexcept { return storage_; }
-    std::size_t rank() const noexcept { return shape_.size(); }
-    std::size_t numel() const noexcept;
-    std::size_t size_bytes() const noexcept;
-    bool is_contiguous() const noexcept;
+    std::size_t rank() const noexcept { return layout_.rank(); }
+    std::size_t numel() const noexcept { return layout_.numel(); }
+    std::size_t size_bytes() const { return layout_.size_bytes(dtype_); }
+    bool is_contiguous() const noexcept { return layout_.is_contiguous(); }
     void* data() noexcept { return storage_.data(); }
     const void* data() const noexcept { return storage_.data(); }
     template <typename T>
@@ -81,12 +80,10 @@ public:
 
 private:
     struct ViewTag {};
-    Tensor(ViewTag, Shape shape, Strides strides, DataType dtype, Storage storage);
-    Tensor as_strided_view(Shape shape, Strides strides,
+    Tensor(ViewTag, TensorLayout layout, DataType dtype, Storage storage);
+    Tensor as_strided_view(TensorLayout layout,
                            std::size_t storage_offset_elements) const;
-    static Strides contiguous_strides(const Shape& shape);
-    Shape shape_;
-    Strides strides_;
+    TensorLayout layout_;
     DataType dtype_{DataType::Float32};
     Storage storage_;
 };

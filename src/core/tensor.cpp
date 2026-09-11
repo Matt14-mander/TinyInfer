@@ -11,95 +11,6 @@
 namespace tinyinfer {
 namespace {
 
-Shape resolve_reshape_shape(Shape new_shape, std::size_t current_elements) {
-    std::size_t known_elements = 1;
-    std::size_t inferred_dimension = new_shape.size();
-
-    for (std::size_t dimension = 0; dimension < new_shape.size(); ++dimension) {
-        const auto size = new_shape[dimension];
-        if (size == -1) {
-            if (inferred_dimension != new_shape.size()) {
-                throw std::invalid_argument("reshape allows at most one inferred dimension");
-            }
-            inferred_dimension = dimension;
-            continue;
-        }
-        if (size < 0) {
-            throw std::invalid_argument("reshape dimensions must be non-negative or -1");
-        }
-
-        const auto unsigned_size = static_cast<std::size_t>(size);
-        if (unsigned_size != 0 &&
-            known_elements > std::numeric_limits<std::size_t>::max() / unsigned_size) {
-            throw std::overflow_error("reshape element count overflows size_t");
-        }
-        known_elements *= unsigned_size;
-    }
-
-    if (inferred_dimension != new_shape.size()) {
-        if (known_elements == 0) {
-            throw std::invalid_argument("cannot infer a reshape dimension when known dimensions multiply to zero");
-        }
-        if (current_elements % known_elements != 0) {
-            throw std::invalid_argument("reshape cannot infer an integral dimension");
-        }
-        const auto inferred_size = current_elements / known_elements;
-        if (inferred_size > static_cast<std::size_t>(std::numeric_limits<std::int64_t>::max())) {
-            throw std::overflow_error("inferred reshape dimension overflows int64_t");
-        }
-        new_shape[inferred_dimension] = static_cast<std::int64_t>(inferred_size);
-        known_elements *= inferred_size;
-    }
-
-    if (known_elements != current_elements) {
-        throw std::invalid_argument("reshape must preserve the number of elements");
-    }
-    return new_shape;
-}
-
-std::size_t storage_offset_from_logical_index(const Shape& shape,
-                                              const Strides& strides,
-                                              std::size_t logical_index) {
-    std::size_t storage_offset = 0;
-    for (std::size_t dimension = shape.size(); dimension > 0; --dimension) {
-        const auto size = static_cast<std::size_t>(shape[dimension - 1]);
-        const auto coordinate = logical_index % size;
-        logical_index /= size;
-        storage_offset += coordinate * static_cast<std::size_t>(strides[dimension - 1]);
-    }
-    return storage_offset;
-}
-
-std::size_t required_storage_elements(const Shape& shape, const Strides& strides) {
-    if (shape.size() != strides.size()) {
-        throw std::invalid_argument("view shape and strides must have the same rank");
-    }
-    if (shape.empty()) return 1;
-
-    std::size_t maximum_offset = 0;
-    for (std::size_t dimension = 0; dimension < shape.size(); ++dimension) {
-        if (shape[dimension] < 0 || strides[dimension] < 0) {
-            throw std::invalid_argument("view shape and strides must be non-negative");
-        }
-        if (shape[dimension] == 0) return 0;
-
-        const auto extent = static_cast<std::size_t>(shape[dimension] - 1);
-        const auto stride = static_cast<std::size_t>(strides[dimension]);
-        if (extent != 0 && stride > std::numeric_limits<std::size_t>::max() / extent) {
-            throw std::overflow_error("view storage span overflows size_t");
-        }
-        const auto contribution = extent * stride;
-        if (maximum_offset > std::numeric_limits<std::size_t>::max() - contribution) {
-            throw std::overflow_error("view storage span overflows size_t");
-        }
-        maximum_offset += contribution;
-    }
-    if (maximum_offset == std::numeric_limits<std::size_t>::max()) {
-        throw std::overflow_error("view storage span overflows size_t");
-    }
-    return maximum_offset + 1;
-}
-
 float float16_to_float32(std::uint16_t bits) {
     const bool negative = (bits & 0x8000U) != 0;
     const auto exponent = static_cast<unsigned>((bits >> 10U) & 0x1FU);
@@ -162,27 +73,18 @@ void write_data(std::ostream& stream, const Tensor& tensor, std::size_t dimensio
 Tensor::Tensor() : Tensor(Shape{}) {}
 
 Tensor::Tensor(Shape shape, DataType dtype, std::shared_ptr<Allocator> allocator)
-    : shape_(std::move(shape)),
-      strides_(contiguous_strides(shape_)),
-      dtype_(dtype) {
-    if (std::any_of(shape_.begin(), shape_.end(), [](std::int64_t dim) { return dim < 0; })) {
-        throw std::invalid_argument("tensor dimensions must be non-negative");
-    }
+    : layout_(std::move(shape)), dtype_(dtype) {
     const auto bytes = size_bytes();
     storage_ = Storage(bytes, std::move(allocator));
     if (bytes > 0) std::memset(storage_.data(), 0, bytes);
 }
 
-Tensor::Tensor(ViewTag, Shape shape, Strides strides, DataType dtype, Storage storage)
-    : shape_(std::move(shape)),
-      strides_(std::move(strides)),
-      dtype_(dtype),
+Tensor::Tensor(ViewTag, TensorLayout layout, DataType dtype, Storage storage)
+    : layout_(std::move(layout)), dtype_(dtype),
       storage_(std::move(storage)) {}
 
 Tensor::Tensor(const Tensor& other)
-    : shape_(other.shape_),
-      strides_(contiguous_strides(other.shape_)),
-      dtype_(other.dtype_) {
+    : layout_(other.shape()), dtype_(other.dtype_) {
     const auto bytes = size_bytes();
     const auto allocator = other.storage_.valid() ? other.storage_.allocator() : default_allocator();
     storage_ = Storage(bytes, allocator);
@@ -192,8 +94,7 @@ Tensor::Tensor(const Tensor& other)
             const auto* source = static_cast<const unsigned char*>(other.storage_.data());
             auto* destination = static_cast<unsigned char*>(storage_.data());
             for (std::size_t logical_index = 0; logical_index < numel(); ++logical_index) {
-                const auto source_offset = storage_offset_from_logical_index(
-                    other.shape_, other.strides_, logical_index);
+                const auto source_offset = other.layout_.storage_offset(logical_index);
                 std::memcpy(destination + logical_index * element_size,
                             source + source_offset * element_size, element_size);
             }
@@ -219,16 +120,6 @@ Tensor Tensor::from_vector(Shape shape, const std::vector<float>& values) {
     return tensor;
 }
 
-std::size_t Tensor::numel() const noexcept {
-    if (shape_.empty()) return 1;
-    std::size_t result = 1;
-    for (const auto dim : shape_) result *= static_cast<std::size_t>(dim);
-    return result;
-}
-
-std::size_t Tensor::size_bytes() const noexcept { return numel() * size_of(dtype_); }
-bool Tensor::is_contiguous() const noexcept { return strides_ == contiguous_strides(shape_); }
-
 float* Tensor::data_f32() {
     return data<float>();
 }
@@ -238,19 +129,7 @@ const float* Tensor::data_f32() const {
 }
 
 std::size_t Tensor::offset(const Shape& indices) const {
-    if (indices.size() != rank()) {
-        throw std::invalid_argument("number of indices must match tensor rank");
-    }
-
-    std::size_t result = 0;
-    for (std::size_t dimension = 0; dimension < rank(); ++dimension) {
-        const auto index = indices[dimension];
-        if (index < 0 || index >= shape_[dimension]) {
-            throw std::out_of_range("tensor index is out of range");
-        }
-        result += static_cast<std::size_t>(index * strides_[dimension]);
-    }
-    return result;
+    return layout_.offset(indices);
 }
 
 std::size_t Tensor::offset(std::initializer_list<std::int64_t> indices) const {
@@ -278,32 +157,19 @@ const float& Tensor::at(std::initializer_list<std::int64_t> indices) const {
 }
 
 Tensor& Tensor::reshape(Shape new_shape) {
-    if (!is_contiguous()) {
-        throw std::logic_error("reshape requires a contiguous tensor");
-    }
-
-    new_shape = resolve_reshape_shape(std::move(new_shape), numel());
-    auto new_strides = contiguous_strides(new_shape);
-    shape_ = std::move(new_shape);
-    strides_ = std::move(new_strides);
+    layout_ = layout_.reshaped(std::move(new_shape));
     return *this;
 }
 
 Tensor& Tensor::transpose(std::size_t dimension0, std::size_t dimension1) {
-    if (dimension0 >= rank() || dimension1 >= rank()) {
-        throw std::out_of_range("transpose dimension is out of range");
-    }
-    if (dimension0 == dimension1) return *this;
-
-    std::swap(shape_[dimension0], shape_[dimension1]);
-    std::swap(strides_[dimension0], strides_[dimension1]);
+    layout_ = layout_.transposed(dimension0, dimension1);
     return *this;
 }
 
 Tensor& Tensor::contiguous() {
     if (is_contiguous()) return *this;
 
-    auto new_strides = contiguous_strides(shape_);
+    TensorLayout new_layout(shape());
     Storage new_storage;
     const auto bytes = size_bytes();
     const auto element_size = size_of(dtype_);
@@ -314,8 +180,7 @@ Tensor& Tensor::contiguous() {
         auto* destination = static_cast<unsigned char*>(new_storage.data());
 
         for (std::size_t logical_index = 0; logical_index < numel(); ++logical_index) {
-            const auto source_offset = storage_offset_from_logical_index(
-                shape_, strides_, logical_index);
+            const auto source_offset = layout_.storage_offset(logical_index);
             std::memcpy(destination + logical_index * element_size,
                         source + source_offset * element_size, element_size);
         }
@@ -323,16 +188,12 @@ Tensor& Tensor::contiguous() {
 
     if (bytes == 0) new_storage = Storage(0, allocator());
     storage_ = std::move(new_storage);
-    strides_ = std::move(new_strides);
+    layout_ = std::move(new_layout);
     return *this;
 }
 
 Tensor Tensor::view(Shape new_shape) const {
-    if (!is_contiguous()) {
-        throw std::logic_error("view reshape requires a contiguous tensor");
-    }
-    new_shape = resolve_reshape_shape(std::move(new_shape), numel());
-    return Tensor(ViewTag{}, new_shape, contiguous_strides(new_shape), dtype_, storage_);
+    return Tensor(ViewTag{}, layout_.reshaped(std::move(new_shape)), dtype_, storage_);
 }
 
 Tensor Tensor::narrow(std::size_t dimension, std::int64_t start,
@@ -341,14 +202,14 @@ Tensor Tensor::narrow(std::size_t dimension, std::int64_t start,
     if (start < 0 || length < 0) {
         throw std::invalid_argument("narrow start and length must be non-negative");
     }
-    if (start > shape_[dimension] || length > shape_[dimension] - start) {
+    if (start > shape()[dimension] || length > shape()[dimension] - start) {
         throw std::out_of_range("narrow range exceeds tensor dimension");
     }
 
-    auto new_shape = shape_;
+    auto new_shape = shape();
     new_shape[dimension] = length;
-    const auto storage_offset = static_cast<std::size_t>(start * strides_[dimension]);
-    return as_strided_view(std::move(new_shape), strides_, storage_offset);
+    const auto storage_offset = static_cast<std::size_t>(start * strides()[dimension]);
+    return as_strided_view(TensorLayout(std::move(new_shape), strides()), storage_offset);
 }
 
 Tensor Tensor::slice(std::size_t dimension, std::int64_t start,
@@ -359,32 +220,32 @@ Tensor Tensor::slice(std::size_t dimension, std::int64_t start,
         throw std::invalid_argument("slice start and end must be non-negative");
     }
     if (start > end) throw std::invalid_argument("slice start must not exceed end");
-    if (end > shape_[dimension]) throw std::out_of_range("slice end exceeds tensor dimension");
+    if (end > shape()[dimension]) throw std::out_of_range("slice end exceeds tensor dimension");
 
     const auto distance = end - start;
     const auto length = distance / step + (distance % step != 0 ? 1 : 0);
-    if (strides_[dimension] != 0 &&
-        step > std::numeric_limits<std::int64_t>::max() / strides_[dimension]) {
+    if (strides()[dimension] != 0 &&
+        step > std::numeric_limits<std::int64_t>::max() / strides()[dimension]) {
         throw std::overflow_error("slice stride overflows int64_t");
     }
-    if (strides_[dimension] != 0 &&
-        start > std::numeric_limits<std::int64_t>::max() / strides_[dimension]) {
+    if (strides()[dimension] != 0 &&
+        start > std::numeric_limits<std::int64_t>::max() / strides()[dimension]) {
         throw std::overflow_error("slice storage offset overflows int64_t");
     }
 
-    auto new_shape = shape_;
-    auto new_strides = strides_;
+    auto new_shape = shape();
+    auto new_strides = strides();
     new_shape[dimension] = length;
     new_strides[dimension] *= step;
-    const auto storage_offset = static_cast<std::size_t>(start * strides_[dimension]);
-    return as_strided_view(std::move(new_shape), std::move(new_strides),
+    const auto storage_offset = static_cast<std::size_t>(start * strides()[dimension]);
+    return as_strided_view(TensorLayout(std::move(new_shape), std::move(new_strides)),
                            storage_offset);
 }
 
-Tensor Tensor::as_strided_view(Shape shape, Strides strides,
+Tensor Tensor::as_strided_view(TensorLayout layout,
                                std::size_t storage_offset_elements) const {
     const auto element_size = size_of(dtype_);
-    const auto required_elements = required_storage_elements(shape, strides);
+    const auto required_elements = layout.storage_span();
     if (storage_offset_elements > std::numeric_limits<std::size_t>::max() / element_size ||
         required_elements > std::numeric_limits<std::size_t>::max() / element_size) {
         throw std::overflow_error("view byte range overflows size_t");
@@ -401,7 +262,7 @@ Tensor Tensor::as_strided_view(Shape shape, Strides strides,
 
     Storage view_storage(storage_.buffer(), storage_.byte_offset() + relative_byte_offset,
                          required_bytes);
-    return Tensor(ViewTag{}, std::move(shape), std::move(strides), dtype_,
+    return Tensor(ViewTag{}, std::move(layout), dtype_,
                   std::move(view_storage));
 }
 
@@ -410,7 +271,7 @@ std::string Tensor::to_string() const {
     stream << "Tensor(shape=[";
     for (std::size_t dimension = 0; dimension < rank(); ++dimension) {
         if (dimension != 0) stream << ", ";
-        stream << shape_[dimension];
+        stream << shape()[dimension];
     }
     stream << "], dtype=" << tinyinfer::to_string(dtype_) << ", data=";
     write_data(stream, *this, 0, 0);
@@ -420,8 +281,7 @@ std::string Tensor::to_string() const {
 
 void Tensor::swap(Tensor& other) noexcept {
     using std::swap;
-    swap(shape_, other.shape_);
-    swap(strides_, other.strides_);
+    swap(layout_, other.layout_);
     swap(dtype_, other.dtype_);
     swap(storage_, other.storage_);
 }
@@ -430,9 +290,4 @@ std::ostream& operator<<(std::ostream& stream, const Tensor& tensor) {
     return stream << tensor.to_string();
 }
 
-Strides Tensor::contiguous_strides(const Shape& shape) {
-    Strides strides(shape.size(), 1);
-    for (std::size_t i = shape.size(); i > 1; --i) strides[i - 2] = strides[i - 1] * shape[i - 1];
-    return strides;
-}
 }  // namespace tinyinfer
