@@ -22,7 +22,7 @@ Tensor storage + memory management
 
 ## Modules
 
-- **Core** owns `Tensor`, `DataType`, layout, and memory abstractions. `TensorLayout` encapsulates shape, strides, indexing, reshape/transpose metadata, and checked size calculations. `Allocator` supplies raw memory, `Buffer` owns an allocation, and `Storage` identifies a shared byte range inside a Buffer. `CpuAllocator` handles independent buffers while `ArenaAllocator` supports bulk lifetime reuse. Core does not depend on graph or runtime.
+- **Core** owns `Tensor`, `DataType`, layout, iteration, and memory abstractions. `TensorLayout` encapsulates shape, strides, indexing, reshape/transpose metadata, and checked size calculations. `TensorIterator` builds a shared broadcasted iteration space for stride-aware elementwise kernels. `Allocator` supplies raw memory, `Buffer` owns an allocation, and `Storage` identifies a shared byte range inside a Buffer. `CpuAllocator` handles independent buffers while `ArenaAllocator` supports bulk lifetime reuse. Core does not depend on graph or runtime.
 - **Ops** defines operator contracts, shape inference, validation, and later reference kernels.
 - **Graph** represents nodes and dependencies; validation, topological sorting, constant folding, fusion, and lifetime analysis follow later.
 - **Runtime** coordinates execution, kernel selection, value binding, memory planning, and scheduling.

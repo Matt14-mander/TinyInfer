@@ -33,6 +33,20 @@ tensor.at(index) = 42.0F;
 
 Negative strides and negative indexing are intentionally unsupported for now. Transpose, reshape, narrow, slice, and contiguous conversion all reuse the same `TensorLayout` rules.
 
+## TensorIterator
+
+`TensorIterator` gives elementwise kernels one common logical iteration space. It aligns operand dimensions from the right, computes a broadcasted output shape, and converts each logical output index into the corresponding storage offset for every operand.
+
+```cpp
+tinyinfer::TensorIterator iterator({lhs.layout(), rhs.layout()});
+for (std::size_t i = 0; i < iterator.numel(); ++i) {
+    output[i] = lhs_data[iterator.operand_offset(0, i)] +
+                rhs_data[iterator.operand_offset(1, i)];
+}
+```
+
+A broadcast dimension uses stride zero, so the same source value is reused without creating an expanded Tensor. The first version supports arbitrary operand rank, NumPy-style broadcasting, scalars, and non-contiguous positive-stride layouts. `add` and `relu` now use it; dimension coalescing and contiguous fast paths are later optimization steps.
+
 ## Value semantics
 
 Copying a Tensor performs a deep copy: shape, strides, dtype, and data are copied into independent storage. Changing the copy therefore does not affect the original. Copy assignment uses copy-and-swap so allocation failure cannot leave the destination half-updated.

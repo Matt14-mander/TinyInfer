@@ -1,5 +1,7 @@
 #include "tinyinfer/ops/basic_ops.h"
 
+#include "tinyinfer/core/tensor_iterator.h"
+
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -14,18 +16,8 @@ void require_f32(const Tensor& tensor, const char* operation) {
     }
 }
 
-Shape coordinates_from_linear_index(const Tensor& tensor, std::size_t index) {
-    Shape coordinates(tensor.rank(), 0);
-    for (std::size_t dimension = tensor.rank(); dimension > 0; --dimension) {
-        const auto size = static_cast<std::size_t>(tensor.shape()[dimension - 1]);
-        coordinates[dimension - 1] = static_cast<std::int64_t>(index % size);
-        index /= size;
-    }
-    return coordinates;
-}
-
 float logical_value(const Tensor& tensor, std::size_t index) {
-    return tensor.at(coordinates_from_linear_index(tensor, index));
+    return tensor.data<float>()[tensor.layout().storage_offset(index)];
 }
 
 }  // namespace
@@ -34,24 +26,16 @@ Tensor add(const Tensor& lhs, const Tensor& rhs) {
     require_f32(lhs, "add");
     require_f32(rhs, "add");
 
-    Tensor output(lhs.shape());
-    if (lhs.shape() == rhs.shape()) {
-        for (std::size_t i = 0; i < lhs.numel(); ++i) {
-            output.at(i) = logical_value(lhs, i) + logical_value(rhs, i);
-        }
-        return output;
+    TensorIterator iterator({lhs.layout(), rhs.layout()});
+    Tensor output(iterator.shape());
+    const auto* lhs_data = lhs.data<float>();
+    const auto* rhs_data = rhs.data<float>();
+    auto* output_data = output.data<float>();
+    for (std::size_t i = 0; i < iterator.numel(); ++i) {
+        output_data[i] = lhs_data[iterator.operand_offset(0, i)] +
+                         rhs_data[iterator.operand_offset(1, i)];
     }
-
-    // The Phase 0 Linear operator needs one simple broadcast form: [..., N] + [N].
-    if (rhs.rank() == 1 && !lhs.shape().empty() && rhs.shape()[0] == lhs.shape().back()) {
-        const auto width = static_cast<std::size_t>(rhs.shape()[0]);
-        for (std::size_t i = 0; i < lhs.numel(); ++i) {
-            output.at(i) = logical_value(lhs, i) + rhs.at({static_cast<std::int64_t>(i % width)});
-        }
-        return output;
-    }
-
-    throw std::invalid_argument("add expects equal shapes or a one-dimensional bias matching the last dimension");
+    return output;
 }
 
 Tensor matmul(const Tensor& lhs, const Tensor& rhs) {
@@ -80,9 +64,13 @@ Tensor matmul(const Tensor& lhs, const Tensor& rhs) {
 
 Tensor relu(const Tensor& input) {
     require_f32(input, "relu");
+    TensorIterator iterator({input.layout()});
     Tensor output(input.shape());
-    for (std::size_t i = 0; i < input.numel(); ++i) {
-        output.at(i) = std::max(0.0F, logical_value(input, i));
+    const auto* input_data = input.data<float>();
+    auto* output_data = output.data<float>();
+    for (std::size_t i = 0; i < iterator.numel(); ++i) {
+        output_data[i] = std::max(0.0F,
+                                  input_data[iterator.operand_offset(0, i)]);
     }
     return output;
 }
