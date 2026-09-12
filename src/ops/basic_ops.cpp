@@ -31,6 +31,12 @@ Tensor add(const Tensor& lhs, const Tensor& rhs) {
     const auto* lhs_data = lhs.data<float>();
     const auto* rhs_data = rhs.data<float>();
     auto* output_data = output.data<float>();
+    if (iterator.has_contiguous_fast_path()) {
+        for (std::size_t i = 0; i < iterator.numel(); ++i) {
+            output_data[i] = lhs_data[i] + rhs_data[i];
+        }
+        return output;
+    }
     for (std::size_t i = 0; i < iterator.numel(); ++i) {
         output_data[i] = lhs_data[iterator.operand_offset(0, i)] +
                          rhs_data[iterator.operand_offset(1, i)];
@@ -68,6 +74,12 @@ Tensor relu(const Tensor& input) {
     Tensor output(input.shape());
     const auto* input_data = input.data<float>();
     auto* output_data = output.data<float>();
+    if (iterator.has_contiguous_fast_path()) {
+        for (std::size_t i = 0; i < iterator.numel(); ++i) {
+            output_data[i] = std::max(0.0F, input_data[i]);
+        }
+        return output;
+    }
     for (std::size_t i = 0; i < iterator.numel(); ++i) {
         output_data[i] = std::max(0.0F,
                                   input_data[iterator.operand_offset(0, i)]);

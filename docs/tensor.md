@@ -45,7 +45,9 @@ for (std::size_t i = 0; i < iterator.numel(); ++i) {
 }
 ```
 
-A broadcast dimension uses stride zero, so the same source value is reused without creating an expanded Tensor. The first version supports arbitrary operand rank, NumPy-style broadcasting, scalars, and non-contiguous positive-stride layouts. `add` and `relu` now use it; dimension coalescing and contiguous fast paths are later optimization steps.
+A broadcast dimension uses stride zero, so the same source value is reused without creating an expanded Tensor. The iterator also removes size-one dimensions and merges adjacent dimensions when every operand crosses the boundary linearly. For example, a contiguous `[2, 3, 4]` iteration becomes the one-dimensional loop `[24]` with stride `[1]`.
+
+`has_contiguous_fast_path()` reports when every operand maps logical index `i` directly to storage offset `i`. `add` and `relu` use this to avoid per-element coordinate and offset calculations, while broadcasting and transposed/sliced inputs continue through the general stride-aware path.
 
 ## Value semantics
 
