@@ -5,11 +5,15 @@
 contiguous fast path, and fall back to TensorIterator offsets for broadcasting
 or non-contiguous inputs.
 
-`basic_ops.cpp` contains the readable FP32 reference implementations used by Phase 0:
+MatMul is split into operator validation and CPU kernels. The CPU layer keeps a
+Tensor-indexed reference kernel, a direct stride-aware kernel, and a
+cache-blocked kernel. The public `matmul` operator selects the blocked kernel.
+
+`basic_ops.cpp` contains the remaining readable FP32 implementations:
 
 - Add, including NumPy-style broadcasting
 - Sub and Mul, including NumPy-style broadcasting
-- Rank-2 MatMul
+- Rank-2 MatMul through the CPU kernel layer
 - ReLU
 - GELU using the tanh approximation
 - ReduceSum and ReduceMax over one or more axes

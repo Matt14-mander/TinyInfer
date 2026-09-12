@@ -105,30 +105,6 @@ Tensor mul(const Tensor& lhs, const Tensor& rhs) {
                                     });
 }
 
-Tensor matmul(const Tensor& lhs, const Tensor& rhs) {
-    require_f32(lhs, "matmul");
-    require_f32(rhs, "matmul");
-    if (lhs.rank() != 2 || rhs.rank() != 2) throw std::invalid_argument("matmul expects two rank-2 tensors");
-    if (lhs.shape()[1] != rhs.shape()[0]) throw std::invalid_argument("matmul inner dimensions must match");
-
-    const auto rows = static_cast<std::size_t>(lhs.shape()[0]);
-    const auto inner = static_cast<std::size_t>(lhs.shape()[1]);
-    const auto cols = static_cast<std::size_t>(rhs.shape()[1]);
-    Tensor output({static_cast<std::int64_t>(rows), static_cast<std::int64_t>(cols)});
-
-    for (std::size_t row = 0; row < rows; ++row) {
-        for (std::size_t col = 0; col < cols; ++col) {
-            float sum = 0.0F;
-            for (std::size_t k = 0; k < inner; ++k) {
-                sum += lhs.at({static_cast<std::int64_t>(row), static_cast<std::int64_t>(k)}) *
-                       rhs.at({static_cast<std::int64_t>(k), static_cast<std::int64_t>(col)});
-            }
-            output.at(row * cols + col) = sum;
-        }
-    }
-    return output;
-}
-
 Tensor relu(const Tensor& input) {
     return run_unary_kernel<float>(input,
                                    [](float value) {

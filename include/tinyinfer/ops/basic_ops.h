@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "tinyinfer/core/tensor.h"
+#include "tinyinfer/ops/matmul.h"
 
 namespace tinyinfer::ops {
 
@@ -12,7 +13,6 @@ namespace tinyinfer::ops {
 Tensor add(const Tensor& lhs, const Tensor& rhs);
 Tensor sub(const Tensor& lhs, const Tensor& rhs);
 Tensor mul(const Tensor& lhs, const Tensor& rhs);
-Tensor matmul(const Tensor& lhs, const Tensor& rhs);
 Tensor relu(const Tensor& input);
 Tensor gelu(const Tensor& input);
 Tensor reduce_sum(const Tensor& input, const std::vector<std::int64_t>& axes,

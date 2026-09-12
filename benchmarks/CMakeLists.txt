@@ -1,1 +1,2 @@
-message(STATUS "TinyInfer benchmark targets will be added with the first numerical kernels")
+add_executable(tinyinfer_matmul_benchmark matmul_benchmark.cpp)
+target_link_libraries(tinyinfer_matmul_benchmark PRIVATE TinyInfer::tinyinfer)

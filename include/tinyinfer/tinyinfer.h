@@ -1,6 +1,7 @@
 #pragma once
 #include "tinyinfer/backend/backend.h"
 #include "tinyinfer/backend/cpu_backend.h"
+#include "tinyinfer/backend/cpu/matmul_kernel.h"
 #include "tinyinfer/core/dtype.h"
 #include "tinyinfer/core/memory/allocator.h"
 #include "tinyinfer/core/memory/arena_allocator.h"
@@ -14,4 +15,5 @@
 #include "tinyinfer/graph/node.h"
 #include "tinyinfer/ops/basic_ops.h"
 #include "tinyinfer/ops/kernel_runner.h"
+#include "tinyinfer/ops/matmul.h"
 #include "tinyinfer/runtime/executor.h"

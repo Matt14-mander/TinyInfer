@@ -15,9 +15,11 @@ add_library(tinyinfer
     src/core/reduction_iterator.cpp
     src/core/tensor.cpp
     src/ops/basic_ops.cpp
+    src/ops/matmul.cpp
     src/graph/graph.cpp
     src/runtime/executor.cpp
     src/backend/cpu/cpu_backend.cpp
+    src/backend/cpu/matmul_kernel.cpp
 )
 add_library(TinyInfer::tinyinfer ALIAS tinyinfer)
 target_compile_features(tinyinfer PUBLIC cxx_std_17)
