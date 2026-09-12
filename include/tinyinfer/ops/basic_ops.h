@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cstdint>
+#include <vector>
+
 #include "tinyinfer/core/tensor.h"
 
 namespace tinyinfer::ops {
@@ -12,7 +15,14 @@ Tensor mul(const Tensor& lhs, const Tensor& rhs);
 Tensor matmul(const Tensor& lhs, const Tensor& rhs);
 Tensor relu(const Tensor& input);
 Tensor gelu(const Tensor& input);
-Tensor softmax(const Tensor& input);
+Tensor reduce_sum(const Tensor& input, const std::vector<std::int64_t>& axes,
+                  bool keepdim = false);
+Tensor reduce_max(const Tensor& input, const std::vector<std::int64_t>& axes,
+                  bool keepdim = false);
+Tensor softmax(const Tensor& input, std::int64_t axis = -1);
+Tensor layer_norm(const Tensor& input, float epsilon = 1e-5F);
+Tensor layer_norm(const Tensor& input, const Tensor& weight,
+                  const Tensor& bias, float epsilon = 1e-5F);
 Tensor linear(const Tensor& input, const Tensor& weight, const Tensor& bias);
 
 }  // namespace tinyinfer::ops

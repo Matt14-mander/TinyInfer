@@ -12,7 +12,9 @@ or non-contiguous inputs.
 - Rank-2 MatMul
 - ReLU
 - GELU using the tanh approximation
+- ReduceSum and ReduceMax over one or more axes
 - Softmax over the final dimension
+- LayerNorm over the final dimension, with optional affine weight and bias
 - Linear, composed from MatMul and Add
 
 Phase 1 will split operator contracts, shape inference, and backend-specific kernels as those responsibilities become necessary.

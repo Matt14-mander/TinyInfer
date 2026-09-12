@@ -60,6 +60,18 @@ the tanh-approximation form of `gelu`. They all share the same runner behavior:
 contiguous inputs use direct pointer traversal, while broadcasting and
 non-contiguous layouts use TensorIterator offsets.
 
+## Reduction and normalization
+
+`ReductionIterator` separates output coordinates from coordinates along the
+reduced axes. It supports multiple axes, negative axes, `keepdim`, and
+positive-stride non-contiguous layouts. Reductions over a contiguous suffix
+are detected so kernels can scan one linear memory range per output value.
+
+`reduce_sum` and `reduce_max` use this iterator directly. `softmax(input,
+axis)` now supports any axis and uses stable maximum subtraction.
+`layer_norm` normalizes the final dimension and optionally applies a
+one-dimensional affine weight and bias.
+
 ## Value semantics
 
 Copying a Tensor performs a deep copy: shape, strides, dtype, and data are copied into independent storage. Changing the copy therefore does not affect the original. Copy assignment uses copy-and-swap so allocation failure cannot leave the destination half-updated.

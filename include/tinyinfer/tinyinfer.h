@@ -8,6 +8,7 @@
 #include "tinyinfer/core/memory/storage.h"
 #include "tinyinfer/core/tensor_layout.h"
 #include "tinyinfer/core/tensor_iterator.h"
+#include "tinyinfer/core/reduction_iterator.h"
 #include "tinyinfer/core/tensor.h"
 #include "tinyinfer/graph/graph.h"
 #include "tinyinfer/graph/node.h"

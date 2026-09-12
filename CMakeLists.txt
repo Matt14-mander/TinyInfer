@@ -12,6 +12,7 @@ add_library(tinyinfer
     src/core/memory/storage.cpp
     src/core/tensor_layout.cpp
     src/core/tensor_iterator.cpp
+    src/core/reduction_iterator.cpp
     src/core/tensor.cpp
     src/ops/basic_ops.cpp
     src/graph/graph.cpp

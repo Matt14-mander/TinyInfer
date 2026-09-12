@@ -1,6 +1,7 @@
 #include "tinyinfer/ops/basic_ops.h"
 
 #include "tinyinfer/ops/kernel_runner.h"
+#include "tinyinfer/core/reduction_iterator.h"
 
 #include <algorithm>
 #include <cmath>
@@ -16,8 +17,69 @@ void require_f32(const Tensor& tensor, const char* operation) {
     }
 }
 
-float logical_value(const Tensor& tensor, std::size_t index) {
-    return tensor.data<float>()[tensor.layout().storage_offset(index)];
+Tensor layer_norm_impl(const Tensor& input, const Tensor* weight,
+                       const Tensor* bias, float epsilon) {
+    require_f32(input, "layer_norm");
+    if (input.rank() == 0 || input.shape().back() <= 0) {
+        throw std::invalid_argument(
+            "layer_norm expects a non-empty final dimension");
+    }
+    if (epsilon < 0.0F) {
+        throw std::invalid_argument("layer_norm epsilon must be non-negative");
+    }
+
+    const auto width = input.shape().back();
+    for (const auto* parameter : {weight, bias}) {
+        if (!parameter) continue;
+        require_f32(*parameter, "layer_norm");
+        if (parameter->shape() != Shape({width})) {
+            throw std::invalid_argument(
+                "layer_norm weight and bias must match the final dimension");
+        }
+    }
+
+    ReductionIterator iterator(input.layout(), {-1});
+    Tensor output(input.shape());
+    const auto* input_data = input.data<float>();
+    auto* output_data = output.data<float>();
+    const auto* weight_data = weight ? weight->data<float>() : nullptr;
+    const auto* bias_data = bias ? bias->data<float>() : nullptr;
+    const auto contiguous = iterator.has_contiguous_reduction();
+
+    for (std::size_t group = 0; group < iterator.output_numel(); ++group) {
+        const auto base = group * iterator.reduction_numel();
+        float mean = 0.0F;
+        for (std::size_t index = 0; index < iterator.reduction_numel(); ++index) {
+            const auto offset = contiguous ? base + index
+                                           : iterator.input_offset(group, index);
+            mean += input_data[offset];
+        }
+        mean /= static_cast<float>(iterator.reduction_numel());
+
+        float variance = 0.0F;
+        for (std::size_t index = 0; index < iterator.reduction_numel(); ++index) {
+            const auto offset = contiguous ? base + index
+                                           : iterator.input_offset(group, index);
+            const auto centered = input_data[offset] - mean;
+            variance += centered * centered;
+        }
+        variance /= static_cast<float>(iterator.reduction_numel());
+        const auto inverse_stddev = 1.0F / std::sqrt(variance + epsilon);
+
+        for (std::size_t index = 0; index < iterator.reduction_numel(); ++index) {
+            const auto input_offset = contiguous
+                                          ? base + index
+                                          : iterator.input_offset(group, index);
+            const auto output_index = contiguous
+                                          ? base + index
+                                          : iterator.input_logical_index(group, index);
+            auto value = (input_data[input_offset] - mean) * inverse_stddev;
+            if (weight_data) value *= weight_data[weight->layout().storage_offset(index)];
+            if (bias_data) value += bias_data[bias->layout().storage_offset(index)];
+            output_data[output_index] = value;
+        }
+    }
+    return output;
 }
 
 }  // namespace
@@ -88,30 +150,109 @@ Tensor gelu(const Tensor& input) {
         });
 }
 
-Tensor softmax(const Tensor& input) {
-    require_f32(input, "softmax");
-    if (input.rank() == 0 || input.shape().back() <= 0) {
-        throw std::invalid_argument("softmax expects a non-empty final dimension");
-    }
+Tensor reduce_sum(const Tensor& input,
+                  const std::vector<std::int64_t>& axes, bool keepdim) {
+    require_f32(input, "reduce_sum");
+    ReductionIterator iterator(input.layout(), axes, keepdim);
+    Tensor output(iterator.output_shape());
+    const auto* input_data = input.data<float>();
+    auto* output_data = output.data<float>();
 
+    for (std::size_t group = 0; group < iterator.output_numel(); ++group) {
+        float result = 0.0F;
+        if (iterator.has_contiguous_reduction()) {
+            const auto base = group * iterator.reduction_numel();
+            for (std::size_t index = 0; index < iterator.reduction_numel(); ++index) {
+                result += input_data[base + index];
+            }
+        } else {
+            for (std::size_t index = 0; index < iterator.reduction_numel(); ++index) {
+                result += input_data[iterator.input_offset(group, index)];
+            }
+        }
+        output_data[group] = result;
+    }
+    return output;
+}
+
+Tensor reduce_max(const Tensor& input,
+                  const std::vector<std::int64_t>& axes, bool keepdim) {
+    require_f32(input, "reduce_max");
+    ReductionIterator iterator(input.layout(), axes, keepdim);
+    if (iterator.reduction_numel() == 0) {
+        throw std::invalid_argument("reduce_max cannot reduce an empty dimension");
+    }
+    Tensor output(iterator.output_shape());
+    const auto* input_data = input.data<float>();
+    auto* output_data = output.data<float>();
+
+    for (std::size_t group = 0; group < iterator.output_numel(); ++group) {
+        const auto first_offset = iterator.has_contiguous_reduction()
+                                      ? group * iterator.reduction_numel()
+                                      : iterator.input_offset(group, 0);
+        float result = input_data[first_offset];
+        for (std::size_t index = 1; index < iterator.reduction_numel(); ++index) {
+            const auto offset = iterator.has_contiguous_reduction()
+                                    ? group * iterator.reduction_numel() + index
+                                    : iterator.input_offset(group, index);
+            result = std::max(result, input_data[offset]);
+        }
+        output_data[group] = result;
+    }
+    return output;
+}
+
+Tensor softmax(const Tensor& input, std::int64_t axis) {
+    require_f32(input, "softmax");
+    ReductionIterator iterator(input.layout(), {axis});
+    if (iterator.reduction_numel() == 0) {
+        throw std::invalid_argument("softmax cannot normalize an empty dimension");
+    }
     Tensor output(input.shape());
-    const auto width = static_cast<std::size_t>(input.shape().back());
-    const auto rows = input.numel() / width;
-    for (std::size_t row = 0; row < rows; ++row) {
-        const auto offset = row * width;
-        float maximum = logical_value(input, offset);
-        for (std::size_t col = 1; col < width; ++col) {
-            maximum = std::max(maximum, logical_value(input, offset + col));
+    const auto* input_data = input.data<float>();
+    auto* output_data = output.data<float>();
+    const auto contiguous = iterator.has_contiguous_reduction();
+    for (std::size_t group = 0; group < iterator.output_numel(); ++group) {
+        const auto base = group * iterator.reduction_numel();
+        const auto first_offset = contiguous ? base
+                                             : iterator.input_offset(group, 0);
+        float maximum = input_data[first_offset];
+        for (std::size_t index = 1; index < iterator.reduction_numel(); ++index) {
+            const auto offset = contiguous ? base + index
+                                           : iterator.input_offset(group, index);
+            maximum = std::max(
+                maximum, input_data[offset]);
         }
 
         float denominator = 0.0F;
-        for (std::size_t col = 0; col < width; ++col) {
-            output.at(offset + col) = std::exp(logical_value(input, offset + col) - maximum);
-            denominator += output.at(offset + col);
+        for (std::size_t index = 0; index < iterator.reduction_numel(); ++index) {
+            const auto input_offset = contiguous
+                                          ? base + index
+                                          : iterator.input_offset(group, index);
+            const auto output_index = contiguous
+                                          ? base + index
+                                          : iterator.input_logical_index(group, index);
+            output_data[output_index] =
+                std::exp(input_data[input_offset] - maximum);
+            denominator += output_data[output_index];
         }
-        for (std::size_t col = 0; col < width; ++col) output.at(offset + col) /= denominator;
+        for (std::size_t index = 0; index < iterator.reduction_numel(); ++index) {
+            const auto output_index = contiguous
+                                          ? base + index
+                                          : iterator.input_logical_index(group, index);
+            output_data[output_index] /= denominator;
+        }
     }
     return output;
+}
+
+Tensor layer_norm(const Tensor& input, float epsilon) {
+    return layer_norm_impl(input, nullptr, nullptr, epsilon);
+}
+
+Tensor layer_norm(const Tensor& input, const Tensor& weight,
+                  const Tensor& bias, float epsilon) {
+    return layer_norm_impl(input, &weight, &bias, epsilon);
 }
 
 Tensor linear(const Tensor& input, const Tensor& weight, const Tensor& bias) {
