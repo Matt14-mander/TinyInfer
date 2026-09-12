@@ -4,6 +4,7 @@ project(TinyInfer VERSION 0.1.0 LANGUAGES CXX)
 option(TINYINFER_BUILD_EXAMPLES "Build TinyInfer examples" ON)
 option(TINYINFER_BUILD_TESTS "Build TinyInfer tests" ON)
 option(TINYINFER_BUILD_BENCHMARKS "Build TinyInfer benchmarks" OFF)
+option(TINYINFER_ENABLE_NATIVE_ARCH "Enable host-specific CPU instructions" OFF)
 
 add_library(tinyinfer
     src/core/memory/allocator.cpp
@@ -29,6 +30,14 @@ if(MSVC)
     target_compile_options(tinyinfer PRIVATE /W4)
 else()
     target_compile_options(tinyinfer PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+if(TINYINFER_ENABLE_NATIVE_ARCH)
+    if(MSVC)
+        target_compile_options(tinyinfer PRIVATE /arch:AVX2)
+    else()
+        target_compile_options(tinyinfer PRIVATE -march=native)
+    endif()
 endif()
 
 if(TINYINFER_BUILD_EXAMPLES)

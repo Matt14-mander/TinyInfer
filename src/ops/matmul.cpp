@@ -18,7 +18,8 @@ Tensor matmul(const Tensor& lhs, const Tensor& rhs) {
     }
 
     Tensor output({lhs.shape()[0], rhs.shape()[1]});
-    cpu::matmul_blocked(lhs, rhs, output);
+    const cpu::PackedMatMulRhs packed_rhs(rhs);
+    cpu::matmul_packed_simd(lhs, packed_rhs, output);
     return output;
 }
 

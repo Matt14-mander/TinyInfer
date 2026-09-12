@@ -49,6 +49,25 @@ int main() {
     expect_equal(reference, transposed_result);
     expect_equal(reference, tinyinfer::ops::matmul(lhs, rhs));
 
+    const auto wide_rhs = Tensor::from_vector(
+        {3, 5}, {1.0F, 2.0F, 3.0F, 4.0F, 5.0F,
+                 6.0F, 7.0F, 8.0F, 9.0F, 10.0F,
+                 11.0F, 12.0F, 13.0F, 14.0F, 15.0F});
+    Tensor wide_reference({2, 5});
+    Tensor wide_simd({2, 5});
+    tinyinfer::cpu::matmul_reference(lhs, wide_rhs, wide_reference);
+    const tinyinfer::cpu::PackedMatMulRhs packed_wide_rhs(wide_rhs);
+    tinyinfer::cpu::matmul_packed_simd(lhs, packed_wide_rhs, wide_simd,
+                                      {2, 5, 2});
+    expect_equal(wide_reference, wide_simd);
+    assert(tinyinfer::cpu::matmul_simd_width() >= 1);
+
+    const tinyinfer::cpu::PackedMatMulRhs packed_transposed(rhs_t);
+    Tensor packed_transposed_result({2, 2});
+    tinyinfer::cpu::matmul_packed_simd(
+        lhs_t, packed_transposed, packed_transposed_result);
+    expect_equal(reference, packed_transposed_result);
+
     const Tensor empty_lhs({2, 0});
     const Tensor empty_rhs({0, 3});
     const auto empty_result = tinyinfer::ops::matmul(empty_lhs, empty_rhs);
@@ -65,5 +84,9 @@ int main() {
     expect_throw<std::invalid_argument>([] {
         const Tensor integers({2, 2}, DataType::Int32);
         tinyinfer::ops::matmul(integers, integers);
+    });
+    expect_throw<std::invalid_argument>([] {
+        const Tensor vector({2});
+        tinyinfer::cpu::PackedMatMulRhs packed(vector);
     });
 }

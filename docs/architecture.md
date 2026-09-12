@@ -34,6 +34,6 @@ Tensor storage + memory management
 - C++17 keeps the toolchain accessible while providing safe ownership primitives.
 - Public headers live under `include/tinyinfer`; implementations remain under `src`.
 - `Tensor` composes `TensorLayout`, `DataType`, and shared `Storage`; views reuse the same Buffer with independent layout metadata.
-- CPU MatMul is separated into reference, stride-aware, and cache-blocked kernels. Operator code validates and allocates output, while the kernel writes into a preallocated contiguous Tensor.
+- CPU MatMul is separated into reference, stride-aware, cache-blocked, and packed-SIMD kernels. `PackedMatMulRhs` converts constant weights to reusable contiguous K×N storage; the micro-kernel uses AVX2, SSE2, or ARM NEON with a scalar tail and fallback.
 - Graph inputs reference earlier nodes, keeping the initial graph valid by construction.
 - Unsupported execution fails explicitly instead of producing placeholder values.

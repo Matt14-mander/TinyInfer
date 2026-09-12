@@ -64,6 +64,8 @@ int main(int argc, char** argv) {
         tinyinfer::Tensor reference({static_cast<std::int64_t>(size), static_cast<std::int64_t>(size)});
         tinyinfer::Tensor strided(reference.shape());
         tinyinfer::Tensor blocked(reference.shape());
+        tinyinfer::Tensor packed_simd(reference.shape());
+        const tinyinfer::cpu::PackedMatMulRhs packed_rhs(rhs);
         const auto iterations = std::max<std::size_t>(1, 256 / size);
 
         if (size <= 128) {
@@ -79,7 +81,15 @@ int main(int argc, char** argv) {
         seconds = measure(
             [&] { tinyinfer::cpu::matmul_blocked(lhs, rhs, blocked); }, iterations);
         print_result("blocked", size, seconds);
+        seconds = measure(
+            [&] {
+                tinyinfer::cpu::matmul_packed_simd(
+                    lhs, packed_rhs, packed_simd);
+            },
+            iterations);
+        print_result("packed_simd", size, seconds);
         verify_close(reference, strided);
         verify_close(reference, blocked);
+        verify_close(reference, packed_simd);
     }
 }

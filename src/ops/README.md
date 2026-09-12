@@ -7,7 +7,10 @@ or non-contiguous inputs.
 
 MatMul is split into operator validation and CPU kernels. The CPU layer keeps a
 Tensor-indexed reference kernel, a direct stride-aware kernel, and a
-cache-blocked kernel. The public `matmul` operator selects the blocked kernel.
+cache-blocked kernel, and a reusable packed-RHS SIMD micro-kernel. The public
+`matmul` operator packs RHS and selects the SIMD path. Callers executing the
+same weights repeatedly can construct `PackedMatMulRhs` once and invoke the
+kernel directly to amortize packing.
 
 `basic_ops.cpp` contains the remaining readable FP32 implementations:
 
