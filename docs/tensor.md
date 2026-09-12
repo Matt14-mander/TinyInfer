@@ -55,6 +55,11 @@ dtype validation, fast-path selection, and fallback offset calculation. An
 operator supplies only its scalar computation, such as `a + b` or
 `max(0, value)`.
 
+The current Elementwise operator set includes `add`, `sub`, `mul`, `relu`, and
+the tanh-approximation form of `gelu`. They all share the same runner behavior:
+contiguous inputs use direct pointer traversal, while broadcasting and
+non-contiguous layouts use TensorIterator offsets.
+
 ## Value semantics
 
 Copying a Tensor performs a deep copy: shape, strides, dtype, and data are copied into independent storage. Changing the copy therefore does not affect the original. Copy assignment uses copy-and-swap so allocation failure cannot leave the destination half-updated.

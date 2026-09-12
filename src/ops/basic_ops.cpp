@@ -29,6 +29,20 @@ Tensor add(const Tensor& lhs, const Tensor& rhs) {
                                     });
 }
 
+Tensor sub(const Tensor& lhs, const Tensor& rhs) {
+    return run_binary_kernel<float>(lhs, rhs,
+                                    [](float left, float right) {
+                                        return left - right;
+                                    });
+}
+
+Tensor mul(const Tensor& lhs, const Tensor& rhs) {
+    return run_binary_kernel<float>(lhs, rhs,
+                                    [](float left, float right) {
+                                        return left * right;
+                                    });
+}
+
 Tensor matmul(const Tensor& lhs, const Tensor& rhs) {
     require_f32(lhs, "matmul");
     require_f32(rhs, "matmul");
@@ -58,6 +72,20 @@ Tensor relu(const Tensor& input) {
                                    [](float value) {
                                        return std::max(0.0F, value);
                                    });
+}
+
+Tensor gelu(const Tensor& input) {
+    // tanh approximation used by many inference runtimes.
+    constexpr float kSqrtTwoOverPi = 0.7978845608028654F;
+    constexpr float kCubicCoefficient = 0.044715F;
+    return run_unary_kernel<float>(
+        input,
+        [](float value) {
+            const auto cubic = value * value * value;
+            return 0.5F * value *
+                   (1.0F + std::tanh(kSqrtTwoOverPi *
+                                     (value + kCubicCoefficient * cubic)));
+        });
 }
 
 Tensor softmax(const Tensor& input) {

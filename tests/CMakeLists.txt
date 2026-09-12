@@ -61,3 +61,7 @@ add_test(NAME tinyinfer_tensor_iterator_tests COMMAND tinyinfer_tensor_iterator_
 add_executable(tinyinfer_kernel_runner_tests kernel_runner_test.cpp)
 target_link_libraries(tinyinfer_kernel_runner_tests PRIVATE TinyInfer::tinyinfer)
 add_test(NAME tinyinfer_kernel_runner_tests COMMAND tinyinfer_kernel_runner_tests)
+
+add_executable(tinyinfer_elementwise_ops_tests elementwise_ops_test.cpp)
+target_link_libraries(tinyinfer_elementwise_ops_tests PRIVATE TinyInfer::tinyinfer)
+add_test(NAME tinyinfer_elementwise_ops_tests COMMAND tinyinfer_elementwise_ops_tests)

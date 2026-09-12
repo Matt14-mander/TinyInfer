@@ -8,8 +8,10 @@ or non-contiguous inputs.
 `basic_ops.cpp` contains the readable FP32 reference implementations used by Phase 0:
 
 - Add, including NumPy-style broadcasting
+- Sub and Mul, including NumPy-style broadcasting
 - Rank-2 MatMul
 - ReLU
+- GELU using the tanh approximation
 - Softmax over the final dimension
 - Linear, composed from MatMul and Add
 

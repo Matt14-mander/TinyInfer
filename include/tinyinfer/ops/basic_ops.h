@@ -7,8 +7,11 @@ namespace tinyinfer::ops {
 // Phase 0 reference operators. Elementwise operators use TensorIterator for
 // stride-aware traversal and NumPy-style broadcasting.
 Tensor add(const Tensor& lhs, const Tensor& rhs);
+Tensor sub(const Tensor& lhs, const Tensor& rhs);
+Tensor mul(const Tensor& lhs, const Tensor& rhs);
 Tensor matmul(const Tensor& lhs, const Tensor& rhs);
 Tensor relu(const Tensor& input);
+Tensor gelu(const Tensor& input);
 Tensor softmax(const Tensor& input);
 Tensor linear(const Tensor& input, const Tensor& weight, const Tensor& bias);
 
