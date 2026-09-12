@@ -1,6 +1,6 @@
 #include "tinyinfer/ops/basic_ops.h"
 
-#include "tinyinfer/core/tensor_iterator.h"
+#include "tinyinfer/ops/kernel_runner.h"
 
 #include <algorithm>
 #include <cmath>
@@ -23,25 +23,10 @@ float logical_value(const Tensor& tensor, std::size_t index) {
 }  // namespace
 
 Tensor add(const Tensor& lhs, const Tensor& rhs) {
-    require_f32(lhs, "add");
-    require_f32(rhs, "add");
-
-    TensorIterator iterator({lhs.layout(), rhs.layout()});
-    Tensor output(iterator.shape());
-    const auto* lhs_data = lhs.data<float>();
-    const auto* rhs_data = rhs.data<float>();
-    auto* output_data = output.data<float>();
-    if (iterator.has_contiguous_fast_path()) {
-        for (std::size_t i = 0; i < iterator.numel(); ++i) {
-            output_data[i] = lhs_data[i] + rhs_data[i];
-        }
-        return output;
-    }
-    for (std::size_t i = 0; i < iterator.numel(); ++i) {
-        output_data[i] = lhs_data[iterator.operand_offset(0, i)] +
-                         rhs_data[iterator.operand_offset(1, i)];
-    }
-    return output;
+    return run_binary_kernel<float>(lhs, rhs,
+                                    [](float left, float right) {
+                                        return left + right;
+                                    });
 }
 
 Tensor matmul(const Tensor& lhs, const Tensor& rhs) {
@@ -69,22 +54,10 @@ Tensor matmul(const Tensor& lhs, const Tensor& rhs) {
 }
 
 Tensor relu(const Tensor& input) {
-    require_f32(input, "relu");
-    TensorIterator iterator({input.layout()});
-    Tensor output(input.shape());
-    const auto* input_data = input.data<float>();
-    auto* output_data = output.data<float>();
-    if (iterator.has_contiguous_fast_path()) {
-        for (std::size_t i = 0; i < iterator.numel(); ++i) {
-            output_data[i] = std::max(0.0F, input_data[i]);
-        }
-        return output;
-    }
-    for (std::size_t i = 0; i < iterator.numel(); ++i) {
-        output_data[i] = std::max(0.0F,
-                                  input_data[iterator.operand_offset(0, i)]);
-    }
-    return output;
+    return run_unary_kernel<float>(input,
+                                   [](float value) {
+                                       return std::max(0.0F, value);
+                                   });
 }
 
 Tensor softmax(const Tensor& input) {

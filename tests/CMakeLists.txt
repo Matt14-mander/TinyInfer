@@ -57,3 +57,7 @@ add_test(NAME tinyinfer_tensor_layout_tests COMMAND tinyinfer_tensor_layout_test
 add_executable(tinyinfer_tensor_iterator_tests tensor_iterator_test.cpp)
 target_link_libraries(tinyinfer_tensor_iterator_tests PRIVATE TinyInfer::tinyinfer)
 add_test(NAME tinyinfer_tensor_iterator_tests COMMAND tinyinfer_tensor_iterator_tests)
+
+add_executable(tinyinfer_kernel_runner_tests kernel_runner_test.cpp)
+target_link_libraries(tinyinfer_kernel_runner_tests PRIVATE TinyInfer::tinyinfer)
+add_test(NAME tinyinfer_kernel_runner_tests COMMAND tinyinfer_kernel_runner_tests)

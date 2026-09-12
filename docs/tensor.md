@@ -49,6 +49,12 @@ A broadcast dimension uses stride zero, so the same source value is reused witho
 
 `has_contiguous_fast_path()` reports when every operand maps logical index `i` directly to storage offset `i`. `add` and `relu` use this to avoid per-element coordinate and offset calculations, while broadcasting and transposed/sliced inputs continue through the general stride-aware path.
 
+Elementwise operators do not repeat this branch themselves. The header-only
+`run_unary_kernel<T>` and `run_binary_kernel<T>` helpers own output creation,
+dtype validation, fast-path selection, and fallback offset calculation. An
+operator supplies only its scalar computation, such as `a + b` or
+`max(0, value)`.
+
 ## Value semantics
 
 Copying a Tensor performs a deep copy: shape, strides, dtype, and data are copied into independent storage. Changing the copy therefore does not affect the original. Copy assignment uses copy-and-swap so allocation failure cannot leave the destination half-updated.
