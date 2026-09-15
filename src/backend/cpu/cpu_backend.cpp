@@ -2,6 +2,6 @@
 #include <stdexcept>
 
 namespace tinyinfer {
-bool CpuBackend::supports(OpType op) const noexcept { return op == OpType::Input || op == OpType::Constant; }
+bool CpuBackend::supports(OpType) const noexcept { return false; }
 void CpuBackend::execute(const Node&) { throw std::logic_error("CPU kernels are not implemented in the architecture scaffold"); }
 }  // namespace tinyinfer

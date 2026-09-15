@@ -10,9 +10,11 @@ int main() {
     assert(tensor.size_bytes() == 24);
     assert(tensor.is_contiguous());
     tinyinfer::Graph graph;
-    const auto input = graph.add_node("input", tinyinfer::OpType::Input);
-    const auto relu = graph.add_node("relu", tinyinfer::OpType::ReLU, {input});
-    assert(graph.size() == 2);
+    const tinyinfer::TensorSpec spec{{2, 3}, tinyinfer::DataType::Float32};
+    const auto input = graph.add_input("input", spec);
+    const auto relu = graph.add_node("relu", tinyinfer::OpType::ReLU,
+                                     {input}, {spec});
+    assert(graph.size() == 1);
     assert(graph.node(relu).inputs.front() == input);
 
     tinyinfer::CpuBackend cpu;
@@ -23,7 +25,7 @@ int main() {
     assert(rejected_unimplemented_op);
 
     bool rejected = false;
-    try { graph.add_node("invalid", tinyinfer::OpType::Add, {99}); }
+    try { graph.add_node("invalid", tinyinfer::OpType::Add, {99}, {spec}); }
     catch (const std::invalid_argument&) { rejected = true; }
     assert(rejected);
     return 0;

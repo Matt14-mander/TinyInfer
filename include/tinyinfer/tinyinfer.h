@@ -13,6 +13,7 @@
 #include "tinyinfer/core/tensor.h"
 #include "tinyinfer/graph/graph.h"
 #include "tinyinfer/graph/node.h"
+#include "tinyinfer/graph/value.h"
 #include "tinyinfer/ops/basic_ops.h"
 #include "tinyinfer/ops/kernel_runner.h"
 #include "tinyinfer/ops/matmul.h"

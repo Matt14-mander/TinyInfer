@@ -17,6 +17,10 @@ Exit criterion: run the Phase 0 MLP through the public Tensor API.
 
 ## Phase 2 — v0.2 Graph Runtime
 
+Current status: in progress. The Value-based graph data model, Tensor metadata,
+constants, node inputs/outputs, typed attributes, producers, and graph output
+registration are implemented. Numerical execution is not connected yet.
+
 - Tensor metadata on graph values.
 - Graph validation and topological ordering.
 - Executor, operator registry, and error reporting.

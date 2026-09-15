@@ -73,3 +73,7 @@ add_test(NAME tinyinfer_reduction_normalization_tests COMMAND tinyinfer_reductio
 add_executable(tinyinfer_matmul_kernel_tests matmul_kernel_test.cpp)
 target_link_libraries(tinyinfer_matmul_kernel_tests PRIVATE TinyInfer::tinyinfer)
 add_test(NAME tinyinfer_matmul_kernel_tests COMMAND tinyinfer_matmul_kernel_tests)
+
+add_executable(tinyinfer_graph_data_model_tests graph_data_model_test.cpp)
+target_link_libraries(tinyinfer_graph_data_model_tests PRIVATE TinyInfer::tinyinfer)
+add_test(NAME tinyinfer_graph_data_model_tests COMMAND tinyinfer_graph_data_model_tests)
