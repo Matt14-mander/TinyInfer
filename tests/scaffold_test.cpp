@@ -19,10 +19,14 @@ int main() {
 
     tinyinfer::CpuBackend cpu;
     tinyinfer::Executor executor(cpu);
-    bool rejected_unimplemented_op = false;
-    try { executor.run(graph); }
-    catch (const std::runtime_error&) { rejected_unimplemented_op = true; }
-    assert(rejected_unimplemented_op);
+    tinyinfer::ExecutionContext context(graph);
+    context.bind_input(input, tinyinfer::Tensor::from_vector(
+                                  {2, 3}, {-1.0F, 2.0F, -3.0F,
+                                           4.0F, -5.0F, 6.0F}));
+    executor.run(graph, context);
+    const auto output = graph.node(relu).outputs.front();
+    assert(context.output(output).at(0) == 0.0F);
+    assert(context.output(output).at(5) == 6.0F);
 
     bool rejected = false;
     try { graph.add_node("invalid", tinyinfer::OpType::Add, {99}); }

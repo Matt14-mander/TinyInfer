@@ -26,7 +26,7 @@ Tensor storage + memory management
 - **Ops** defines operator contracts, input/output arity, accepted attributes, dtype rules, and shape inference. Graph construction invokes these schemas before creating output Values, so invalid operators fail during model construction rather than execution.
 - **Graph** represents Tensor values as data-flow edges and operator nodes as producers/consumers. Values carry shape, dtype, kind, and producer metadata; nodes carry Value inputs/outputs and typed attributes. Whole-graph validation checks table integrity, constants, producers, schemas, and registered outputs. A stable Kahn sort produces execution order and rejects cycles. Constant folding, fusion, and lifetime analysis follow later.
 - **Runtime** coordinates execution, kernel selection, value binding, memory planning, and scheduling. `ExecutionContext` owns the materialized Tensor table for one graph invocation: constants are loaded at construction, inputs are bound by the caller, and intermediate/output values are written during execution. It rejects shape/dtype mismatches and access to values that are not ready.
-- **Backend** is the hardware abstraction boundary. CPU comes first; Metal and CUDA remain optional modules.
+- **Backend** is the hardware abstraction boundary. `CpuBackend` delegates node execution to a CPU `OperatorRegistry`, which maps each `OpType` to a callable kernel without coupling `Executor` to operator implementations. Metal and CUDA remain optional modules.
 - **Compiler** is reserved for a future low-level IR, fusion, code generation, and kernel selection.
 
 ## Current scaffold decisions

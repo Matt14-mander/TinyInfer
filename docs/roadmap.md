@@ -23,8 +23,9 @@ operator arity, attributes, dtype, broadcasting, ranks, axes, and affine
 normalization parameters before automatically creating output Values.
 Whole-graph structural validation and stable topological sorting are also
 implemented. `ExecutionContext` now manages per-invocation input, constant,
-intermediate, and output Tensors with TensorSpec validation. Numerical operator
-dispatch is not connected yet.
+intermediate, and output Tensors with TensorSpec validation. The CPU Operator
+Registry connects all current graph operators to their eager kernels, and the
+Executor now performs numerical graph execution through the selected Backend.
 
 - Tensor metadata on graph values.
 - Graph validation and topological ordering.

@@ -2,6 +2,7 @@
 #include "tinyinfer/backend/backend.h"
 #include "tinyinfer/backend/cpu_backend.h"
 #include "tinyinfer/backend/cpu/matmul_kernel.h"
+#include "tinyinfer/backend/cpu/operator_registry.h"
 #include "tinyinfer/core/dtype.h"
 #include "tinyinfer/core/memory/allocator.h"
 #include "tinyinfer/core/memory/arena_allocator.h"
