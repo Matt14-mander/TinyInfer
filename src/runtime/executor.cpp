@@ -3,7 +3,8 @@
 
 namespace tinyinfer {
 void Executor::run(const Graph& graph) {
-    for (const auto& node : graph.nodes()) {
+    for (const auto node_id : graph.topological_order()) {
+        const auto& node = graph.node(node_id);
         if (!backend_.supports(node.op)) throw std::runtime_error("operator is not supported by the selected backend");
         backend_.execute(node);
     }

@@ -21,7 +21,8 @@ Current status: in progress. The Value-based graph data model and Operator
 Schema/Shape Inference layer are implemented. Graph construction validates
 operator arity, attributes, dtype, broadcasting, ranks, axes, and affine
 normalization parameters before automatically creating output Values.
-Numerical execution is not connected yet.
+Whole-graph structural validation and stable topological sorting are also
+implemented. Numerical execution is not connected yet.
 
 - Tensor metadata on graph values.
 - Graph validation and topological ordering.

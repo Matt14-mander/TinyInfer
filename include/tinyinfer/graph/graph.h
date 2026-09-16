@@ -25,6 +25,8 @@ public:
     const std::vector<ValueId>& inputs() const noexcept { return input_ids_; }
     const std::vector<ValueId>& outputs() const noexcept { return output_ids_; }
     void mark_output(ValueId id);
+    void validate() const;
+    std::vector<NodeId> topological_order() const;
 
     bool empty() const noexcept { return nodes_.empty(); }
     std::size_t size() const noexcept { return nodes_.size(); }

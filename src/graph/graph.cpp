@@ -1,7 +1,11 @@
 #include "tinyinfer/graph/graph.h"
 
 #include <algorithm>
+#include <functional>
+#include <queue>
+#include <set>
 #include <stdexcept>
+#include <unordered_set>
 #include <utility>
 
 #include "tinyinfer/ops/operator_schema.h"
@@ -101,6 +105,164 @@ void Graph::mark_output(ValueId id) {
         throw std::invalid_argument("graph output is already registered");
     }
     output_ids_.push_back(id);
+}
+
+void Graph::validate() const {
+    static_cast<void>(topological_order());
+}
+
+std::vector<NodeId> Graph::topological_order() const {
+    if (constants_.size() != values_.size()) {
+        throw std::logic_error("graph value and constant tables are inconsistent");
+    }
+    if (output_ids_.empty()) {
+        throw std::invalid_argument("graph must register at least one output");
+    }
+
+    std::unordered_set<std::string> names;
+    std::vector<bool> registered_input(values_.size(), false);
+    for (const auto input : input_ids_) {
+        if (input >= values_.size()) {
+            throw std::logic_error("graph input id is out of range");
+        }
+        if (registered_input[input]) {
+            throw std::logic_error("graph input is registered more than once");
+        }
+        registered_input[input] = true;
+    }
+
+    std::vector<bool> registered_output(values_.size(), false);
+    for (const auto output : output_ids_) {
+        if (output >= values_.size()) {
+            throw std::logic_error("graph output id is out of range");
+        }
+        if (registered_output[output]) {
+            throw std::logic_error("graph output is registered more than once");
+        }
+        registered_output[output] = true;
+    }
+
+    for (std::size_t id = 0; id < values_.size(); ++id) {
+        const auto& graph_value = values_[id];
+        if (graph_value.id != id) {
+            throw std::logic_error("graph value id does not match its table index");
+        }
+        validate_spec(graph_value.spec);
+        if (!names.insert(graph_value.name).second) {
+            throw std::logic_error("graph contains duplicate names");
+        }
+
+        switch (graph_value.kind) {
+            case ValueKind::Input:
+                if (!registered_input[id] || graph_value.producer || constants_[id]) {
+                    throw std::logic_error("graph input value metadata is inconsistent");
+                }
+                break;
+            case ValueKind::Constant:
+                if (registered_input[id] || graph_value.producer || !constants_[id]) {
+                    throw std::logic_error("graph constant value metadata is inconsistent");
+                }
+                if (constants_[id]->shape() != graph_value.spec.shape ||
+                    constants_[id]->dtype() != graph_value.spec.dtype) {
+                    throw std::logic_error("graph constant TensorSpec is inconsistent");
+                }
+                break;
+            case ValueKind::Intermediate:
+                if (registered_input[id] || !graph_value.producer || constants_[id]) {
+                    throw std::logic_error(
+                        "graph intermediate value metadata is inconsistent");
+                }
+                if (*graph_value.producer >= nodes_.size()) {
+                    throw std::logic_error("graph value producer is out of range");
+                }
+                break;
+        }
+    }
+
+    std::vector<std::size_t> indegree(nodes_.size(), 0);
+    std::vector<std::vector<NodeId>> consumers(nodes_.size());
+    std::vector<bool> produced_value(values_.size(), false);
+    for (std::size_t id = 0; id < nodes_.size(); ++id) {
+        const auto& graph_node = nodes_[id];
+        if (graph_node.id != id) {
+            throw std::logic_error("graph node id does not match its table index");
+        }
+        if (!names.insert(graph_node.name).second) {
+            throw std::logic_error("graph contains duplicate names");
+        }
+        if (graph_node.outputs.empty()) {
+            throw std::logic_error("graph node must produce at least one value");
+        }
+
+        std::vector<TensorSpec> input_specs;
+        input_specs.reserve(graph_node.inputs.size());
+        std::set<NodeId> dependencies;
+        for (const auto input : graph_node.inputs) {
+            if (input >= values_.size()) {
+                throw std::logic_error("graph node input value is out of range");
+            }
+            input_specs.push_back(values_[input].spec);
+            if (values_[input].producer) {
+                dependencies.insert(*values_[input].producer);
+            }
+        }
+
+        const auto inferred = infer_output_specs(
+            graph_node.op, input_specs, graph_node.attributes);
+        if (inferred.size() != graph_node.outputs.size()) {
+            throw std::logic_error("graph node output count violates its schema");
+        }
+        for (std::size_t index = 0; index < graph_node.outputs.size(); ++index) {
+            const auto output = graph_node.outputs[index];
+            if (output >= values_.size()) {
+                throw std::logic_error("graph node output value is out of range");
+            }
+            if (produced_value[output]) {
+                throw std::logic_error("graph value has multiple producers");
+            }
+            produced_value[output] = true;
+            if (values_[output].kind != ValueKind::Intermediate ||
+                values_[output].producer != graph_node.id ||
+                values_[output].spec != inferred[index]) {
+                throw std::logic_error(
+                    "graph node output metadata is inconsistent");
+            }
+        }
+
+        indegree[id] = dependencies.size();
+        for (const auto dependency : dependencies) {
+            if (dependency >= nodes_.size()) {
+                throw std::logic_error("graph node dependency is out of range");
+            }
+            consumers[dependency].push_back(id);
+        }
+    }
+
+    for (std::size_t id = 0; id < values_.size(); ++id) {
+        if (values_[id].kind == ValueKind::Intermediate && !produced_value[id]) {
+            throw std::logic_error("graph intermediate value has no producer");
+        }
+    }
+
+    std::priority_queue<NodeId, std::vector<NodeId>, std::greater<NodeId>> ready;
+    for (NodeId id = 0; id < nodes_.size(); ++id) {
+        if (indegree[id] == 0) ready.push(id);
+    }
+
+    std::vector<NodeId> order;
+    order.reserve(nodes_.size());
+    while (!ready.empty()) {
+        const auto id = ready.top();
+        ready.pop();
+        order.push_back(id);
+        for (const auto consumer : consumers[id]) {
+            if (--indegree[consumer] == 0) ready.push(consumer);
+        }
+    }
+    if (order.size() != nodes_.size()) {
+        throw std::invalid_argument("graph contains a cycle");
+    }
+    return order;
 }
 
 void Graph::validate_spec(const TensorSpec& spec) {

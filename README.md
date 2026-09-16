@@ -2,14 +2,14 @@
 
 TinyInfer is a lightweight AI inference runtime built for learning and experimentation. Its long-term scope spans tensors, computation graphs, execution, kernel optimization, quantization, and hardware backends.
 
-The repository has completed **Phase 0** and is now at the end of **Phase 1 — Tensor Engine**. TinyInfer can execute a two-layer MLP through its eager Tensor API and now includes explicit Tensor layout and storage abstractions, views and strided iteration, Elementwise and Reduction kernels, normalization operators, and an optimized CPU MatMul path. The computation graph and executor still exist only as an architectural scaffold; numerical graph execution belongs to Phase 2 and has not started yet.
+The repository has completed **Phase 0** and is now developing **Phase 2 — Graph Execution Engine**. TinyInfer can execute a two-layer MLP through its eager Tensor API and includes explicit Tensor layout and storage abstractions, views and strided iteration, Elementwise and Reduction kernels, normalization operators, and an optimized CPU MatMul path. The graph layer now has a complete data model, operator schema inference, whole-graph validation, and stable topological ordering; numerical graph execution is the next step.
 
 ## Current development stage
 
 ```text
 Phase 0  Learning Prototype       Complete
 Phase 1  Tensor Runtime           Substantially complete
-Phase 2  Graph Execution Engine   In progress (schema and inference complete)
+Phase 2  Graph Execution Engine   In progress (validation and sorting complete)
 Phase 3  Model Runtime            Not started
 Phase 4  Optimization Engine      Partially explored through CPU MatMul
 Phase 5  Hardware Backend         Not started
@@ -27,8 +27,9 @@ Tensor
 ```
 
 Graph values and operator nodes can be assembled with Tensor metadata, constants,
-typed attributes, producers, and registered outputs. `Executor` and `CpuBackend`
-are not yet connected to those values or numerical kernels.
+typed attributes, producers, and registered outputs. Graph validation checks their
+integrity before a stable topological order is produced. `Executor` consumes this
+order, but it is not yet connected to graph values or numerical kernels.
 
 Operator outputs are inferred automatically during graph construction. The
 current schemas cover Add, Subtract, Multiply, MatMul, ReLU, GELU, Softmax, and
@@ -39,7 +40,7 @@ LayerNorm, including broadcasting, dtype, rank, axis, and attribute validation.
 | Milestone | Scope |
 | --- | --- |
 | v0.1 Tensor Engine | Substantially complete: Tensor, eager operators, CPU execution, MLP inference |
-| v0.2 Graph Runtime | In progress: data model and shape inference complete; graph validation and execution next |
+| v0.2 Graph Runtime | In progress: graph model, inference, validation, and sorting complete; execution next |
 | v0.3 Model Runtime | Planned: ONNX import, graph optimization, model benchmarks |
 | v0.4 Accelerated | Partially explored: CPU SIMD MatMul; Metal, CUDA, and quantization remain planned |
 
@@ -118,7 +119,7 @@ TinyInfer is not yet an executable graph runtime or model runtime. `Graph` now m
 
 ## Next milestone
 
-The active milestone is **v0.2 Graph Runtime**. Graph Values and Operator
-Schema/Shape Inference are now represented. The next slice is whole-graph
-validation and topological sorting, followed by an `ExecutionContext`, CPU
-operator dispatch, and an end-to-end graph version of the existing MLP.
+The active milestone is **v0.2 Graph Runtime**. Graph Values, Operator
+Schema/Shape Inference, whole-graph validation, and stable topological sorting
+are now implemented. The next slice is an `ExecutionContext`, followed by CPU
+operator dispatch and an end-to-end graph version of the existing MLP.

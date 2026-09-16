@@ -13,6 +13,7 @@ int main() {
     const tinyinfer::TensorSpec spec{{2, 3}, tinyinfer::DataType::Float32};
     const auto input = graph.add_input("input", spec);
     const auto relu = graph.add_node("relu", tinyinfer::OpType::ReLU, {input});
+    graph.mark_output(graph.node(relu).outputs.front());
     assert(graph.size() == 1);
     assert(graph.node(relu).inputs.front() == input);
 
