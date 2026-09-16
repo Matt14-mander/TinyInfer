@@ -5,6 +5,11 @@
 contiguous fast path, and fall back to TensorIterator offsets for broadcasting
 or non-contiguous inputs.
 
+`operator_schema.cpp` defines graph-time contracts for the current operators:
+input arity, output count, accepted attributes, FP32 requirements, and output
+TensorSpec inference. Graph construction calls this layer before output Values
+are created.
+
 MatMul is split into operator validation and CPU kernels. The CPU layer keeps a
 Tensor-indexed reference kernel, a direct stride-aware kernel, and a
 cache-blocked kernel, and a reusable packed-RHS SIMD micro-kernel. The public
@@ -24,4 +29,5 @@ kernel directly to amortize packing.
 - LayerNorm over the final dimension, with optional affine weight and bias
 - Linear, composed from MatMul and Add
 
-Phase 1 will split operator contracts, shape inference, and backend-specific kernels as those responsibilities become necessary.
+Phase 2 now uses these contracts to validate nodes and infer output metadata
+during graph construction. Numerical dispatch remains a later Phase 2 step.

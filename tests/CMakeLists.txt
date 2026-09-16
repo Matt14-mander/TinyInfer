@@ -77,3 +77,7 @@ add_test(NAME tinyinfer_matmul_kernel_tests COMMAND tinyinfer_matmul_kernel_test
 add_executable(tinyinfer_graph_data_model_tests graph_data_model_test.cpp)
 target_link_libraries(tinyinfer_graph_data_model_tests PRIVATE TinyInfer::tinyinfer)
 add_test(NAME tinyinfer_graph_data_model_tests COMMAND tinyinfer_graph_data_model_tests)
+
+add_executable(tinyinfer_operator_schema_tests operator_schema_test.cpp)
+target_link_libraries(tinyinfer_operator_schema_tests PRIVATE TinyInfer::tinyinfer)
+add_test(NAME tinyinfer_operator_schema_tests COMMAND tinyinfer_operator_schema_tests)

@@ -13,7 +13,6 @@ public:
     ValueId add_constant(std::string name, Tensor value);
     NodeId add_node(std::string name, OpType op,
                     std::vector<ValueId> inputs,
-                    std::vector<TensorSpec> output_specs,
                     NodeAttributes attributes = {});
 
     const Node& node(NodeId id) const;

@@ -9,7 +9,7 @@ The repository has completed **Phase 0** and is now at the end of **Phase 1 — 
 ```text
 Phase 0  Learning Prototype       Complete
 Phase 1  Tensor Runtime           Substantially complete
-Phase 2  Graph Execution Engine   In progress (data model complete)
+Phase 2  Graph Execution Engine   In progress (schema and inference complete)
 Phase 3  Model Runtime            Not started
 Phase 4  Optimization Engine      Partially explored through CPU MatMul
 Phase 5  Hardware Backend         Not started
@@ -30,12 +30,16 @@ Graph values and operator nodes can be assembled with Tensor metadata, constants
 typed attributes, producers, and registered outputs. `Executor` and `CpuBackend`
 are not yet connected to those values or numerical kernels.
 
+Operator outputs are inferred automatically during graph construction. The
+current schemas cover Add, Subtract, Multiply, MatMul, ReLU, GELU, Softmax, and
+LayerNorm, including broadcasting, dtype, rank, axis, and attribute validation.
+
 ## Roadmap
 
 | Milestone | Scope |
 | --- | --- |
 | v0.1 Tensor Engine | Substantially complete: Tensor, eager operators, CPU execution, MLP inference |
-| v0.2 Graph Runtime | In progress: data model complete; validation, execution, and memory lifetime next |
+| v0.2 Graph Runtime | In progress: data model and shape inference complete; graph validation and execution next |
 | v0.3 Model Runtime | Planned: ONNX import, graph optimization, model benchmarks |
 | v0.4 Accelerated | Partially explored: CPU SIMD MatMul; Metal, CUDA, and quantization remain planned |
 
@@ -114,8 +118,7 @@ TinyInfer is not yet an executable graph runtime or model runtime. `Graph` now m
 
 ## Next milestone
 
-The active milestone is **v0.2 Graph Runtime**. Graph Values, Tensor metadata,
-constants, producers, node inputs/outputs, attributes, and graph outputs are now
-represented. The next slice is operator schemas and shape inference, followed
-by graph validation and topological sorting, an `ExecutionContext`, CPU
+The active milestone is **v0.2 Graph Runtime**. Graph Values and Operator
+Schema/Shape Inference are now represented. The next slice is whole-graph
+validation and topological sorting, followed by an `ExecutionContext`, CPU
 operator dispatch, and an end-to-end graph version of the existing MLP.

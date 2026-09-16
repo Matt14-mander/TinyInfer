@@ -12,8 +12,7 @@ int main() {
     tinyinfer::Graph graph;
     const tinyinfer::TensorSpec spec{{2, 3}, tinyinfer::DataType::Float32};
     const auto input = graph.add_input("input", spec);
-    const auto relu = graph.add_node("relu", tinyinfer::OpType::ReLU,
-                                     {input}, {spec});
+    const auto relu = graph.add_node("relu", tinyinfer::OpType::ReLU, {input});
     assert(graph.size() == 1);
     assert(graph.node(relu).inputs.front() == input);
 
@@ -25,7 +24,7 @@ int main() {
     assert(rejected_unimplemented_op);
 
     bool rejected = false;
-    try { graph.add_node("invalid", tinyinfer::OpType::Add, {99}, {spec}); }
+    try { graph.add_node("invalid", tinyinfer::OpType::Add, {99}); }
     catch (const std::invalid_argument&) { rejected = true; }
     assert(rejected);
     return 0;

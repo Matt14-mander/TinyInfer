@@ -4,6 +4,8 @@
 #include <stdexcept>
 #include <utility>
 
+#include "tinyinfer/ops/operator_schema.h"
+
 namespace tinyinfer {
 
 ValueId Graph::add_input(std::string name, TensorSpec spec) {
@@ -30,17 +32,17 @@ ValueId Graph::add_constant(std::string name, Tensor tensor) {
 
 NodeId Graph::add_node(std::string name, OpType op,
                        std::vector<ValueId> inputs,
-                       std::vector<TensorSpec> output_specs,
                        NodeAttributes attributes) {
     require_unique_name(name);
-    if (output_specs.empty()) {
-        throw std::invalid_argument("graph node must produce at least one value");
-    }
+    std::vector<TensorSpec> input_specs;
+    input_specs.reserve(inputs.size());
     for (const auto input : inputs) {
         if (input >= values_.size()) {
             throw std::invalid_argument("graph input value does not exist");
         }
+        input_specs.push_back(values_[input].spec);
     }
+    auto output_specs = infer_output_specs(op, input_specs, attributes);
     for (const auto& spec : output_specs) validate_spec(spec);
     for (std::size_t index = 0; index < output_specs.size(); ++index) {
         require_unique_name(name + ":" + std::to_string(index));
