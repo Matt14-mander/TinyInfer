@@ -18,4 +18,5 @@
 #include "tinyinfer/ops/kernel_runner.h"
 #include "tinyinfer/ops/matmul.h"
 #include "tinyinfer/ops/operator_schema.h"
+#include "tinyinfer/runtime/execution_context.h"
 #include "tinyinfer/runtime/executor.h"

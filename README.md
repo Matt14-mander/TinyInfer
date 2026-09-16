@@ -120,6 +120,6 @@ TinyInfer is not yet an executable graph runtime or model runtime. `Graph` now m
 ## Next milestone
 
 The active milestone is **v0.2 Graph Runtime**. Graph Values, Operator
-Schema/Shape Inference, whole-graph validation, and stable topological sorting
-are now implemented. The next slice is an `ExecutionContext`, followed by CPU
+Schema/Shape Inference, whole-graph validation, stable topological sorting, and
+the per-invocation `ExecutionContext` are now implemented. The next slice is CPU
 operator dispatch and an end-to-end graph version of the existing MLP.

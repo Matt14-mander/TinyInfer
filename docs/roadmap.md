@@ -22,7 +22,9 @@ Schema/Shape Inference layer are implemented. Graph construction validates
 operator arity, attributes, dtype, broadcasting, ranks, axes, and affine
 normalization parameters before automatically creating output Values.
 Whole-graph structural validation and stable topological sorting are also
-implemented. Numerical execution is not connected yet.
+implemented. `ExecutionContext` now manages per-invocation input, constant,
+intermediate, and output Tensors with TensorSpec validation. Numerical operator
+dispatch is not connected yet.
 
 - Tensor metadata on graph values.
 - Graph validation and topological ordering.

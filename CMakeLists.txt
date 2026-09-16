@@ -19,6 +19,7 @@ add_library(tinyinfer
     src/ops/matmul.cpp
     src/ops/operator_schema.cpp
     src/graph/graph.cpp
+    src/runtime/execution_context.cpp
     src/runtime/executor.cpp
     src/backend/cpu/cpu_backend.cpp
     src/backend/cpu/matmul_kernel.cpp
