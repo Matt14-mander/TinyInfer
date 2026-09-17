@@ -18,8 +18,8 @@ Exit criterion: run the Phase 0 MLP through the public Tensor API.
 
 ## Phase 2 — v0.2 Graph Runtime
 
-Current status: in progress. The Value-based graph data model and Operator
-Schema/Shape Inference layer are implemented. Graph construction validates
+Current status: complete for the v0.2 MVP. The Value-based graph data model and
+Operator Schema/Shape Inference layer are implemented. Graph construction validates
 operator arity, attributes, dtype, broadcasting, ranks, axes, and affine
 normalization parameters before automatically creating output Values.
 Whole-graph structural validation and stable topological sorting are also
@@ -33,11 +33,16 @@ and is checked against the eager implementation.
 - Tensor metadata on graph values.
 - Graph validation and topological ordering.
 - Executor, operator registry, and error reporting.
-- Initial arena allocator and observable tensor lifetimes.
+- End-to-end Graph execution of the Phase 0 MLP.
 
 Exit criterion: express and execute the MLP as a graph.
 
+Tensor lifetime analysis, memory planning, and buffer reuse are intentionally
+deferred to Phase 4 rather than blocking the model-runtime milestone.
+
 ## Phase 3 — v0.3 Model Runtime
+
+Current status: ready to start.
 
 - A deliberately small ONNX importer, limited to one selected model.
 - Conv and primitives needed for attention.

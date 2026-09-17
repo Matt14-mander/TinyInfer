@@ -2,15 +2,15 @@
 
 TinyInfer is a lightweight AI inference runtime built for learning and experimentation. Its long-term scope spans tensors, computation graphs, execution, kernel optimization, quantization, and hardware backends.
 
-The repository has completed **Phase 0** and is now developing **Phase 2 — Graph Execution Engine**. TinyInfer can execute a two-layer MLP through its eager Tensor API and includes explicit Tensor layout and storage abstractions, views and strided iteration, Elementwise and Reduction kernels, normalization operators, and an optimized CPU MatMul path. The graph layer now has a complete data model, operator schema inference, validation, stable topological ordering, an execution context, and CPU operator dispatch.
+TinyInfer has completed the MVP scope of **Phase 2 — Graph Execution Engine**. It can execute the Phase 0 two-layer MLP through both the eager Tensor API and the Graph Runtime. The runtime now includes explicit Tensor layout and storage abstractions, reusable CPU kernels, a Value-based graph, schema inference, validation, stable topological ordering, per-invocation execution state, and CPU operator dispatch. The project is ready to begin **Phase 3 — Model Runtime**.
 
 ## Current development stage
 
 ```text
 Phase 0  Learning Prototype       Complete
-Phase 1  Tensor Runtime           Substantially complete
-Phase 2  Graph Execution Engine   In progress (CPU graph execution connected)
-Phase 3  Model Runtime            Not started
+Phase 1  Tensor Runtime           Complete (v0.1 scope)
+Phase 2  Graph Execution Engine   Complete (v0.2 MVP scope)
+Phase 3  Model Runtime            Ready to start
 Phase 4  Optimization Engine      Partially explored through CPU MatMul
 Phase 5  Hardware Backend         Not started
 Phase 6  ML Compiler Direction    Not started
@@ -37,8 +37,8 @@ LayerNorm, including broadcasting, dtype, rank, axis, and attribute validation.
 
 | Milestone | Scope |
 | --- | --- |
-| v0.1 Tensor Engine | Substantially complete: Tensor, eager operators, CPU execution, MLP inference |
-| v0.2 Graph Runtime | In progress: graph model, validation, execution context, and CPU dispatch complete |
+| v0.1 Tensor Engine | Complete: Tensor, eager operators, CPU execution, MLP inference |
+| v0.2 Graph Runtime | Complete (MVP): graph model, validation, execution context, CPU dispatch, Graph MLP |
 | v0.3 Model Runtime | Planned: ONNX import, graph optimization, model benchmarks |
 | v0.4 Accelerated | Partially explored: CPU SIMD MatMul; Metal, CUDA, and quantization remain planned |
 
@@ -112,7 +112,7 @@ cmake --build build --target tinyinfer_matmul_benchmark
 
 ## Current boundary
 
-TinyInfer is now an executable CPU graph runtime, but it is not yet a model runtime. The current Executor materializes every intermediate Tensor for the entire invocation and does not yet perform lifetime analysis or buffer reuse. There is no ONNX importer, graph optimizer, quantization pipeline, Metal backend, or CUDA backend yet.
+TinyInfer is now an executable CPU graph runtime, but it is not yet a model runtime. Phase 2 deliberately stops at a correctness-first execution path: the Executor materializes every intermediate Tensor for the entire invocation and does not perform lifetime analysis or buffer reuse yet. Those optimizations are deferred to Phase 4. There is no ONNX importer, graph optimizer, quantization pipeline, Metal backend, or CUDA backend yet.
 
 ## Design principles
 
@@ -124,8 +124,7 @@ TinyInfer is now an executable CPU graph runtime, but it is not yet a model runt
 
 ## Next milestone
 
-The active milestone is **v0.2 Graph Runtime**. Graph Values, Operator
-Schema/Shape Inference, whole-graph validation, stable topological sorting, and
-the per-invocation `ExecutionContext`, CPU operator dispatch, and the end-to-end
-Graph MLP are now implemented. The next slice is observable Tensor lifetimes,
-followed by memory planning and buffer reuse.
+The next milestone is **v0.3 Model Runtime**. Development will begin with a
+deliberately restricted ONNX importer: model inputs, outputs, initializers, and
+the operators required by one small MLP. The imported model must execute through
+the existing Graph Runtime and match a trusted reference implementation.

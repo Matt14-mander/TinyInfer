@@ -1,7 +1,17 @@
 /build*/
 /cmake-build-*/
+/out/
 /.cache/
 /compile_commands.json
+CMakeCache.txt
+CMakeFiles/
+CTestTestfile.cmake
+cmake_install.cmake
+Testing/
+.ninja_deps
+.ninja_log
+build.ninja
+rules.ninja
 .DS_Store
 *.o
 *.a
