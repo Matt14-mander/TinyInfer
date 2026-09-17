@@ -10,6 +10,6 @@ int main() {
     tinyinfer::CpuBackend cpu;
     std::cout << "TinyInfer scaffold: tensor has " << input.numel() << " elements, graph has "
               << graph.size() << " nodes, backend is " << cpu.name() << ".\n";
-    std::cout << "Numerical graph execution will be added in Phase 2.\n";
+    std::cout << "See tinyinfer_phase0_graph_mlp for numerical graph execution.\n";
     return 0;
 }

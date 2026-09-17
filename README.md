@@ -83,6 +83,12 @@ Run the Phase 0 MLP:
 ./build/examples/tinyinfer_phase0_mlp
 ```
 
+Run the same MLP through the Graph Runtime:
+
+```bash
+./build/examples/tinyinfer_phase0_graph_mlp
+```
+
 Build and run the optional MatMul benchmark:
 
 ```bash
@@ -101,11 +107,12 @@ cmake --build build --target tinyinfer_matmul_benchmark
 - **Elementwise operators:** Add, Sub, Mul, ReLU, and GELU.
 - **Reduction and normalization:** `ReductionIterator`, ReduceSum, ReduceMax, arbitrary-axis Softmax, and LayerNorm with optional affine weight and bias.
 - **CPU MatMul:** reference, direct stride-aware, cache-blocked, reusable RHS packing, and AVX2/SSE2/ARM NEON micro-kernel paths with scalar fallback.
-- **Verification:** focused unit tests, an eager MLP integration test, sanitizer validation, and a correctness-checking MatMul benchmark.
+- **Graph runtime:** Value-based graphs, schema inference, validation, stable topological sorting, `ExecutionContext`, CPU Operator Registry, and end-to-end numerical execution.
+- **Verification:** focused unit tests, eager and Graph MLP integration tests, sanitizer validation, and a correctness-checking MatMul benchmark.
 
 ## Current boundary
 
-TinyInfer is not yet an executable graph runtime or model runtime. `Graph` now models Tensor values, constants, producers, node inputs/outputs, and attributes, but `Executor` and `Backend` do not execute those values yet. There is no ONNX importer, graph optimizer, memory planner, quantization pipeline, Metal backend, or CUDA backend yet.
+TinyInfer is now an executable CPU graph runtime, but it is not yet a model runtime. The current Executor materializes every intermediate Tensor for the entire invocation and does not yet perform lifetime analysis or buffer reuse. There is no ONNX importer, graph optimizer, quantization pipeline, Metal backend, or CUDA backend yet.
 
 ## Design principles
 
@@ -119,6 +126,6 @@ TinyInfer is not yet an executable graph runtime or model runtime. `Graph` now m
 
 The active milestone is **v0.2 Graph Runtime**. Graph Values, Operator
 Schema/Shape Inference, whole-graph validation, stable topological sorting, and
-the per-invocation `ExecutionContext`, and CPU operator dispatch are now
-implemented. The next slice is an end-to-end graph version of the existing MLP,
-followed by observable Tensor lifetimes and memory planning.
+the per-invocation `ExecutionContext`, CPU operator dispatch, and the end-to-end
+Graph MLP are now implemented. The next slice is observable Tensor lifetimes,
+followed by memory planning and buffer reuse.

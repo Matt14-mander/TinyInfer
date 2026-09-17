@@ -4,7 +4,8 @@
 
 Build a hand-written `Linear -> ReLU -> Linear -> Softmax` inference path and verify every operation with known inputs.
 
-Current status: complete as an eager FP32 reference path. The implementation deliberately uses readable loops and does not go through Graph or Backend dispatch.
+Current status: complete as both an eager FP32 reference path and an equivalent
+Graph Runtime path. Both produce the same checked logits and probabilities.
 
 ## Phase 1 — v0.1 Tensor Engine
 
@@ -26,6 +27,8 @@ implemented. `ExecutionContext` now manages per-invocation input, constant,
 intermediate, and output Tensors with TensorSpec validation. The CPU Operator
 Registry connects all current graph operators to their eager kernels, and the
 Executor now performs numerical graph execution through the selected Backend.
+The Phase 0 MLP runs end to end through two Linear stages, ReLU, and Softmax,
+and is checked against the eager implementation.
 
 - Tensor metadata on graph values.
 - Graph validation and topological ordering.

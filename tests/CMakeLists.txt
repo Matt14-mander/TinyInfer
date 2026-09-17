@@ -93,3 +93,7 @@ add_test(NAME tinyinfer_execution_context_tests COMMAND tinyinfer_execution_cont
 add_executable(tinyinfer_cpu_operator_registry_tests cpu_operator_registry_test.cpp)
 target_link_libraries(tinyinfer_cpu_operator_registry_tests PRIVATE TinyInfer::tinyinfer)
 add_test(NAME tinyinfer_cpu_operator_registry_tests COMMAND tinyinfer_cpu_operator_registry_tests)
+
+add_executable(tinyinfer_graph_mlp_tests graph_mlp_test.cpp)
+target_link_libraries(tinyinfer_graph_mlp_tests PRIVATE TinyInfer::tinyinfer)
+add_test(NAME tinyinfer_graph_mlp_tests COMMAND tinyinfer_graph_mlp_tests)
