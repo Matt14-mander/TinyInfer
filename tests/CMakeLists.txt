@@ -97,3 +97,11 @@ add_test(NAME tinyinfer_cpu_operator_registry_tests COMMAND tinyinfer_cpu_operat
 add_executable(tinyinfer_graph_mlp_tests graph_mlp_test.cpp)
 target_link_libraries(tinyinfer_graph_mlp_tests PRIVATE TinyInfer::tinyinfer)
 add_test(NAME tinyinfer_graph_mlp_tests COMMAND tinyinfer_graph_mlp_tests)
+
+add_executable(tinyinfer_onnx_importer_tests onnx_importer_test.cpp)
+target_link_libraries(tinyinfer_onnx_importer_tests PRIVATE TinyInfer::tinyinfer)
+add_test(NAME tinyinfer_onnx_importer_tests COMMAND tinyinfer_onnx_importer_tests)
+
+add_executable(tinyinfer_protobuf_model_parser_tests protobuf_model_parser_test.cpp)
+target_link_libraries(tinyinfer_protobuf_model_parser_tests PRIVATE TinyInfer::tinyinfer)
+add_test(NAME tinyinfer_protobuf_model_parser_tests COMMAND tinyinfer_protobuf_model_parser_tests)

@@ -19,6 +19,10 @@ add_library(tinyinfer
     src/ops/matmul.cpp
     src/ops/operator_schema.cpp
     src/graph/graph.cpp
+    src/model/model.cpp
+    src/model/onnx/operator_registry.cpp
+    src/model/onnx/onnx_importer.cpp
+    src/model/onnx/protobuf_model_parser.cpp
     src/runtime/execution_context.cpp
     src/runtime/executor.cpp
     src/backend/cpu/cpu_backend.cpp
