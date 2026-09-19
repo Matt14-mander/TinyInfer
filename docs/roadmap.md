@@ -47,8 +47,9 @@ bindings, lightweight ONNX model description, operator translation registry,
 and dependency-resolving Graph importer are implemented. An in-memory ONNX-style
 MLP imports and executes with the expected output. A built-in minimal protobuf
 reader now loads restricted `.onnx` files directly and decodes static Float32,
-Float16, Int8, and Int32 TensorProto data. A checked real-file model fixture and
-broader ONNX compatibility are the next slice.
+Float16, Int8, and Int32 TensorProto data. A protobuf-generated MLP fixture now
+verifies the common Gemm `transB=1` export pattern end to end. Broader ONNX
+compatibility and importer diagnostics are the next slice.
 
 - A deliberately small ONNX importer, limited to one selected model.
 - Conv and primitives needed for attention.

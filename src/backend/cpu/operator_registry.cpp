@@ -60,6 +60,31 @@ OperatorRegistry::OperatorRegistry() {
                      ops::matmul(input(node, context, 0),
                                  input(node, context, 1)));
     });
+    register_kernel(OpType::Gemm, [](const Node& node, ExecutionContext& context) {
+        const auto trans_a = integer_attribute(node, "transA", 0);
+        const auto trans_b = integer_attribute(node, "transB", 0);
+        const auto alpha = float_attribute(node, "alpha", 1.0F);
+        const auto beta = float_attribute(node, "beta", 1.0F);
+
+        auto lhs = input(node, context, 0);
+        auto rhs = input(node, context, 1);
+        if (trans_a != 0) lhs.transpose(0, 1);
+        if (trans_b != 0) rhs.transpose(0, 1);
+        auto output = ops::matmul(lhs, rhs);
+        if (alpha != 1.0F) {
+            output = ops::mul(
+                output, Tensor::from_vector(Shape{}, std::vector<float>{alpha}));
+        }
+        if (node.inputs.size() == 3) {
+            auto bias = input(node, context, 2);
+            if (beta != 1.0F) {
+                bias = ops::mul(
+                    bias, Tensor::from_vector(Shape{}, std::vector<float>{beta}));
+            }
+            output = ops::add(output, bias);
+        }
+        store_output(node, context, std::move(output));
+    });
     register_kernel(OpType::ReLU, [](const Node& node, ExecutionContext& context) {
         store_output(node, context, ops::relu(input(node, context, 0)));
     });

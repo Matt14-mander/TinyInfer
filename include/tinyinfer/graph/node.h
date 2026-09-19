@@ -9,7 +9,17 @@
 #include "tinyinfer/graph/value.h"
 
 namespace tinyinfer {
-enum class OpType { Add, Multiply, Subtract, MatMul, ReLU, GELU, Softmax, LayerNorm };
+enum class OpType {
+    Add,
+    Multiply,
+    Subtract,
+    MatMul,
+    Gemm,
+    ReLU,
+    GELU,
+    Softmax,
+    LayerNorm
+};
 using AttributeValue = std::variant<std::int64_t, float, bool, std::string,
                                     std::vector<std::int64_t>>;
 using NodeAttributes = std::map<std::string, AttributeValue>;

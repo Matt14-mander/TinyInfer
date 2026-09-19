@@ -19,6 +19,7 @@ OperatorRegistry::OperatorRegistry() {
     register_translator("Sub", direct(OpType::Subtract));
     register_translator("Mul", direct(OpType::Multiply));
     register_translator("MatMul", direct(OpType::MatMul));
+    register_translator("Gemm", direct(OpType::Gemm));
     register_translator("Relu", direct(OpType::ReLU));
     register_translator("Gelu", direct(OpType::GELU));
     register_translator("Softmax", direct(OpType::Softmax));

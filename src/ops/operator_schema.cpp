@@ -13,6 +13,12 @@ const OperatorSchema kAdd{OpType::Add, "Add", 2, 2, 1, {}};
 const OperatorSchema kMultiply{OpType::Multiply, "Multiply", 2, 2, 1, {}};
 const OperatorSchema kSubtract{OpType::Subtract, "Subtract", 2, 2, 1, {}};
 const OperatorSchema kMatMul{OpType::MatMul, "MatMul", 2, 2, 1, {}};
+const OperatorSchema kGemm{
+    OpType::Gemm, "Gemm", 2, 3, 1,
+    {{"alpha", AttributeType::Float, false},
+     {"beta", AttributeType::Float, false},
+     {"transA", AttributeType::Integer, false},
+     {"transB", AttributeType::Integer, false}}};
 const OperatorSchema kReLU{OpType::ReLU, "ReLU", 1, 1, 1, {}};
 const OperatorSchema kGELU{OpType::GELU, "GELU", 1, 1, 1, {}};
 const OperatorSchema kSoftmax{
@@ -100,6 +106,7 @@ const OperatorSchema& operator_schema(OpType op) {
         case OpType::Multiply: return kMultiply;
         case OpType::Subtract: return kSubtract;
         case OpType::MatMul: return kMatMul;
+        case OpType::Gemm: return kGemm;
         case OpType::ReLU: return kReLU;
         case OpType::GELU: return kGELU;
         case OpType::Softmax: return kSoftmax;
@@ -145,6 +152,45 @@ std::vector<TensorSpec> infer_output_specs(
             }
             return {TensorSpec{{inputs[0].shape[0], inputs[1].shape[1]},
                                inputs[0].dtype}};
+
+        case OpType::Gemm: {
+            if (inputs[0].dtype != inputs[1].dtype ||
+                (inputs.size() == 3 && inputs[0].dtype != inputs[2].dtype)) {
+                throw std::invalid_argument("Gemm input dtypes must match");
+            }
+            if (inputs[0].shape.size() != 2 || inputs[1].shape.size() != 2) {
+                throw std::invalid_argument("Gemm expects rank-2 A and B inputs");
+            }
+            const auto integer_attribute = [&](const char* name) {
+                const auto iterator = attributes.find(name);
+                return iterator == attributes.end()
+                           ? std::int64_t{0}
+                           : std::get<std::int64_t>(iterator->second);
+            };
+            const auto trans_a = integer_attribute("transA");
+            const auto trans_b = integer_attribute("transB");
+            if ((trans_a != 0 && trans_a != 1) ||
+                (trans_b != 0 && trans_b != 1)) {
+                throw std::invalid_argument("Gemm transpose attributes must be 0 or 1");
+            }
+            const auto m = inputs[0].shape[trans_a == 0 ? 0 : 1];
+            const auto k_a = inputs[0].shape[trans_a == 0 ? 1 : 0];
+            const auto k_b = inputs[1].shape[trans_b == 0 ? 0 : 1];
+            const auto n = inputs[1].shape[trans_b == 0 ? 1 : 0];
+            if (k_a != k_b) {
+                throw std::invalid_argument("Gemm inner dimensions must match");
+            }
+            const TensorSpec output{{m, n}, inputs[0].dtype};
+            if (inputs.size() == 3) {
+                TensorIterator iterator(
+                    {TensorLayout(output.shape), TensorLayout(inputs[2].shape)});
+                if (iterator.shape() != output.shape) {
+                    throw std::invalid_argument(
+                        "Gemm bias must broadcast to the output shape");
+                }
+            }
+            return {output};
+        }
 
         case OpType::ReLU:
         case OpType::GELU:

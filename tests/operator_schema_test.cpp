@@ -38,6 +38,14 @@ int main() {
          TensorSpec{{3, 5}, DataType::Float32}});
     assert(product[0].shape == Shape({4, 5}));
 
+    const auto gemm = infer_output_specs(
+        OpType::Gemm,
+        {TensorSpec{{1, 2}, DataType::Float32},
+         TensorSpec{{3, 2}, DataType::Float32},
+         TensorSpec{{3}, DataType::Float32}},
+        {{"transB", std::int64_t{1}}, {"alpha", 0.5F}});
+    assert(gemm[0].shape == Shape({1, 3}));
+
     const auto unary = infer_output_specs(OpType::GELU, {matrix});
     assert(unary[0] == matrix);
     const auto softmax = infer_output_specs(
@@ -62,6 +70,13 @@ int main() {
         infer_output_specs(
             OpType::MatMul,
             {matrix, TensorSpec{{4, 2}, DataType::Float32}});
+    });
+    expect_throw<std::invalid_argument>([&] {
+        infer_output_specs(
+            OpType::Gemm,
+            {TensorSpec{{1, 2}, DataType::Float32},
+             TensorSpec{{3, 2}, DataType::Float32}},
+            {{"transB", std::int64_t{2}}});
     });
     expect_throw<std::out_of_range>([&] {
         infer_output_specs(OpType::Softmax, {matrix},

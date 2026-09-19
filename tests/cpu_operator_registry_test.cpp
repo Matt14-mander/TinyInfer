@@ -84,7 +84,7 @@ int main() {
     CpuBackend backend;
     for (const auto op : {OpType::Add, OpType::Subtract, OpType::Multiply,
                           OpType::MatMul, OpType::ReLU, OpType::GELU,
-                          OpType::Softmax, OpType::LayerNorm}) {
+                          OpType::Gemm, OpType::Softmax, OpType::LayerNorm}) {
         assert(backend.supports(op));
     }
 

@@ -105,3 +105,13 @@ add_test(NAME tinyinfer_onnx_importer_tests COMMAND tinyinfer_onnx_importer_test
 add_executable(tinyinfer_protobuf_model_parser_tests protobuf_model_parser_test.cpp)
 target_link_libraries(tinyinfer_protobuf_model_parser_tests PRIVATE TinyInfer::tinyinfer)
 add_test(NAME tinyinfer_protobuf_model_parser_tests COMMAND tinyinfer_protobuf_model_parser_tests)
+
+add_executable(tinyinfer_onnx_gemm_fixture_tests onnx_gemm_fixture_test.cpp)
+target_link_libraries(tinyinfer_onnx_gemm_fixture_tests PRIVATE TinyInfer::tinyinfer)
+target_compile_definitions(tinyinfer_onnx_gemm_fixture_tests PRIVATE
+    TINYINFER_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+add_test(NAME tinyinfer_onnx_gemm_fixture_tests COMMAND tinyinfer_onnx_gemm_fixture_tests)
+
+add_executable(tinyinfer_gemm_tests gemm_test.cpp)
+target_link_libraries(tinyinfer_gemm_tests PRIVATE TinyInfer::tinyinfer)
+add_test(NAME tinyinfer_gemm_tests COMMAND tinyinfer_gemm_tests)

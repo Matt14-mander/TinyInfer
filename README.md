@@ -30,8 +30,9 @@ integrity before a stable topological order is produced. `Executor` consumes thi
 order and dispatches nodes through the CPU registry using `ExecutionContext`.
 
 Operator outputs are inferred automatically during graph construction. The
-current schemas cover Add, Subtract, Multiply, MatMul, ReLU, GELU, Softmax, and
-LayerNorm, including broadcasting, dtype, rank, axis, and attribute validation.
+current schemas cover Add, Subtract, Multiply, MatMul, Gemm, ReLU, GELU,
+Softmax, and LayerNorm, including broadcasting, dtype, rank, axis, and attribute
+validation.
 
 ## Roadmap
 
@@ -39,7 +40,7 @@ LayerNorm, including broadcasting, dtype, rank, axis, and attribute validation.
 | --- | --- |
 | v0.1 Tensor Engine | Complete: Tensor, eager operators, CPU execution, MLP inference |
 | v0.2 Graph Runtime | Complete (MVP): graph model, validation, execution context, CPU dispatch, Graph MLP |
-| v0.3 Model Runtime | In progress: ModelLoader, protobuf parser, restricted ONNX import |
+| v0.3 Model Runtime | In progress: protobuf parser, real Gemm MLP fixture, restricted ONNX import |
 | v0.4 Accelerated | Partially explored: CPU SIMD MatMul; Metal, CUDA, and quantization remain planned |
 
 See [docs/architecture.md](docs/architecture.md) for module responsibilities,
