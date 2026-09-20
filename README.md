@@ -43,10 +43,9 @@ validation.
 | v0.3 Model Runtime | In progress: protobuf parser, real Gemm MLP fixture, restricted ONNX import |
 | v0.4 Accelerated | Partially explored: CPU SIMD MatMul; Metal, CUDA, and quantization remain planned |
 
-See [docs/architecture.md](docs/architecture.md) for module responsibilities,
-[docs/tensor.md](docs/tensor.md) for the current Tensor model,
-[docs/onnx_importer.md](docs/onnx_importer.md) for the importer boundaries, and
-[docs/roadmap.md](docs/roadmap.md) for the phased development plan.
+See the [documentation index](docs/README.md) for an overview. The current
+system design lives under `docs/architecture`, learning-oriented walkthroughs
+under `docs/tutorials`, and design rationale under `docs/decisions`.
 
 ## Repository layout
 
