@@ -43,10 +43,10 @@ What becomes easier, harder, or deliberately deferred?
 
 - [ADR-0001: Separate Buffer, Storage, and TensorLayout](0001-separate-buffer-storage-and-tensor-layout.md)
 - [ADR-0002: Deep-copy Tensors and share Storage explicitly through views](0002-deep-copy-tensors-and-share-storage-explicitly.md)
+- [ADR-0003: Centralize elementwise traversal in TensorIterator](0003-centralize-elementwise-traversal-in-tensor-iterator.md)
 
 ## Initial decision backlog
 
-- Centralize elementwise traversal in TensorIterator and kernel runners.
 - Represent graph edges as Values rather than connecting Nodes directly.
 - Separate ONNX protobuf parsing from graph import.
 - Keep Executor independent of CPU operator implementations through Backend
