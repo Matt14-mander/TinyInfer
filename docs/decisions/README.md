@@ -39,9 +39,12 @@ What other approaches were evaluated?
 What becomes easier, harder, or deliberately deferred?
 ```
 
+## Accepted decisions
+
+- [ADR-0001: Separate Buffer, Storage, and TensorLayout](0001-separate-buffer-storage-and-tensor-layout.md)
+
 ## Initial decision backlog
 
-- Separate Tensor metadata from Buffer and Storage ownership.
 - Keep Tensor copies deep while views explicitly share storage.
 - Centralize elementwise traversal in TensorIterator and kernel runners.
 - Represent graph edges as Values rather than connecting Nodes directly.

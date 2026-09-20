@@ -10,7 +10,7 @@ design rationale.
 | --- | --- | --- |
 | [Architecture](architecture/README.md) | Describes how the current system is structured and behaves. | [System architecture](architecture/architecture.md) |
 | [Tutorials](tutorials/README.md) | Builds runtime concepts step by step with code, tests, and experiments. | [Tutorial plan](tutorials/README.md) |
-| [Design decisions](decisions/README.md) | Records why important architectural choices were made and their tradeoffs. | [Decision log](decisions/README.md) |
+| [Design decisions](decisions/README.md) | Records why important architectural choices were made and their tradeoffs. | [ADR-0001](decisions/0001-separate-buffer-storage-and-tensor-layout.md) |
 
 The phased development status remains in the
 [roadmap](architecture/roadmap.md). It lives with the architecture documents
