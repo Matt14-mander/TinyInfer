@@ -55,7 +55,10 @@ covers supported execution plus explicit rejection cases. Model-level loading
 and inference benchmarking now separates file/protobuf parsing, graph import,
 ExecutionContext initialization, cold inference, and warm inference with
 correctness checks and text/JSON statistics. Stable measurements on the target
-Mac and ROG machines are the final validation step before closing v0.3.
+Mac and ROG machines are the final validation step before closing v0.3. The
+[Mac CPU v0.3 baseline](../benchmarks/mac-cpu-v0.3.md) now records three Model
+Runtime runs and the extended MatMul result; the matching ROG CPU baseline is
+next.
 
 - A deliberately small ONNX importer, limited to one selected model.
 - Conv and primitives needed for attention.
