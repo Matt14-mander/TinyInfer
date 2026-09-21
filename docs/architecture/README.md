@@ -11,6 +11,8 @@ limitations. These documents should change when the code changes.
   Tensor value semantics.
 - [ONNX importer architecture](onnx_importer.md): parsing, translation, Gemm,
   and the currently supported model subset.
+- [ONNX compatibility profile](onnx_compatibility.md): exact model envelope,
+  operator/dtype support, diagnostics, and the compatibility test matrix.
 - [Development roadmap](roadmap.md): phase status, boundaries, and exit
   criteria.
 

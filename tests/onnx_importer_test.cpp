@@ -81,6 +81,7 @@ int main() {
     using tinyinfer::Executor;
     using tinyinfer::ModelLoader;
     using tinyinfer::Tensor;
+    using tinyinfer::onnx::OnnxImportError;
     using tinyinfer::onnx::OnnxImporter;
 
     const auto source_model = make_mlp_model();
@@ -111,23 +112,23 @@ int main() {
     assert(std::fabs(probabilities.at(1) - 0.73105860F) < 1e-5F);
 
     OnnxImporter parserless;
-    expect_throw<std::runtime_error>([&] { parserless.load("model.onnx"); });
+    expect_throw<OnnxImportError>([&] { parserless.load("model.onnx"); });
 
     auto unsupported = make_mlp_model();
     unsupported.graph.nodes[1].op_type = "Conv";
-    expect_throw<std::invalid_argument>([&] {
+    expect_throw<OnnxImportError>([&] {
         parserless.import_model(unsupported);
     });
 
     auto old_opset = make_mlp_model();
     old_opset.opset_version = 11;
-    expect_throw<std::invalid_argument>([&] {
+    expect_throw<OnnxImportError>([&] {
         parserless.import_model(old_opset);
     });
 
     auto unresolved = make_mlp_model();
     unresolved.graph.nodes[1].inputs[0] = "missing";
-    expect_throw<std::invalid_argument>([&] {
+    expect_throw<OnnxImportError>([&] {
         parserless.import_model(unresolved);
     });
 }

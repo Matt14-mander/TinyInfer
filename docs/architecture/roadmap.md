@@ -48,8 +48,11 @@ and dependency-resolving Graph importer are implemented. An in-memory ONNX-style
 MLP imports and executes with the expected output. A built-in minimal protobuf
 reader now loads restricted `.onnx` files directly and decodes static Float32,
 Float16, Int8, and Int32 TensorProto data. A protobuf-generated MLP fixture now
-verifies the common Gemm `transB=1` export pattern end to end. Broader ONNX
-compatibility and importer diagnostics are the next slice.
+verifies the common Gemm `transB=1` export pattern end to end. Structured ONNX
+diagnostics now identify the failed import stage and preserve path, graph,
+node, operator, domain, and value context. A documented compatibility matrix
+covers supported execution plus explicit rejection cases. Model-level loading
+and inference benchmarks are the next slice.
 
 - A deliberately small ONNX importer, limited to one selected model.
 - Conv and primitives needed for attention.

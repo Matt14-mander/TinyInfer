@@ -1,5 +1,7 @@
 #include "tinyinfer/model/onnx/protobuf_model_parser.h"
 
+#include "tinyinfer/model/onnx/import_diagnostic.h"
+
 #include <algorithm>
 #include <cstring>
 #include <fstream>
@@ -486,14 +488,27 @@ GraphProto parse_graph(std::string_view bytes) {
                 require_wire(wire, 2, "GraphProto.node");
                 graph.nodes.push_back(parse_node(reader.bytes()));
                 break;
+            case 2:
+                require_wire(wire, 2, "GraphProto.name");
+                graph.name = std::string(reader.bytes());
+                break;
             case 5: {
                 require_wire(wire, 2, "GraphProto.initializer");
                 const auto parsed = parse_tensor(reader.bytes());
                 if (parsed.name.empty()) {
                     throw std::invalid_argument("ONNX initializer has no name");
                 }
-                graph.initializers.push_back(
-                    Initializer{parsed.name, decode_tensor(parsed)});
+                try {
+                    graph.initializers.push_back(
+                        Initializer{parsed.name, decode_tensor(parsed)});
+                } catch (const std::exception& error) {
+                    OnnxImportDiagnostic diagnostic;
+                    diagnostic.stage = OnnxImportStage::TensorDecode;
+                    diagnostic.graph_name = graph.name;
+                    diagnostic.value_name = parsed.name;
+                    diagnostic.message = error.what();
+                    throw OnnxImportError(std::move(diagnostic));
+                }
                 break;
             }
             case 11:
@@ -560,18 +575,52 @@ ModelProto parse_model(std::string_view bytes) {
 
 ModelProto ProtobufModelParser::parse(const std::filesystem::path& path) const {
     std::ifstream stream(path, std::ios::binary);
-    if (!stream) throw std::runtime_error("failed to open ONNX model: " + path.string());
+    if (!stream) {
+        OnnxImportDiagnostic diagnostic;
+        diagnostic.stage = OnnxImportStage::FileRead;
+        diagnostic.model_path = path;
+        diagnostic.message = "failed to open ONNX model";
+        throw OnnxImportError(std::move(diagnostic));
+    }
     const std::string bytes((std::istreambuf_iterator<char>(stream)),
                             std::istreambuf_iterator<char>());
     if (stream.bad()) {
-        throw std::runtime_error("failed to read ONNX model: " + path.string());
+        OnnxImportDiagnostic diagnostic;
+        diagnostic.stage = OnnxImportStage::FileRead;
+        diagnostic.model_path = path;
+        diagnostic.message = "failed to read ONNX model";
+        throw OnnxImportError(std::move(diagnostic));
     }
-    return parse_model(bytes);
+    try {
+        return parse_model(bytes);
+    } catch (const OnnxImportError& error) {
+        auto diagnostic = error.diagnostic();
+        diagnostic.model_path = path;
+        throw OnnxImportError(std::move(diagnostic));
+    } catch (const std::exception& error) {
+        OnnxImportDiagnostic diagnostic;
+        diagnostic.stage = OnnxImportStage::ProtobufParse;
+        diagnostic.model_path = path;
+        diagnostic.message = error.what();
+        throw OnnxImportError(std::move(diagnostic));
+    }
 }
 
 Tensor ProtobufModelParser::decode_tensor_proto(
     std::string_view serialized) const {
-    return decode_tensor(parse_tensor(serialized));
+    ParsedTensor parsed;
+    try {
+        parsed = parse_tensor(serialized);
+        return decode_tensor(parsed);
+    } catch (const OnnxImportError&) {
+        throw;
+    } catch (const std::exception& error) {
+        OnnxImportDiagnostic diagnostic;
+        diagnostic.stage = OnnxImportStage::TensorDecode;
+        diagnostic.value_name = parsed.name;
+        diagnostic.message = error.what();
+        throw OnnxImportError(std::move(diagnostic));
+    }
 }
 
 }  // namespace tinyinfer::onnx

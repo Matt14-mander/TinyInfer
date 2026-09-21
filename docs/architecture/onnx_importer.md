@@ -29,6 +29,14 @@ uses the built-in `ProtobufModelParser` by default while retaining the injected
 parses only the required ONNX protobuf fields, so TinyInfer does not link the
 protobuf runtime or the full ONNX source tree.
 
+Failures crossing the ONNX loading boundary are reported as
+`OnnxImportError`. Its structured diagnostic distinguishes file reading,
+protobuf parsing, TensorProto decoding, model validation, graph dependency
+import, operator translation, shape inference, and final graph validation.
+When available it also preserves model path, graph, node, operator, domain,
+and value context. The exact supported subset and negative-test contract are
+listed in the [ONNX compatibility profile](onnx_compatibility.md).
+
 The first importer slice supports one-output nodes and maps Add, Sub, Mul,
 MatMul, Gemm, Relu, Gelu, Softmax, and LayerNormalization. It imports
 initializers as Graph constants, excludes initializer-backed values from runtime inputs,

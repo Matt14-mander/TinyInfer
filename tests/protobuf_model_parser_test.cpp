@@ -9,19 +9,20 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace {
 
-template <typename Exception, typename Function>
-void expect_throw(Function&& function) {
-    bool thrown = false;
+template <typename Function>
+tinyinfer::onnx::OnnxImportDiagnostic import_error(Function&& function) {
     try {
-        function();
-    } catch (const Exception&) {
-        thrown = true;
+        std::forward<Function>(function)();
+    } catch (const tinyinfer::onnx::OnnxImportError& error) {
+        return error.diagnostic();
     }
-    assert(thrown);
+    assert(false && "expected OnnxImportError");
+    return {};
 }
 
 void append_varint(std::string& output, std::uint64_t value) {
@@ -140,6 +141,31 @@ std::string make_add_model() {
     return model;
 }
 
+std::string make_dynamic_shape_model() {
+    std::string dimension;
+    append_bytes_field(dimension, 2, "batch");
+    std::string shape;
+    append_bytes_field(shape, 1, dimension);
+    std::string tensor;
+    append_varint_field(tensor, 1, 1);
+    append_bytes_field(tensor, 2, shape);
+    std::string type;
+    append_bytes_field(type, 1, tensor);
+    std::string input;
+    append_bytes_field(input, 1, "x");
+    append_bytes_field(input, 2, type);
+
+    std::string graph;
+    append_bytes_field(graph, 2, "dynamic_graph");
+    append_bytes_field(graph, 11, input);
+    std::string opset;
+    append_varint_field(opset, 2, 17);
+    std::string model;
+    append_bytes_field(model, 7, graph);
+    append_bytes_field(model, 8, opset);
+    return model;
+}
+
 }  // namespace
 
 int main() {
@@ -148,6 +174,7 @@ int main() {
     using tinyinfer::ExecutionContext;
     using tinyinfer::Executor;
     using tinyinfer::Tensor;
+    using tinyinfer::onnx::OnnxImportStage;
     using tinyinfer::onnx::OnnxImporter;
     using tinyinfer::onnx::ProtobufModelParser;
 
@@ -172,9 +199,21 @@ int main() {
     assert(float16.at<std::uint16_t>(1) == 0xC000);
 
     auto malformed = float_tensor("bad", {2}, {1.0F}, true);
-    expect_throw<std::invalid_argument>([&] {
+    auto diagnostic = import_error([&] {
         parser.decode_tensor_proto(malformed);
     });
+    assert(diagnostic.stage == OnnxImportStage::TensorDecode);
+    assert(diagnostic.value_name == "bad");
+
+    auto external = int32_tensor(6, {7});
+    append_bytes_field(external, 8, "external_weight");
+    append_varint_field(external, 14, 1);
+    diagnostic = import_error([&] {
+        parser.decode_tensor_proto(external);
+    });
+    assert(diagnostic.stage == OnnxImportStage::TensorDecode);
+    assert(diagnostic.value_name == "external_weight");
+    assert(diagnostic.message.find("external") != std::string::npos);
 
     const auto path = std::filesystem::temp_directory_path() /
                       "tinyinfer_protobuf_model_parser_test.onnx";
@@ -201,7 +240,33 @@ int main() {
     assert(std::fabs(output.at(0) - 1.5F) < 1e-6F);
     assert(std::fabs(output.at(1) - 1.5F) < 1e-6F);
 
-    expect_throw<std::runtime_error>([&] {
+    diagnostic = import_error([&] {
         importer.load("does-not-exist.onnx");
     });
+    assert(diagnostic.stage == OnnxImportStage::FileRead);
+    assert(diagnostic.model_path == "does-not-exist.onnx");
+
+    const auto malformed_path = std::filesystem::temp_directory_path() /
+                                "tinyinfer_malformed_model.onnx";
+    {
+        std::ofstream stream(malformed_path, std::ios::binary);
+        const char truncated = static_cast<char>(0x08);
+        stream.write(&truncated, 1);
+    }
+    diagnostic = import_error([&] { importer.load(malformed_path); });
+    std::filesystem::remove(malformed_path);
+    assert(diagnostic.stage == OnnxImportStage::ProtobufParse);
+    assert(diagnostic.model_path == malformed_path);
+
+    const auto dynamic_path = std::filesystem::temp_directory_path() /
+                              "tinyinfer_dynamic_shape_model.onnx";
+    {
+        std::ofstream stream(dynamic_path, std::ios::binary);
+        const auto bytes = make_dynamic_shape_model();
+        stream.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+    }
+    diagnostic = import_error([&] { importer.load(dynamic_path); });
+    std::filesystem::remove(dynamic_path);
+    assert(diagnostic.stage == OnnxImportStage::ProtobufParse);
+    assert(diagnostic.message.find("dynamic") != std::string::npos);
 }

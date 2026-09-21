@@ -17,6 +17,7 @@
 #include "tinyinfer/graph/value.h"
 #include "tinyinfer/model/model.h"
 #include "tinyinfer/model/model_loader.h"
+#include "tinyinfer/model/onnx/import_diagnostic.h"
 #include "tinyinfer/model/onnx/model_proto.h"
 #include "tinyinfer/model/onnx/onnx_importer.h"
 #include "tinyinfer/model/onnx/operator_registry.h"

@@ -30,6 +30,7 @@ struct NodeProto {
 };
 
 struct GraphProto {
+    std::string name;
     std::vector<ValueInfo> inputs;
     std::vector<Initializer> initializers;
     std::vector<NodeProto> nodes;

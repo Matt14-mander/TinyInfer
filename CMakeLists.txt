@@ -20,6 +20,7 @@ add_library(tinyinfer
     src/ops/operator_schema.cpp
     src/graph/graph.cpp
     src/model/model.cpp
+    src/model/onnx/import_diagnostic.cpp
     src/model/onnx/operator_registry.cpp
     src/model/onnx/onnx_importer.cpp
     src/model/onnx/protobuf_model_parser.cpp
