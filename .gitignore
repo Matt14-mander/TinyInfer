@@ -17,3 +17,6 @@ rules.ninja
 *.a
 *.so
 *.dylib
+*.bench.json
+*.bench.txt
+/benchmark-results/

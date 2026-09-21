@@ -52,7 +52,10 @@ verifies the common Gemm `transB=1` export pattern end to end. Structured ONNX
 diagnostics now identify the failed import stage and preserve path, graph,
 node, operator, domain, and value context. A documented compatibility matrix
 covers supported execution plus explicit rejection cases. Model-level loading
-and inference benchmarks are the next slice.
+and inference benchmarking now separates file/protobuf parsing, graph import,
+ExecutionContext initialization, cold inference, and warm inference with
+correctness checks and text/JSON statistics. Stable measurements on the target
+Mac and ROG machines are the final validation step before closing v0.3.
 
 - A deliberately small ONNX importer, limited to one selected model.
 - Conv and primitives needed for attention.

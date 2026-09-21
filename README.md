@@ -136,6 +136,6 @@ the exact parser, importer, dtype, operator, and rejection matrix.
 The active milestone is **v0.3 Model Runtime**. `Model`, `ModelLoader`, the ONNX
 operator translation registry, dependency resolution, a built-in protobuf
 `ModelParser`, TensorProto decoding, a checked real-file Gemm MLP, structured
-import diagnostics, and a compatibility test matrix are implemented. The next
-slice is model-level loading and inference benchmarking before the v0.3
-milestone is closed.
+import diagnostics, a compatibility test matrix, and a model-level benchmark
+are implemented. Run the Release benchmark on target hardware and record a
+stable baseline before closing the v0.3 milestone.
