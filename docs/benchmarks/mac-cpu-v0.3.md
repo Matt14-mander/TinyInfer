@@ -1,6 +1,6 @@
 # Mac CPU baseline — TinyInfer v0.3
 
-- Status: Baseline candidate
+- Status: Final v0.3 baseline
 - Measurement date: 2026-09-21
 - Git commit: `da318707b1f6e5aa167cf5b57970e74a4e0480c0`
 - Branch: `main`

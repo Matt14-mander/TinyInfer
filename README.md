@@ -2,7 +2,7 @@
 
 TinyInfer is a lightweight AI inference runtime built for learning and experimentation. Its long-term scope spans tensors, computation graphs, execution, kernel optimization, quantization, and hardware backends.
 
-TinyInfer has completed the MVP scope of **Phase 2 — Graph Execution Engine** and has entered **Phase 3 — Model Runtime**. It can execute the Phase 0 two-layer MLP through both the eager Tensor API and the Graph Runtime. Phase 3 now has a format-independent `ModelLoader`, a named `Model` interface, and the dependency-free core of a deliberately restricted ONNX importer.
+TinyInfer has completed **Phase 3 — Model Runtime** and has entered **Phase 4 — Optimization Engine**. It can execute the Phase 0 two-layer MLP through both the eager Tensor API and the Graph Runtime, and it can load and execute a documented restricted ONNX model through its format-independent `ModelLoader` and named `Model` interface.
 
 ## Current development stage
 
@@ -10,8 +10,8 @@ TinyInfer has completed the MVP scope of **Phase 2 — Graph Execution Engine** 
 Phase 0  Learning Prototype       Complete
 Phase 1  Tensor Runtime           Complete (v0.1 scope)
 Phase 2  Graph Execution Engine   Complete (v0.2 MVP scope)
-Phase 3  Model Runtime            In progress (restricted .onnx loading)
-Phase 4  Optimization Engine      Partially explored through CPU MatMul
+Phase 3  Model Runtime            Complete (v0.3 restricted ONNX scope)
+Phase 4  Optimization Engine      In progress (CPU MatMul foundation)
 Phase 5  Hardware Backend         Not started
 Phase 6  ML Compiler Direction    Not started
 ```
@@ -40,8 +40,8 @@ validation.
 | --- | --- |
 | v0.1 Tensor Engine | Complete: Tensor, eager operators, CPU execution, MLP inference |
 | v0.2 Graph Runtime | Complete (MVP): graph model, validation, execution context, CPU dispatch, Graph MLP |
-| v0.3 Model Runtime | In progress: protobuf parser, real Gemm MLP fixture, restricted ONNX import |
-| v0.4 Accelerated | Partially explored: CPU SIMD MatMul; Metal, CUDA, and quantization remain planned |
+| v0.3 Model Runtime | Complete: protobuf parser, real Gemm MLP fixture, restricted ONNX import, diagnostics, compatibility profile, and Mac/ROG CPU baselines |
+| v0.4 Optimization Engine | In progress: CPU SIMD MatMul foundation; lifetime planning, fusion, threading, and quantization remain planned |
 
 See the [documentation index](docs/README.md) for an overview. The current
 system design lives under `docs/architecture`, learning-oriented walkthroughs
@@ -133,9 +133,10 @@ the exact parser, importer, dtype, operator, and rejection matrix.
 
 ## Next milestone
 
-The active milestone is **v0.3 Model Runtime**. `Model`, `ModelLoader`, the ONNX
-operator translation registry, dependency resolution, a built-in protobuf
-`ModelParser`, TensorProto decoding, a checked real-file Gemm MLP, structured
-import diagnostics, a compatibility test matrix, and a model-level benchmark
-are implemented. Run the Release benchmark on target hardware and record a
-stable baseline before closing the v0.3 milestone.
+The active milestone is **v0.4 Optimization Engine**. The initial CPU MatMul
+foundation already includes reference, stride-aware, cache-blocked, reusable
+RHS packing, and SIMD paths. The next work is lifetime analysis and buffer
+reuse, fused inference operators, shape-aware kernel selection and optional
+threading, followed by a measured Int8 quantization path. Every optimization
+must preserve the v0.3 correctness contract and be justified by reproducible
+before-and-after benchmarks.

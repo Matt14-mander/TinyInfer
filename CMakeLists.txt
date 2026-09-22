@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(TinyInfer VERSION 0.1.0 LANGUAGES CXX)
+project(TinyInfer VERSION 0.3.0 LANGUAGES CXX)
 
 option(TINYINFER_BUILD_EXAMPLES "Build TinyInfer examples" ON)
 option(TINYINFER_BUILD_TESTS "Build TinyInfer tests" ON)

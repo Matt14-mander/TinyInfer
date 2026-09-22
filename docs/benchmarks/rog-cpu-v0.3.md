@@ -1,6 +1,6 @@
 # ROG CPU baseline — TinyInfer v0.3
 
-- Status: Baseline candidate
+- Status: Final v0.3 baseline
 - Measurement date: 2026-09-22
 - Git commit: `7f94b4550732c280bc7260804fc5c7ca2922582b`
 - Branch: `main`

@@ -42,7 +42,7 @@ deferred to Phase 4 rather than blocking the model-runtime milestone.
 
 ## Phase 3 — v0.3 Model Runtime
 
-Current status: in progress. The format-independent `ModelLoader`, named `Model`
+Current status: complete for v0.3. The format-independent `ModelLoader`, named `Model`
 bindings, lightweight ONNX model description, operator translation registry,
 and dependency-resolving Graph importer are implemented. An in-memory ONNX-style
 MLP imports and executes with the expected output. A built-in minimal protobuf
@@ -54,19 +54,22 @@ node, operator, domain, and value context. A documented compatibility matrix
 covers supported execution plus explicit rejection cases. Model-level loading
 and inference benchmarking now separates file/protobuf parsing, graph import,
 ExecutionContext initialization, cold inference, and warm inference with
-correctness checks and text/JSON statistics. Stable measurements on the target
-Mac and ROG machines are the final validation step before closing v0.3. The
-[Mac CPU v0.3 baseline](../benchmarks/mac-cpu-v0.3.md) now records three Model
-Runtime runs and the extended MatMul result; the matching ROG CPU baseline is
-next.
+correctness checks and text/JSON statistics. Stable measurements are recorded
+in the [Mac CPU v0.3 baseline](../benchmarks/mac-cpu-v0.3.md) and the
+[ROG CPU v0.3 baseline](../benchmarks/rog-cpu-v0.3.md), completing the target
+hardware validation for the milestone.
 
-- A deliberately small ONNX importer, limited to one selected model.
-- Conv and primitives needed for attention.
-- Model-level correctness and latency benchmarks.
+- A deliberately small ONNX importer with a documented compatibility profile.
+- A built-in protobuf parser and checked real-file Gemm MLP fixture.
+- Model-level correctness and latency benchmarks on the target Mac and ROG CPUs.
 
 Exit criterion: import and run one documented ONNX model end to end.
 
 ## Phase 4 — Optimization Engine
+
+Current status: in progress. Reference, stride-aware, cache-blocked, reusable
+RHS packing, and SIMD MatMul paths are implemented and benchmarked. Static
+memory planning, graph-level fusion, threading, and quantization remain open.
 
 - Lifetime analysis and buffer reuse.
 - Linear + bias + activation fusion.
@@ -81,7 +84,9 @@ Stabilize capability and buffer interfaces, then add Metal and CUDA with explici
 
 ## Phase 6 — Transformer and compiler direction
 
-Add attention, KV cache management, a small Transformer-family model, and a lower-level IR only when fusion or code generation requires it.
+Add Conv and the primitives needed for attention, KV cache management, a small
+Transformer-family model, and a lower-level IR only when fusion or code
+generation requires it.
 
 ## Suggested weekly rhythm
 
