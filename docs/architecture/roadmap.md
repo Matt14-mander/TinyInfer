@@ -68,9 +68,13 @@ Exit criterion: import and run one documented ONNX model end to end.
 ## Phase 4 — Optimization Engine
 
 Current status: in progress. Reference, stride-aware, cache-blocked, reusable
-RHS packing, and SIMD MatMul paths are implemented and benchmarked. Static
-memory planning, graph-level fusion, threading, and quantization remain open.
+RHS packing, and SIMD MatMul paths are implemented and benchmarked. The first
+Graph Optimizer slice now provides GraphPass, PassManager, OptimizationResult,
+composed ValueId mapping, pass statistics, interface validation, and an
+end-to-end NoOpPass. Graph reconstruction, transforming passes, static memory
+planning, graph-level fusion, threading, and quantization remain open.
 
+- Graph reconstruction, Constant Folding, and Dead Code Elimination.
 - Lifetime analysis and buffer reuse.
 - Linear + bias + activation fusion.
 - MatMul tiling, cache blocking, SIMD, and optional threading.

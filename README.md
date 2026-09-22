@@ -112,6 +112,7 @@ cmake --build build --target tinyinfer_matmul_benchmark
 - **Reduction and normalization:** `ReductionIterator`, ReduceSum, ReduceMax, arbitrary-axis Softmax, and LayerNorm with optional affine weight and bias.
 - **CPU MatMul:** reference, direct stride-aware, cache-blocked, reusable RHS packing, and AVX2/SSE2/ARM NEON micro-kernel paths with scalar fallback.
 - **Graph runtime:** Value-based graphs, schema inference, validation, stable topological sorting, `ExecutionContext`, CPU Operator Registry, and end-to-end numerical execution.
+- **Graph optimizer foundation:** composable Graph passes, checked Model interface preservation, ValueId mapping, pass statistics, and a NoOp end-to-end pipeline.
 - **Verification:** focused unit tests, eager and Graph MLP integration tests, sanitizer validation, and a correctness-checking MatMul benchmark.
 
 ## Current boundary
@@ -135,8 +136,10 @@ the exact parser, importer, dtype, operator, and rejection matrix.
 
 The active milestone is **v0.4 Optimization Engine**. The initial CPU MatMul
 foundation already includes reference, stride-aware, cache-blocked, reusable
-RHS packing, and SIMD paths. The next work is lifetime analysis and buffer
-reuse, fused inference operators, shape-aware kernel selection and optional
-threading, followed by a measured Int8 quantization path. Every optimization
-must preserve the v0.3 correctness contract and be justified by reproducible
-before-and-after benchmarks.
+RHS packing, and SIMD paths, while the GraphPass/PassManager foundation now
+validates a complete NoOp optimization pipeline. The next work is a rebuilding
+Graph rewriter followed by Constant Folding and Dead Code Elimination, then
+lifetime analysis and buffer reuse, fused inference operators, shape-aware
+kernel selection, optional threading, and a measured Int8 path. Every
+optimization must preserve the v0.3 correctness contract and be justified by
+reproducible before-and-after benchmarks.

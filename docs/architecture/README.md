@@ -13,6 +13,8 @@ limitations. These documents should change when the code changes.
   and the currently supported model subset.
 - [ONNX compatibility profile](onnx_compatibility.md): exact model envelope,
   operator/dtype support, diagnostics, and the compatibility test matrix.
+- [Graph optimizer architecture](graph_optimizer.md): GraphPass, PassManager,
+  OptimizationResult, ValueId mapping, and pipeline invariants.
 - [Development roadmap](roadmap.md): phase status, boundaries, and exit
   criteria.
 

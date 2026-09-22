@@ -19,6 +19,9 @@ add_library(tinyinfer
     src/ops/matmul.cpp
     src/ops/operator_schema.cpp
     src/graph/graph.cpp
+    src/graph/optimizer/optimization_result.cpp
+    src/graph/optimizer/no_op_pass.cpp
+    src/graph/optimizer/pass_manager.cpp
     src/model/model.cpp
     src/model/onnx/import_diagnostic.cpp
     src/model/onnx/operator_registry.cpp
