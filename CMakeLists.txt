@@ -20,6 +20,9 @@ add_library(tinyinfer
     src/ops/operator_schema.cpp
     src/graph/graph.cpp
     src/graph/optimizer/optimization_result.cpp
+    src/graph/optimizer/graph_rewriter.cpp
+    src/graph/optimizer/constant_folding_pass.cpp
+    src/graph/optimizer/dead_code_elimination_pass.cpp
     src/graph/optimizer/no_op_pass.cpp
     src/graph/optimizer/pass_manager.cpp
     src/model/model.cpp

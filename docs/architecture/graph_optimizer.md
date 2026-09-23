@@ -72,9 +72,54 @@ The current test covers direct inference before and after the pass, a two-pass
 pipeline, an empty pipeline, interface preservation, graph structure, constant
 ownership, mapping lookup, and statistics.
 
+## GraphRewriter
+
+`GraphRewriter` is the shared reconstruction mechanism for transforming passes.
+It creates a fresh Graph, preserves every external input, copies constants only
+when a retained node needs them, and records every old-to-new ValueId. A pass
+can copy a node after its dependencies or replace one source Value with a newly
+computed constant. `finish()` registers the mapped model outputs and validates
+the reconstructed Model.
+
+This avoids erasing entries from the Graph's index-based node/value tables. A
+removed internal Value maps to `kInvalidValueId`; external inputs and outputs
+must always remain mapped.
+
+## ConstantFoldingPass
+
+Constant Folding visits nodes in topological order and tracks values whose
+Tensor contents are known. A single-output node is folded when all inputs are
+known constants and `CpuBackend` supports its operator. It is evaluated through
+the normal CPU execution path, then its output is inserted into the rewritten
+Graph as a constant.
+
+New folded constants are immediately available to later nodes, so a chain such
+as `Add(constants) -> ReLU` folds in one pass. Nodes that depend on runtime
+inputs are copied unchanged. The first implementation deliberately reuses the
+CPU operator semantics instead of maintaining a second evaluator; multi-output
+nodes and unsupported operators are left untouched.
+
+## DeadCodeEliminationPass
+
+Dead Code Elimination starts from registered model outputs and walks backwards
+through Value producers. Only nodes and dependencies reached by that traversal
+are copied. Unreachable nodes, unused constants, and dead intermediate Values
+therefore disappear, while the complete external input interface is preserved.
+
+The recommended initial pipeline is:
+
+```text
+ConstantFoldingPass -> DeadCodeEliminationPass
+```
+
+Folding may leave an earlier folded constant unused after a later node also
+folds. DCE removes those transient constants as well as pre-existing dead
+branches. Tests cover cascading folding, dead runtime-dependent branches,
+ValueId-map composition, constant-only graph outputs, numerical equivalence,
+and a no-change second optimization run.
+
 ## Next extension
 
-The next slice is a reusable Graph reconstruction helper. It will copy inputs
-and constants, visit nodes in topological order, and maintain the old-to-new
-ValueId map used by Constant Folding and Dead Code Elimination. Stable vector
-IDs will not be edited in place.
+The next optimizer slice is Tensor lifetime analysis and reusable execution
+buffers. It should consume the already simplified Graph and preserve the same
+model-interface, mapping, statistics, and numerical-correctness contracts.

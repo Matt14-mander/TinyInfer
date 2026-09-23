@@ -11,7 +11,7 @@ Phase 0  Learning Prototype       Complete
 Phase 1  Tensor Runtime           Complete (v0.1 scope)
 Phase 2  Graph Execution Engine   Complete (v0.2 MVP scope)
 Phase 3  Model Runtime            Complete (v0.3 restricted ONNX scope)
-Phase 4  Optimization Engine      In progress (CPU MatMul foundation)
+Phase 4  Optimization Engine      In progress (graph simplification + CPU MatMul)
 Phase 5  Hardware Backend         Not started
 Phase 6  ML Compiler Direction    Not started
 ```
@@ -112,7 +112,7 @@ cmake --build build --target tinyinfer_matmul_benchmark
 - **Reduction and normalization:** `ReductionIterator`, ReduceSum, ReduceMax, arbitrary-axis Softmax, and LayerNorm with optional affine weight and bias.
 - **CPU MatMul:** reference, direct stride-aware, cache-blocked, reusable RHS packing, and AVX2/SSE2/ARM NEON micro-kernel paths with scalar fallback.
 - **Graph runtime:** Value-based graphs, schema inference, validation, stable topological sorting, `ExecutionContext`, CPU Operator Registry, and end-to-end numerical execution.
-- **Graph optimizer foundation:** composable Graph passes, checked Model interface preservation, ValueId mapping, pass statistics, and a NoOp end-to-end pipeline.
+- **Graph optimization:** composable passes, checked Model interface preservation, Graph reconstruction, ValueId-map composition, pass statistics, cascading Constant Folding, and output-driven Dead Code Elimination.
 - **Verification:** focused unit tests, eager and Graph MLP integration tests, sanitizer validation, and a correctness-checking MatMul benchmark.
 
 ## Current boundary
@@ -136,10 +136,10 @@ the exact parser, importer, dtype, operator, and rejection matrix.
 
 The active milestone is **v0.4 Optimization Engine**. The initial CPU MatMul
 foundation already includes reference, stride-aware, cache-blocked, reusable
-RHS packing, and SIMD paths, while the GraphPass/PassManager foundation now
-validates a complete NoOp optimization pipeline. The next work is a rebuilding
-Graph rewriter followed by Constant Folding and Dead Code Elimination, then
-lifetime analysis and buffer reuse, fused inference operators, shape-aware
-kernel selection, optional threading, and a measured Int8 path. Every
+RHS packing, and SIMD paths. The GraphPass/PassManager pipeline now includes a
+rebuilding GraphRewriter, cascading Constant Folding, and output-driven Dead
+Code Elimination with composed ValueId mappings. The next work is lifetime
+analysis and buffer reuse, fused inference operators, shape-aware kernel
+selection, optional threading, and a measured Int8 path. Every
 optimization must preserve the v0.3 correctness contract and be justified by
 reproducible before-and-after benchmarks.
