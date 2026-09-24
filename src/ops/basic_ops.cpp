@@ -24,8 +24,8 @@ void layer_norm_impl(Tensor& output, const Tensor& input, const Tensor* weight,
         throw std::invalid_argument(
             "layer_norm expects a non-empty final dimension");
     }
-    if (epsilon < 0.0F) {
-        throw std::invalid_argument("layer_norm epsilon must be non-negative");
+    if (!std::isfinite(epsilon) || epsilon < 0.0F) {
+        throw std::invalid_argument("layer_norm epsilon must be finite and non-negative");
     }
 
     const auto width = input.shape().back();
@@ -148,7 +148,18 @@ Tensor gelu(const Tensor& input) {
     return output;
 }
 
-void gelu_out(Tensor& output, const Tensor& input) {
+void gelu_out(Tensor& output, const Tensor& input,
+              std::string_view approximate) {
+    if (approximate == "none") {
+        constexpr float kInverseSqrtTwo = 0.7071067811865475F;
+        run_unary_kernel_into<float>(output, input, [](float value) {
+            return 0.5F * value * (1.0F + std::erf(value * kInverseSqrtTwo));
+        });
+        return;
+    }
+    if (approximate != "tanh") {
+        throw std::invalid_argument("gelu approximate must be 'none' or 'tanh'");
+    }
     // tanh approximation used by many inference runtimes.
     constexpr float kSqrtTwoOverPi = 0.7978845608028654F;
     constexpr float kCubicCoefficient = 0.044715F;
@@ -275,6 +286,17 @@ Tensor layer_norm(const Tensor& input, float epsilon) {
 
 void layer_norm_out(Tensor& output, const Tensor& input, float epsilon) {
     layer_norm_impl(output, input, nullptr, nullptr, epsilon);
+}
+
+Tensor layer_norm(const Tensor& input, const Tensor& weight, float epsilon) {
+    Tensor output(input.shape(), DataType::Float32);
+    layer_norm_impl(output, input, &weight, nullptr, epsilon);
+    return output;
+}
+
+void layer_norm_out(Tensor& output, const Tensor& input,
+                    const Tensor& weight, float epsilon) {
+    layer_norm_impl(output, input, &weight, nullptr, epsilon);
 }
 
 Tensor layer_norm(const Tensor& input, const Tensor& weight,

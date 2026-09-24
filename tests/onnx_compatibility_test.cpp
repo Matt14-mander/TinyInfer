@@ -1,6 +1,7 @@
 #include "tinyinfer/tinyinfer.h"
 
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <string>
 #include <utility>
@@ -27,6 +28,18 @@ tinyinfer::onnx::ModelProto make_add_model() {
     model.graph.outputs = {
         ValueInfo{"y", TensorSpec{{1, 2}, DataType::Float32}}};
     return model;
+}
+
+tinyinfer::Tensor execute(const tinyinfer::onnx::ModelProto& proto,
+                          const tinyinfer::Tensor& input) {
+    tinyinfer::onnx::OnnxImporter importer;
+    const auto model = importer.import_model(proto);
+    tinyinfer::ExecutionContext context(model.graph());
+    context.bind_input(model.input_id("x"), input);
+    tinyinfer::CpuBackend backend;
+    tinyinfer::Executor executor(backend);
+    executor.run(model.graph(), context);
+    return context.output(model.output_id("y"));
 }
 
 template <typename Function>
@@ -77,6 +90,39 @@ int main() {
     assert(diagnostic.message.find("opset=16") != std::string::npos);
     layer_norm.opset_version = 17;
     assert(importer.import_model(layer_norm).graph().size() == 1);
+    const auto norm_input = tinyinfer::Tensor::from_vector(
+        {1, 2}, {1.0F, 2.0F});
+    auto normalized = execute(layer_norm, norm_input);
+    assert(std::fabs(normalized.at(0) - (-0.49998F)) < 1e-4F);
+    assert(std::fabs(normalized.at(1) - 0.49998F) < 1e-4F);
+
+    layer_norm.graph.nodes[0].inputs.pop_back();  // Optional Bias omitted.
+    normalized = execute(layer_norm, norm_input);
+    assert(std::fabs(normalized.at(0) + 0.99998F) < 1e-4F);
+    assert(std::fabs(normalized.at(1) - 0.99998F) < 1e-4F);
+    layer_norm.graph.nodes[0].attributes["axis"] = std::int64_t{-1};
+    layer_norm.graph.nodes[0].attributes["stash_type"] = std::int64_t{1};
+    assert(importer.import_model(layer_norm).graph().size() == 1);
+    layer_norm.graph.nodes[0].attributes["axis"] = std::int64_t{0};
+    diagnostic = import_error([&] { importer.import_model(layer_norm); });
+    assert(diagnostic.stage == OnnxImportStage::OperatorTranslation);
+    assert(diagnostic.message.find("axis=-1") != std::string::npos);
+    layer_norm.graph.nodes[0].attributes["axis"] = std::int64_t{-1};
+    layer_norm.graph.nodes[0].attributes["stash_type"] = std::int64_t{0};
+    diagnostic = import_error([&] { importer.import_model(layer_norm); });
+    assert(diagnostic.stage == OnnxImportStage::OperatorTranslation);
+    assert(diagnostic.message.find("stash_type=1") != std::string::npos);
+    layer_norm.graph.nodes[0].attributes.clear();
+    layer_norm.graph.nodes[0].inputs.pop_back();  // Scale is mandatory.
+    diagnostic = import_error([&] { importer.import_model(layer_norm); });
+    assert(diagnostic.stage == OnnxImportStage::OperatorTranslation);
+    assert(diagnostic.message.find("Scale") != std::string::npos);
+    layer_norm.graph.nodes[0].inputs.push_back("bias");
+    layer_norm.graph.initializers[0].value =
+        tinyinfer::Tensor::from_vector({1}, {0.5F});
+    diagnostic = import_error([&] { importer.import_model(layer_norm); });
+    assert(diagnostic.stage == OnnxImportStage::ShapeInference);
+    assert(diagnostic.message.find("weight") != std::string::npos);
 
     auto gelu = make_add_model();
     gelu.graph.nodes[0].op_type = "Gelu";
@@ -88,6 +134,25 @@ int main() {
     assert(diagnostic.message.find("opset=19") != std::string::npos);
     gelu.opset_version = 20;
     assert(importer.import_model(gelu).graph().size() == 1);
+    const auto gelu_input = tinyinfer::Tensor::from_vector(
+        {1, 2}, {-1.0F, 1.0F});
+    auto activated = execute(gelu, gelu_input);
+    assert(std::fabs(activated.at(0) - (-0.15865526F)) < 1e-6F);
+    assert(std::fabs(activated.at(1) - 0.84134474F) < 1e-6F);
+    gelu.graph.nodes[0].attributes["approximate"] = std::string{"tanh"};
+    activated = execute(gelu, gelu_input);
+    assert(std::fabs(activated.at(0) - (-0.158808F)) < 1e-6F);
+    assert(std::fabs(activated.at(1) - 0.841192F) < 1e-6F);
+    gelu.graph.nodes[0].attributes["approximate"] = std::string{"none"};
+    activated = execute(gelu, gelu_input);
+    assert(std::fabs(activated.at(0) - (-0.15865526F)) < 1e-6F);
+    gelu.graph.nodes[0].attributes["approximate"] = std::string{"fast"};
+    diagnostic = import_error([&] { importer.import_model(gelu); });
+    assert(diagnostic.stage == OnnxImportStage::OperatorTranslation);
+    assert(diagnostic.message.find("approximate") != std::string::npos);
+    gelu.graph.nodes[0].attributes["approximate"] = std::int64_t{0};
+    diagnostic = import_error([&] { importer.import_model(gelu); });
+    assert(diagnostic.stage == OnnxImportStage::OperatorTranslation);
 
     auto unsupported_operator = make_add_model();
     unsupported_operator.graph.nodes[0].op_type = "Conv";

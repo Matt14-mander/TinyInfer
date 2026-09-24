@@ -23,7 +23,7 @@ kernel directly to amortize packing.
 - Sub and Mul, including NumPy-style broadcasting
 - Rank-2 MatMul through the CPU kernel layer
 - ReLU
-- GELU using the tanh approximation
+- GELU using the tanh approximation by default; exact-erf mode for ONNX `Gelu`
 - ReduceSum and ReduceMax over one or more axes
 - Softmax over the final dimension
 - LayerNorm over the final dimension, with optional affine weight and bias

@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstdint>
 #include <stdexcept>
+#include <string>
 
 namespace {
 template <typename Exception, typename Function>
@@ -48,6 +49,9 @@ int main() {
 
     const auto unary = infer_output_specs(OpType::GELU, {matrix});
     assert(unary[0] == matrix);
+    assert(infer_output_specs(
+               OpType::GELU, {matrix},
+               {{"approximate", std::string{"none"}}})[0] == matrix);
     const auto softmax = infer_output_specs(
         OpType::Softmax, {matrix}, {{"axis", std::int64_t{-2}}});
     assert(softmax[0] == matrix);
@@ -58,6 +62,9 @@ int main() {
          TensorSpec{{3}, DataType::Float32}},
         {{"epsilon", 1e-5F}});
     assert(layer_norm[0] == matrix);
+    assert(infer_output_specs(
+               OpType::LayerNorm,
+               {matrix, TensorSpec{{3}, DataType::Float32}})[0] == matrix);
 
     expect_throw<std::invalid_argument>([&] {
         infer_output_specs(OpType::Add, {matrix});
@@ -88,6 +95,10 @@ int main() {
     expect_throw<std::invalid_argument>([&] {
         infer_output_specs(OpType::ReLU, {matrix},
                            {{"unknown", std::int64_t{0}}});
+    });
+    expect_throw<std::invalid_argument>([&] {
+        infer_output_specs(OpType::GELU, {matrix},
+                           {{"approximate", std::string{"fast"}}});
     });
     expect_throw<std::invalid_argument>([&] {
         infer_output_specs(

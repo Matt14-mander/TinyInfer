@@ -14,6 +14,48 @@ OperatorTranslator direct(OpType op) {
     };
 }
 
+TranslatedOperator translate_gelu(const NodeProto& node) {
+    auto attributes = node.attributes;
+    const auto found = attributes.find("approximate");
+    if (found == attributes.end()) {
+        attributes.emplace("approximate", std::string{"none"});
+    } else {
+        const auto* value = std::get_if<std::string>(&found->second);
+        if (!value || (*value != "none" && *value != "tanh")) {
+            throw std::invalid_argument(
+                "ONNX Gelu approximate must be 'none' or 'tanh'");
+        }
+    }
+    return {OpType::GELU, std::move(attributes)};
+}
+
+TranslatedOperator translate_layer_norm(const NodeProto& node) {
+    if (node.inputs.size() < 2 || node.inputs.size() > 3) {
+        throw std::invalid_argument(
+            "ONNX LayerNormalization requires X and Scale, with optional Bias");
+    }
+    auto attributes = node.attributes;
+    const auto axis = attributes.find("axis");
+    if (axis != attributes.end()) {
+        const auto* value = std::get_if<std::int64_t>(&axis->second);
+        if (!value || *value != -1) {
+            throw std::invalid_argument(
+                "ONNX LayerNormalization currently supports axis=-1 only");
+        }
+        attributes.erase(axis);
+    }
+    const auto stash_type = attributes.find("stash_type");
+    if (stash_type != attributes.end()) {
+        const auto* value = std::get_if<std::int64_t>(&stash_type->second);
+        if (!value || *value != 1) {
+            throw std::invalid_argument(
+                "ONNX LayerNormalization currently supports stash_type=1 only");
+        }
+        attributes.erase(stash_type);
+    }
+    return {OpType::LayerNorm, std::move(attributes)};
+}
+
 std::string canonical_domain(const std::string& domain) {
     return domain == "ai.onnx" ? "" : domain;
 }
@@ -30,8 +72,8 @@ OperatorRegistry::OperatorRegistry() {
     register_translator("", "Relu", 13, latest, direct(OpType::ReLU));
     register_translator("", "Softmax", 13, latest, direct(OpType::Softmax));
     register_translator("", "LayerNormalization", 17, latest,
-                        direct(OpType::LayerNorm));
-    register_translator("", "Gelu", 20, latest, direct(OpType::GELU));
+                        translate_layer_norm);
+    register_translator("", "Gelu", 20, latest, translate_gelu);
 }
 
 void OperatorRegistry::register_translator(

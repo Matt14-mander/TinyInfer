@@ -93,7 +93,12 @@ OperatorRegistry::OperatorRegistry() {
         ops::relu_out(output(node, context), input(node, context, 0));
     });
     register_kernel(OpType::GELU, [](const Node& node, ExecutionContext& context) {
-        ops::gelu_out(output(node, context), input(node, context, 0));
+        const auto found = node.attributes.find("approximate");
+        const auto approximate = found == node.attributes.end()
+                                     ? std::string_view{"tanh"}
+                                     : std::string_view{std::get<std::string>(found->second)};
+        ops::gelu_out(output(node, context), input(node, context, 0),
+                      approximate);
     });
     register_kernel(OpType::Softmax,
                     [](const Node& node, ExecutionContext& context) {
@@ -106,6 +111,11 @@ OperatorRegistry::OperatorRegistry() {
         if (node.inputs.size() == 1) {
             ops::layer_norm_out(output(node, context),
                                 input(node, context, 0), epsilon);
+            return;
+        }
+        if (node.inputs.size() == 2) {
+            ops::layer_norm_out(output(node, context), input(node, context, 0),
+                                input(node, context, 1), epsilon);
             return;
         }
         ops::layer_norm_out(output(node, context), input(node, context, 0),

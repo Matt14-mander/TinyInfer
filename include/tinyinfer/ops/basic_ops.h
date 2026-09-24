@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string_view>
 #include <vector>
 
 #include "tinyinfer/core/tensor.h"
@@ -19,7 +20,8 @@ void mul_out(Tensor& output, const Tensor& lhs, const Tensor& rhs);
 Tensor relu(const Tensor& input);
 void relu_out(Tensor& output, const Tensor& input);
 Tensor gelu(const Tensor& input);
-void gelu_out(Tensor& output, const Tensor& input);
+void gelu_out(Tensor& output, const Tensor& input,
+              std::string_view approximate = "tanh");
 Tensor reduce_sum(const Tensor& input, const std::vector<std::int64_t>& axes,
                   bool keepdim = false);
 Tensor reduce_max(const Tensor& input, const std::vector<std::int64_t>& axes,
@@ -30,6 +32,10 @@ void softmax_out(Tensor& output, const Tensor& input,
 Tensor layer_norm(const Tensor& input, float epsilon = 1e-5F);
 void layer_norm_out(Tensor& output, const Tensor& input,
                     float epsilon = 1e-5F);
+Tensor layer_norm(const Tensor& input, const Tensor& weight,
+                  float epsilon = 1e-5F);
+void layer_norm_out(Tensor& output, const Tensor& input,
+                    const Tensor& weight, float epsilon = 1e-5F);
 Tensor layer_norm(const Tensor& input, const Tensor& weight,
                   const Tensor& bias, float epsilon = 1e-5F);
 void layer_norm_out(Tensor& output, const Tensor& input,

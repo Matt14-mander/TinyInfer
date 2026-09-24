@@ -1,6 +1,7 @@
 #include "tinyinfer/ops/operator_schema.h"
 
 #include <algorithm>
+#include <cmath>
 #include <stdexcept>
 #include <string>
 
@@ -20,7 +21,9 @@ const OperatorSchema kGemm{
      {"transA", AttributeType::Integer, false},
      {"transB", AttributeType::Integer, false}}};
 const OperatorSchema kReLU{OpType::ReLU, "ReLU", 1, 1, 1, {}};
-const OperatorSchema kGELU{OpType::GELU, "GELU", 1, 1, 1, {}};
+const OperatorSchema kGELU{
+    OpType::GELU, "GELU", 1, 1, 1,
+    {{"approximate", AttributeType::String, false}}};
 const OperatorSchema kSoftmax{
     OpType::Softmax, "Softmax", 1, 1, 1,
     {{"axis", AttributeType::Integer, false}}};
@@ -193,8 +196,19 @@ std::vector<TensorSpec> infer_output_specs(
         }
 
         case OpType::ReLU:
-        case OpType::GELU:
             return {inputs[0]};
+
+        case OpType::GELU: {
+            const auto found = attributes.find("approximate");
+            if (found != attributes.end()) {
+                const auto& value = std::get<std::string>(found->second);
+                if (value != "none" && value != "tanh") {
+                    throw std::invalid_argument(
+                        "GELU approximate must be 'none' or 'tanh'");
+                }
+            }
+            return {inputs[0]};
+        }
 
         case OpType::Softmax:
             if (inputs[0].shape.empty()) {
@@ -208,25 +222,26 @@ std::vector<TensorSpec> infer_output_specs(
                 throw std::invalid_argument(
                     "LayerNorm expects a non-empty final dimension");
             }
-            if (inputs.size() == 2) {
-                throw std::invalid_argument(
-                    "LayerNorm requires both weight and bias when affine");
-            }
-            if (inputs.size() == 3) {
+            if (inputs.size() >= 2) {
                 const Shape parameter_shape{inputs[0].shape.back()};
                 if (inputs[1].shape != parameter_shape ||
-                    inputs[2].shape != parameter_shape ||
-                    inputs[1].dtype != inputs[0].dtype ||
-                    inputs[2].dtype != inputs[0].dtype) {
+                    inputs[1].dtype != inputs[0].dtype) {
                     throw std::invalid_argument(
-                        "LayerNorm weight and bias must match the final dimension");
+                        "LayerNorm weight must match the final dimension");
+                }
+                if (inputs.size() == 3 &&
+                    (inputs[2].shape != parameter_shape ||
+                     inputs[2].dtype != inputs[0].dtype)) {
+                    throw std::invalid_argument(
+                        "LayerNorm bias must match the final dimension");
                 }
             }
             const auto epsilon = attributes.find("epsilon");
             if (epsilon != attributes.end() &&
-                std::get<float>(epsilon->second) < 0.0F) {
+                (!std::isfinite(std::get<float>(epsilon->second)) ||
+                 std::get<float>(epsilon->second) < 0.0F)) {
                 throw std::invalid_argument(
-                    "LayerNorm epsilon must be non-negative");
+                    "LayerNorm epsilon must be finite and non-negative");
             }
             return {inputs[0]};
         }

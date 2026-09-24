@@ -49,17 +49,18 @@ in an imported graph.
 | `MatMul` | 13 | 2 | None | Float32 rank-2 matrices only |
 | `Gemm` | 13 | 2–3 | `alpha`, `beta`, `transA`, `transB` | Float32 rank-2 A/B; optional broadcastable C |
 | `Relu` | 13 | 1 | None | Float32 |
-| `Gelu` | 20 | 1 | None | Float32 tanh approximation; ONNX default uses erf and is not yet semantically matched |
+| `Gelu` | 20 | 1 | `approximate` | Float32; default `none` uses erf, explicit `tanh` uses approximation |
 | `Softmax` | 13 | 1 | `axis` | Float32, non-empty selected axis |
-| `LayerNormalization` | 17 | 1 or 3 | `epsilon` | Internal final-axis form differs from ONNX's required X+Scale and optional Bias |
+| `LayerNormalization` | 17 | 2–3 | `axis`, `epsilon`, `stash_type` | Float32 X+Scale, optional Bias; final axis only (`axis=-1`), `stash_type=1`, 1-D Scale/Bias matching final dimension, Y output only |
 
 Unknown attributes are rejected during Shape Inference. This is intentional:
 silently ignoring an ONNX attribute could execute a model with different
 semantics.
 
-`Gelu` and `LayerNormalization` currently pass their ONNX version gate but
-still have known semantic gaps. Their ONNX translations need correction or
-explicit rejection before they can be described as conformant.
+`Gelu` preserves ONNX's exact-erf default; the internal eager GELU retains its
+historical tanh default. `LayerNormalization` translates only the subset that
+the current final-axis Float32 kernel implements. Other axes, stash types,
+parameter shapes, and extra outputs are rejected rather than silently changed.
 
 ## Structured diagnostics
 
@@ -106,8 +107,10 @@ domain='', op='Conv', opset=17
 | Real opset-17 Gemm MLP | Import and execute with checked probabilities | `onnx_gemm_fixture_test.cpp` |
 | Supported static Add model | Import successfully | `onnx_compatibility_test.cpp` |
 | Opset below 13 | `ModelValidation` | `onnx_compatibility_test.cpp` |
-| LayerNormalization at opset 16 / 17 | Reject 16; admit 17 to schema validation | `onnx_compatibility_test.cpp` |
-| Gelu at opset 19 / 20 | Reject 19; admit 20 to schema validation | `onnx_compatibility_test.cpp` |
+| LayerNormalization at opset 16 / 17 | Reject 16; execute 17 with Scale and optional Bias | `onnx_compatibility_test.cpp` |
+| LayerNormalization unsupported axis/stash/shape/missing Scale | Reject with diagnostic | `onnx_compatibility_test.cpp` |
+| Gelu at opset 19 / 20 | Reject 19; execute 20 exact default and explicit tanh | `onnx_compatibility_test.cpp` |
+| Gelu unsupported approximation | Reject with diagnostic | `onnx_compatibility_test.cpp` |
 | Versioned registry and overlapping ranges | Select matching translator; reject overlap | `onnx_operator_registry_test.cpp` |
 | Unsupported operator | `OperatorTranslation` with node and OpType | `onnx_compatibility_test.cpp` |
 | Non-default domain | `OperatorTranslation` with domain | `onnx_compatibility_test.cpp` |
