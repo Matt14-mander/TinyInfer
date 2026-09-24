@@ -1,5 +1,7 @@
 #include "tinyinfer/model/onnx/operator_registry.h"
 
+#include <algorithm>
+#include <limits>
 #include <stdexcept>
 #include <utility>
 
@@ -12,41 +14,80 @@ OperatorTranslator direct(OpType op) {
     };
 }
 
+std::string canonical_domain(const std::string& domain) {
+    return domain == "ai.onnx" ? "" : domain;
+}
+
 }  // namespace
 
 OperatorRegistry::OperatorRegistry() {
-    register_translator("Add", direct(OpType::Add));
-    register_translator("Sub", direct(OpType::Subtract));
-    register_translator("Mul", direct(OpType::Multiply));
-    register_translator("MatMul", direct(OpType::MatMul));
-    register_translator("Gemm", direct(OpType::Gemm));
-    register_translator("Relu", direct(OpType::ReLU));
-    register_translator("Gelu", direct(OpType::GELU));
-    register_translator("Softmax", direct(OpType::Softmax));
-    register_translator("LayerNormalization", direct(OpType::LayerNorm));
+    constexpr auto latest = std::numeric_limits<std::int64_t>::max();
+    register_translator("", "Add", 13, latest, direct(OpType::Add));
+    register_translator("", "Sub", 13, latest, direct(OpType::Subtract));
+    register_translator("", "Mul", 13, latest, direct(OpType::Multiply));
+    register_translator("", "MatMul", 13, latest, direct(OpType::MatMul));
+    register_translator("", "Gemm", 13, latest, direct(OpType::Gemm));
+    register_translator("", "Relu", 13, latest, direct(OpType::ReLU));
+    register_translator("", "Softmax", 13, latest, direct(OpType::Softmax));
+    register_translator("", "LayerNormalization", 17, latest,
+                        direct(OpType::LayerNorm));
+    register_translator("", "Gelu", 20, latest, direct(OpType::GELU));
 }
 
 void OperatorRegistry::register_translator(
-    std::string op_type, OperatorTranslator translator) {
-    if (op_type.empty() || !translator) {
+    std::string domain, std::string op_type, std::int64_t first_opset,
+    std::int64_t last_opset, OperatorTranslator translator) {
+    if (op_type.empty() || !translator || first_opset <= 0 ||
+        last_opset < first_opset) {
         throw std::invalid_argument(
-            "ONNX operator translator must have a name and callable");
+            "ONNX translator requires an operator, callable, and valid opset range");
     }
-    if (!translators_.emplace(std::move(op_type), std::move(translator)).second) {
-        throw std::invalid_argument("ONNX operator translator is already registered");
+    auto& versions = translators_[{canonical_domain(domain), std::move(op_type)}];
+    for (const auto& version : versions) {
+        if (first_opset <= version.last_opset &&
+            version.first_opset <= last_opset) {
+            throw std::invalid_argument(
+                "ONNX operator translator opset ranges overlap");
+        }
     }
+    versions.push_back({first_opset, last_opset, std::move(translator)});
+    std::sort(versions.begin(), versions.end(),
+              [](const VersionedTranslator& lhs,
+                 const VersionedTranslator& rhs) {
+                  return lhs.first_opset < rhs.first_opset;
+              });
 }
 
-bool OperatorRegistry::supports(const std::string& op_type) const noexcept {
-    return translators_.find(op_type) != translators_.end();
+bool OperatorRegistry::supports(const std::string& domain,
+                                const std::string& op_type,
+                                std::int64_t opset_version) const {
+    if (opset_version <= 0) return false;
+    const auto found = translators_.find({canonical_domain(domain), op_type});
+    if (found == translators_.end()) return false;
+    return std::any_of(found->second.begin(), found->second.end(),
+                       [opset_version](const VersionedTranslator& version) {
+                           return version.first_opset <= opset_version &&
+                                  opset_version <= version.last_opset;
+                       });
 }
 
-TranslatedOperator OperatorRegistry::translate(const NodeProto& node) const {
-    const auto iterator = translators_.find(node.op_type);
-    if (iterator == translators_.end()) {
-        throw std::invalid_argument("unsupported ONNX operator: " + node.op_type);
+TranslatedOperator OperatorRegistry::translate(
+    const NodeProto& node, std::int64_t opset_version) const {
+    const auto found = translators_.find(
+        {canonical_domain(node.domain), node.op_type});
+    if (found != translators_.end()) {
+        for (const auto& version : found->second) {
+            if (version.first_opset <= opset_version &&
+                opset_version <= version.last_opset) {
+                return version.translate(node);
+            }
+        }
     }
-    return iterator->second(node);
+    const auto domain = canonical_domain(node.domain);
+    throw std::invalid_argument(
+        "unsupported ONNX operator or opset: domain='" + domain +
+        "', op='" + node.op_type + "', opset=" +
+        std::to_string(opset_version));
 }
 
 }  // namespace tinyinfer::onnx

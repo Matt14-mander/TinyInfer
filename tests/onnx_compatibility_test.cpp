@@ -54,12 +54,40 @@ int main() {
     const auto valid = importer.import_model(make_add_model());
     assert(valid.graph().size() == 1);
 
+    auto explicit_default_domain = make_add_model();
+    explicit_default_domain.graph.nodes[0].domain = "ai.onnx";
+    assert(importer.import_model(explicit_default_domain).graph().size() == 1);
+
     auto old_opset = make_add_model();
     old_opset.opset_version = 11;
     auto diagnostic = import_error(
         [&] { importer.import_model(old_opset); });
     assert(diagnostic.stage == OnnxImportStage::ModelValidation);
     assert(diagnostic.graph_name == "compatibility_graph");
+
+    auto layer_norm = make_add_model();
+    layer_norm.graph.initializers.push_back(
+        {"scale", tinyinfer::Tensor::from_vector({2}, {1.0F, 1.0F})});
+    layer_norm.graph.nodes[0].op_type = "LayerNormalization";
+    layer_norm.graph.nodes[0].inputs = {"x", "scale", "bias"};
+    layer_norm.opset_version = 16;
+    diagnostic = import_error([&] { importer.import_model(layer_norm); });
+    assert(diagnostic.stage == OnnxImportStage::OperatorTranslation);
+    assert(diagnostic.op_type == "LayerNormalization");
+    assert(diagnostic.message.find("opset=16") != std::string::npos);
+    layer_norm.opset_version = 17;
+    assert(importer.import_model(layer_norm).graph().size() == 1);
+
+    auto gelu = make_add_model();
+    gelu.graph.nodes[0].op_type = "Gelu";
+    gelu.graph.nodes[0].inputs = {"x"};
+    gelu.opset_version = 19;
+    diagnostic = import_error([&] { importer.import_model(gelu); });
+    assert(diagnostic.stage == OnnxImportStage::OperatorTranslation);
+    assert(diagnostic.op_type == "Gelu");
+    assert(diagnostic.message.find("opset=19") != std::string::npos);
+    gelu.opset_version = 20;
+    assert(importer.import_model(gelu).graph().size() == 1);
 
     auto unsupported_operator = make_add_model();
     unsupported_operator.graph.nodes[0].op_type = "Conv";

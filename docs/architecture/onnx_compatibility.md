@@ -9,7 +9,7 @@ support at one layer does not imply support at the next layer.
 | Feature | v0.3 behavior |
 | --- | --- |
 | File format | Binary protobuf `.onnx` read by the built-in parser |
-| Opset | Default-domain opset 13 or newer; end-to-end fixture uses opset 17 |
+| Opset | Default-domain opset 13 or newer, with per-operator minimum versions; end-to-end fixture uses opset 17 |
 | Operator domain | Empty domain or `ai.onnx` |
 | Shapes | Static dimensions only |
 | Node outputs | Exactly one non-empty output per node |
@@ -20,7 +20,9 @@ support at one layer does not imply support at the next layer.
 | Graph ordering | Nodes may be out of topological order |
 | Cycles and missing values | Rejected during `GraphImport` |
 
-Opset 13 or newer is an importer gate, not a claim of complete conformance for
+The importer passes the default-domain opset to a version-aware operator
+registry. Registrations use inclusive version ranges and reject overlaps. An
+opset match is an availability check, not a claim of complete conformance for
 every later ONNX opset. Each operator below supports only the attributes and
 semantics explicitly implemented by TinyInfer.
 
@@ -39,21 +41,25 @@ in an imported graph.
 
 ## Operator profile
 
-| ONNX operator | Inputs | Supported attributes | Current constraints |
-| --- | ---: | --- | --- |
-| `Add` | 2 | None | Float32, NumPy-style broadcasting |
-| `Sub` | 2 | None | Float32, NumPy-style broadcasting |
-| `Mul` | 2 | None | Float32, NumPy-style broadcasting |
-| `MatMul` | 2 | None | Float32 rank-2 matrices only |
-| `Gemm` | 2–3 | `alpha`, `beta`, `transA`, `transB` | Float32 rank-2 A/B; optional broadcastable C |
-| `Relu` | 1 | None | Float32 |
-| `Gelu` | 1 | None | Float32 tanh approximation |
-| `Softmax` | 1 | `axis` | Float32, non-empty selected axis |
-| `LayerNormalization` | 1 or 3 | `epsilon` | Float32; final-axis normalization; affine form requires weight and bias |
+| ONNX operator | Registered from opset | Inputs | Supported attributes | Current constraints |
+| --- | ---: | ---: | --- | --- |
+| `Add` | 13 | 2 | None | Float32, NumPy-style broadcasting |
+| `Sub` | 13 | 2 | None | Float32, NumPy-style broadcasting |
+| `Mul` | 13 | 2 | None | Float32, NumPy-style broadcasting |
+| `MatMul` | 13 | 2 | None | Float32 rank-2 matrices only |
+| `Gemm` | 13 | 2–3 | `alpha`, `beta`, `transA`, `transB` | Float32 rank-2 A/B; optional broadcastable C |
+| `Relu` | 13 | 1 | None | Float32 |
+| `Gelu` | 20 | 1 | None | Float32 tanh approximation; ONNX default uses erf and is not yet semantically matched |
+| `Softmax` | 13 | 1 | `axis` | Float32, non-empty selected axis |
+| `LayerNormalization` | 17 | 1 or 3 | `epsilon` | Internal final-axis form differs from ONNX's required X+Scale and optional Bias |
 
 Unknown attributes are rejected during Shape Inference. This is intentional:
 silently ignoring an ONNX attribute could execute a model with different
 semantics.
+
+`Gelu` and `LayerNormalization` currently pass their ONNX version gate but
+still have known semantic gaps. Their ONNX translations need correction or
+explicit rejection before they can be described as conformant.
 
 ## Structured diagnostics
 
@@ -81,7 +87,7 @@ The stages identify the boundary that rejected the model:
 | `TensorDecode` | TensorProto storage or dtype could not be decoded |
 | `ModelValidation` | Model-level constraints such as opset were rejected |
 | `GraphImport` | Names, dependencies, input/output arity, or graph construction failed |
-| `OperatorTranslation` | Domain or OpType has no TinyInfer translation |
+| `OperatorTranslation` | Domain, OpType, or opset has no TinyInfer translation |
 | `ShapeInference` | Operator Schema rejected inputs or attributes |
 | `GraphValidation` | Imported outputs or final Graph invariants failed |
 
@@ -89,7 +95,8 @@ Example:
 
 ```text
 ONNX import failed [stage=OperatorTranslation, graph=compatibility_graph,
-node_index=0, node=add_bias, op=Conv]: unsupported ONNX operator: Conv
+node_index=0, node=add_bias, op=Conv]: unsupported ONNX operator or opset:
+domain='', op='Conv', opset=17
 ```
 
 ## Compatibility test matrix
@@ -99,6 +106,9 @@ node_index=0, node=add_bias, op=Conv]: unsupported ONNX operator: Conv
 | Real opset-17 Gemm MLP | Import and execute with checked probabilities | `onnx_gemm_fixture_test.cpp` |
 | Supported static Add model | Import successfully | `onnx_compatibility_test.cpp` |
 | Opset below 13 | `ModelValidation` | `onnx_compatibility_test.cpp` |
+| LayerNormalization at opset 16 / 17 | Reject 16; admit 17 to schema validation | `onnx_compatibility_test.cpp` |
+| Gelu at opset 19 / 20 | Reject 19; admit 20 to schema validation | `onnx_compatibility_test.cpp` |
+| Versioned registry and overlapping ranges | Select matching translator; reject overlap | `onnx_operator_registry_test.cpp` |
 | Unsupported operator | `OperatorTranslation` with node and OpType | `onnx_compatibility_test.cpp` |
 | Non-default domain | `OperatorTranslation` with domain | `onnx_compatibility_test.cpp` |
 | Unknown operator attribute | `ShapeInference` with node context | `onnx_compatibility_test.cpp` |

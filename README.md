@@ -121,7 +121,8 @@ cmake --build build --target tinyinfer_matmul_benchmark
 TinyInfer is now an executable CPU graph runtime with restricted direct `.onnx` loading. Its built-in protobuf reader supports static tensor shapes, the default ONNX domain, one output per node, the current operator subset, and Float32/Float16/Int8/Int32 initializers. It does not support arbitrary ONNX models, dynamic shapes, external tensor files, sparse tensors, or general operator coverage. Planned execution can reuse intermediate storage, including storage retained for intermediate graph outputs; inputs, constants, packed weights, and backend scratch allocations remain outside that accounting.
 
 ONNX failures are reported with structured stages and available model, graph,
-node, operator, domain, and value context. See the
+node, operator, domain, and value context. ONNX operator translation now checks
+the model opset against per-operator version ranges. See the
 [v0.3 ONNX compatibility profile](docs/architecture/onnx_compatibility.md) for
 the exact parser, importer, dtype, operator, and rejection matrix.
 

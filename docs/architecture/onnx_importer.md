@@ -29,6 +29,14 @@ uses the built-in `ProtobufModelParser` by default while retaining the injected
 parses only the required ONNX protobuf fields, so TinyInfer does not link the
 protobuf runtime or the full ONNX source tree.
 
+The ONNX `OperatorRegistry` resolves a translator by domain, operator name,
+and the model's imported opset version. Translator registrations declare an
+inclusive supported version range; overlapping ranges for the same operator
+are rejected. Empty domain and `ai.onnx` are aliases for the default domain.
+The current `ModelProto` records only the default-domain opset, so the importer
+continues to reject non-default domains. A version match selects a translator;
+shape and attribute checks still happen when the TinyInfer Graph node is built.
+
 Failures crossing the ONNX loading boundary are reported as
 `OnnxImportError`. Its structured diagnostic distinguishes file reading,
 protobuf parsing, TensorProto decoding, model validation, graph dependency

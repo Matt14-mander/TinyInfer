@@ -191,7 +191,8 @@ Model OnnxImporter::import_model(const ModelProto& model) const {
 
             TranslatedOperator translated;
             try {
-                translated = operators_.translate(source);
+                translated = operators_.translate(source,
+                                                  model.opset_version);
             } catch (const std::exception& error) {
                 throw_node_error(model, source, index,
                                  OnnxImportStage::OperatorTranslation,
