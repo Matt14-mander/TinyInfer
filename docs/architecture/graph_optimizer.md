@@ -120,6 +120,7 @@ and a no-change second optimization run.
 
 ## Next extension
 
-The next optimizer slice is Tensor lifetime analysis and reusable execution
-buffers. It should consume the already simplified Graph and preserve the same
-model-interface, mapping, statistics, and numerical-correctness contracts.
+Tensor lifetime analysis and reusable execution buffers are now implemented as
+a runtime `MemoryPlan` that consumes the simplified Graph without modifying it.
+See [Runtime memory planning](memory_planner.md). The next graph transformation
+slice is inference-oriented operator fusion.

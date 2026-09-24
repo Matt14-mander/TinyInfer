@@ -120,6 +120,17 @@ Tensor Tensor::from_vector(Shape shape, const std::vector<float>& values) {
     return tensor;
 }
 
+Tensor Tensor::from_storage(Shape shape, DataType dtype, Storage storage) {
+    TensorLayout layout(std::move(shape));
+    if (!storage.valid()) {
+        throw std::invalid_argument("Tensor storage must be valid");
+    }
+    if (storage.size_bytes() < layout.size_bytes(dtype)) {
+        throw std::invalid_argument("Tensor storage is smaller than its layout");
+    }
+    return Tensor(ViewTag{}, std::move(layout), dtype, std::move(storage));
+}
+
 float* Tensor::data_f32() {
     return data<float>();
 }

@@ -35,3 +35,4 @@
 #include "tinyinfer/ops/operator_schema.h"
 #include "tinyinfer/runtime/execution_context.h"
 #include "tinyinfer/runtime/executor.h"
+#include "tinyinfer/runtime/memory_plan.h"

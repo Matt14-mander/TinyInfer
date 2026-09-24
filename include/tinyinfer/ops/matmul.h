@@ -5,5 +5,6 @@
 namespace tinyinfer::ops {
 
 Tensor matmul(const Tensor& lhs, const Tensor& rhs);
+void matmul_out(Tensor& output, const Tensor& lhs, const Tensor& rhs);
 
 }  // namespace tinyinfer::ops

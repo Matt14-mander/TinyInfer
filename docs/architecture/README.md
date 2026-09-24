@@ -15,6 +15,8 @@ limitations. These documents should change when the code changes.
   operator/dtype support, diagnostics, and the compatibility test matrix.
 - [Graph optimizer architecture](graph_optimizer.md): GraphPass, PassManager,
   OptimizationResult, ValueId mapping, and pipeline invariants.
+- [Runtime memory planning](memory_planner.md): Value lifetimes, reusable buffer
+  slots, planned execution, and current memory-accounting boundaries.
 - [Development roadmap](roadmap.md): phase status, boundaries, and exit
   criteria.
 

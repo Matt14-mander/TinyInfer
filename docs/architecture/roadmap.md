@@ -73,10 +73,11 @@ Graph Optimizer slice now provides GraphPass, PassManager, OptimizationResult,
 composed ValueId mapping, pass statistics, interface validation, and an
 end-to-end NoOpPass. GraphRewriter, cascading Constant Folding, and
 output-driven Dead Code Elimination are also implemented. Static memory
-planning, graph-level fusion, threading, and quantization remain open.
+planning and runtime buffer reuse are implemented. Graph-level fusion,
+threading, and quantization remain open.
 
 - Graph reconstruction, Constant Folding, and Dead Code Elimination. (Complete)
-- Lifetime analysis and buffer reuse.
+- Lifetime analysis and buffer reuse. (Complete)
 - Linear + bias + activation fusion.
 - MatMul tiling, cache blocking, SIMD, and optional threading.
 - Int8 quantization format, calibration, and kernels.

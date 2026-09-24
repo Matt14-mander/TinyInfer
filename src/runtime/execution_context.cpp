@@ -18,6 +18,37 @@ ExecutionContext::ExecutionContext(const Graph& graph)
     }
 }
 
+ExecutionContext::ExecutionContext(const Graph& graph, MemoryPlan memory_plan)
+    : graph_(graph),
+      graph_value_count_(graph.value_count()),
+      values_(graph_value_count_),
+      memory_plan_(std::move(memory_plan)) {
+    graph_.validate();
+    if (!memory_plan_->matches(graph_)) {
+        throw std::invalid_argument("memory plan belongs to another graph");
+    }
+    planned_buffer_ = std::make_shared<Buffer>(memory_plan_->buffer_size_bytes());
+    for (const auto& graph_value : graph_.values()) {
+        if (graph_value.kind == ValueKind::Constant) {
+            values_[graph_value.id].emplace(graph_.constant(graph_value.id));
+        } else if (graph_value.kind == ValueKind::Intermediate &&
+                   !memory_plan_->has_allocation(graph_value.id)) {
+            throw std::invalid_argument(
+                "memory plan does not cover every intermediate value");
+        } else if (graph_value.kind == ValueKind::Intermediate) {
+            const auto expected_bytes =
+                TensorLayout(graph_value.spec.shape).size_bytes(
+                    graph_value.spec.dtype);
+            if (memory_plan_->allocation(graph_value.id).size_bytes !=
+                    expected_bytes ||
+                memory_plan_->lifetime(graph_value.id).value != graph_value.id) {
+                throw std::invalid_argument(
+                    "memory plan does not match graph value metadata");
+            }
+        }
+    }
+}
+
 void ExecutionContext::bind_input(ValueId id, Tensor tensor) {
     require_current_graph();
     if (graph_.value(id).kind != ValueKind::Input) {
@@ -34,6 +65,25 @@ void ExecutionContext::set_value(ValueId id, Tensor tensor) {
     }
     require_matching_spec(id, tensor);
     values_[id] = std::move(tensor);
+}
+
+Tensor& ExecutionContext::prepare_output(ValueId id) {
+    require_current_graph();
+    const auto& graph_value = graph_.value(id);
+    if (graph_value.kind != ValueKind::Intermediate) {
+        throw std::invalid_argument("only intermediate outputs can be prepared");
+    }
+    if (!memory_plan_) {
+        values_[id].emplace(graph_value.spec.shape, graph_value.spec.dtype);
+        return *values_[id];
+    }
+
+    const auto& allocation = memory_plan_->allocation(id);
+    Storage storage(planned_buffer_, allocation.byte_offset,
+                    allocation.size_bytes);
+    values_[id].emplace(Tensor::from_storage(
+        graph_value.spec.shape, graph_value.spec.dtype, std::move(storage)));
+    return *values_[id];
 }
 
 bool ExecutionContext::has_value(ValueId id) const {
@@ -79,6 +129,18 @@ void ExecutionContext::clear_intermediates() {
         if (graph_value.kind == ValueKind::Intermediate) {
             values_[graph_value.id].reset();
         }
+    }
+}
+
+void ExecutionContext::release_after_step(std::size_t execution_step) {
+    require_current_graph();
+    if (!memory_plan_) return;
+    if (execution_step >= graph_.size()) {
+        throw std::out_of_range("execution step is out of range");
+    }
+    for (const auto value :
+         memory_plan_->values_released_after_step(execution_step)) {
+        values_[value].reset();
     }
 }
 

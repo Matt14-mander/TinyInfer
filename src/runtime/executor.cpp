@@ -8,10 +8,13 @@ void Executor::run(const Graph& graph, ExecutionContext& context) {
     }
     context.require_all_inputs_bound();
     context.clear_intermediates();
-    for (const auto node_id : graph.topological_order()) {
+    const auto order = graph.topological_order();
+    for (std::size_t step = 0; step < order.size(); ++step) {
+        const auto node_id = order[step];
         const auto& node = graph.node(node_id);
         if (!backend_.supports(node.op)) throw std::runtime_error("operator is not supported by the selected backend");
         backend_.execute(node, context);
+        context.release_after_step(step);
     }
 }
 }  // namespace tinyinfer

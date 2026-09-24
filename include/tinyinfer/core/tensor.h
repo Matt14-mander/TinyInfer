@@ -27,6 +27,7 @@ public:
     ~Tensor() = default;
 
     static Tensor from_vector(Shape shape, const std::vector<float>& values);
+    static Tensor from_storage(Shape shape, DataType dtype, Storage storage);
     template <typename T>
     static Tensor from_vector(Shape shape, const std::vector<T>& values);
     const Shape& shape() const noexcept { return layout_.shape(); }

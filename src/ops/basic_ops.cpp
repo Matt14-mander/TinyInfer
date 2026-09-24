@@ -17,8 +17,8 @@ void require_f32(const Tensor& tensor, const char* operation) {
     }
 }
 
-Tensor layer_norm_impl(const Tensor& input, const Tensor* weight,
-                       const Tensor* bias, float epsilon) {
+void layer_norm_impl(Tensor& output, const Tensor& input, const Tensor* weight,
+                     const Tensor* bias, float epsilon) {
     require_f32(input, "layer_norm");
     if (input.rank() == 0 || input.shape().back() <= 0) {
         throw std::invalid_argument(
@@ -38,8 +38,12 @@ Tensor layer_norm_impl(const Tensor& input, const Tensor* weight,
         }
     }
 
+    if (output.shape() != input.shape() ||
+        output.dtype() != DataType::Float32 || !output.is_contiguous()) {
+        throw std::invalid_argument(
+            "layer_norm output must be contiguous and match the input");
+    }
     ReductionIterator iterator(input.layout(), {-1});
-    Tensor output(input.shape());
     const auto* input_data = input.data<float>();
     auto* output_data = output.data<float>();
     const auto* weight_data = weight ? weight->data<float>() : nullptr;
@@ -79,45 +83,77 @@ Tensor layer_norm_impl(const Tensor& input, const Tensor* weight,
             output_data[output_index] = value;
         }
     }
-    return output;
 }
 
 }  // namespace
 
 Tensor add(const Tensor& lhs, const Tensor& rhs) {
-    return run_binary_kernel<float>(lhs, rhs,
-                                    [](float left, float right) {
-                                        return left + right;
-                                    });
+    TensorIterator iterator({lhs.layout(), rhs.layout()});
+    Tensor output(iterator.shape(), DataType::Float32);
+    add_out(output, lhs, rhs);
+    return output;
+}
+
+void add_out(Tensor& output, const Tensor& lhs, const Tensor& rhs) {
+    run_binary_kernel_into<float>(output, lhs, rhs,
+                                  [](float left, float right) {
+                                      return left + right;
+                                  });
 }
 
 Tensor sub(const Tensor& lhs, const Tensor& rhs) {
-    return run_binary_kernel<float>(lhs, rhs,
-                                    [](float left, float right) {
-                                        return left - right;
-                                    });
+    TensorIterator iterator({lhs.layout(), rhs.layout()});
+    Tensor output(iterator.shape(), DataType::Float32);
+    sub_out(output, lhs, rhs);
+    return output;
+}
+
+void sub_out(Tensor& output, const Tensor& lhs, const Tensor& rhs) {
+    run_binary_kernel_into<float>(output, lhs, rhs,
+                                  [](float left, float right) {
+                                      return left - right;
+                                  });
 }
 
 Tensor mul(const Tensor& lhs, const Tensor& rhs) {
-    return run_binary_kernel<float>(lhs, rhs,
-                                    [](float left, float right) {
-                                        return left * right;
-                                    });
+    TensorIterator iterator({lhs.layout(), rhs.layout()});
+    Tensor output(iterator.shape(), DataType::Float32);
+    mul_out(output, lhs, rhs);
+    return output;
+}
+
+void mul_out(Tensor& output, const Tensor& lhs, const Tensor& rhs) {
+    run_binary_kernel_into<float>(output, lhs, rhs,
+                                  [](float left, float right) {
+                                      return left * right;
+                                  });
 }
 
 Tensor relu(const Tensor& input) {
-    return run_unary_kernel<float>(input,
-                                   [](float value) {
-                                       return std::max(0.0F, value);
-                                   });
+    Tensor output(input.shape(), DataType::Float32);
+    relu_out(output, input);
+    return output;
+}
+
+void relu_out(Tensor& output, const Tensor& input) {
+    run_unary_kernel_into<float>(output, input,
+                                 [](float value) {
+                                     return std::max(0.0F, value);
+                                 });
 }
 
 Tensor gelu(const Tensor& input) {
+    Tensor output(input.shape(), DataType::Float32);
+    gelu_out(output, input);
+    return output;
+}
+
+void gelu_out(Tensor& output, const Tensor& input) {
     // tanh approximation used by many inference runtimes.
     constexpr float kSqrtTwoOverPi = 0.7978845608028654F;
     constexpr float kCubicCoefficient = 0.044715F;
-    return run_unary_kernel<float>(
-        input,
+    run_unary_kernel_into<float>(
+        output, input,
         [](float value) {
             const auto cubic = value * value * value;
             return 0.5F * value *
@@ -179,12 +215,22 @@ Tensor reduce_max(const Tensor& input,
 }
 
 Tensor softmax(const Tensor& input, std::int64_t axis) {
+    Tensor output(input.shape(), DataType::Float32);
+    softmax_out(output, input, axis);
+    return output;
+}
+
+void softmax_out(Tensor& output, const Tensor& input, std::int64_t axis) {
     require_f32(input, "softmax");
     ReductionIterator iterator(input.layout(), {axis});
     if (iterator.reduction_numel() == 0) {
         throw std::invalid_argument("softmax cannot normalize an empty dimension");
     }
-    Tensor output(input.shape());
+    if (output.shape() != input.shape() ||
+        output.dtype() != DataType::Float32 || !output.is_contiguous()) {
+        throw std::invalid_argument(
+            "softmax output must be contiguous and match the input");
+    }
     const auto* input_data = input.data<float>();
     auto* output_data = output.data<float>();
     const auto contiguous = iterator.has_contiguous_reduction();
@@ -219,16 +265,28 @@ Tensor softmax(const Tensor& input, std::int64_t axis) {
             output_data[output_index] /= denominator;
         }
     }
-    return output;
 }
 
 Tensor layer_norm(const Tensor& input, float epsilon) {
-    return layer_norm_impl(input, nullptr, nullptr, epsilon);
+    Tensor output(input.shape(), DataType::Float32);
+    layer_norm_impl(output, input, nullptr, nullptr, epsilon);
+    return output;
+}
+
+void layer_norm_out(Tensor& output, const Tensor& input, float epsilon) {
+    layer_norm_impl(output, input, nullptr, nullptr, epsilon);
 }
 
 Tensor layer_norm(const Tensor& input, const Tensor& weight,
                   const Tensor& bias, float epsilon) {
-    return layer_norm_impl(input, &weight, &bias, epsilon);
+    Tensor output(input.shape(), DataType::Float32);
+    layer_norm_impl(output, input, &weight, &bias, epsilon);
+    return output;
+}
+
+void layer_norm_out(Tensor& output, const Tensor& input,
+                    const Tensor& weight, const Tensor& bias, float epsilon) {
+    layer_norm_impl(output, input, &weight, &bias, epsilon);
 }
 
 Tensor linear(const Tensor& input, const Tensor& weight, const Tensor& bias) {

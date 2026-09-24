@@ -48,12 +48,18 @@ or incorrect probabilities before timing anything. It then reports:
 | `file_and_parse` | Open/read `.onnx`, protobuf parsing, TensorProto decoding |
 | `graph_import` | Operator translation, graph construction, shape inference and validation |
 | `context_init` | ExecutionContext allocation and graph constant copies |
+| `memory_plan_build` | Static lifetime analysis and reusable slot assignment |
+| `planned_context_init` | Constant copies plus one shared intermediate Buffer allocation |
 | `cold_inference` | New context, input creation/binding, and one CPU execution |
 | `warm_inference` | CPU execution while reusing the model, context, input, and constants |
+| `planned_warm_inference` | CPU execution with direct writes into reusable planned storage |
 
 `Executor::run` clears intermediate values before each execution, so the warm
-measurement still includes allocation of current operator outputs. It does not
-yet represent a memory-planned runtime.
+measurement still includes independent allocation of current operator outputs.
+Compare it with `planned_warm_inference`, which reuses one shared Buffer. The
+planner reports intermediate capacity separately from inputs, constants,
+packed weights, and backend scratch space; intermediate graph outputs are part
+of the plan but remain live through the invocation.
 
 Because parsing is warmed up and repeated, `file_and_parse` normally measures
 file access with the operating-system page cache already hot. It is a

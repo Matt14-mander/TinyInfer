@@ -330,7 +330,7 @@ std::vector<BenchmarkResult> run_benchmarks(const Options& options) {
     verify_fixture(model);
 
     std::vector<BenchmarkResult> results;
-    results.reserve(5);
+    results.reserve(8);
     results.push_back(measure("file_and_parse", options, [&] {
         const auto candidate = parser.parse(options.model_path);
         if (candidate.graph.nodes.empty()) {
@@ -347,6 +347,20 @@ std::vector<BenchmarkResult> run_benchmarks(const Options& options) {
         const tinyinfer::ExecutionContext context(model.graph());
         if (context.graph().size() == 0) {
             throw std::runtime_error("benchmark context has an empty graph");
+        }
+    }));
+
+    results.push_back(measure("memory_plan_build", options, [&] {
+        const tinyinfer::MemoryPlan plan(model.graph());
+        if (plan.value_count() != model.graph().value_count()) {
+            throw std::runtime_error("benchmark memory plan is incomplete");
+        }
+    }));
+    const tinyinfer::MemoryPlan memory_plan(model.graph());
+    results.push_back(measure("planned_context_init", options, [&] {
+        const tinyinfer::ExecutionContext context(model.graph(), memory_plan);
+        if (!context.uses_memory_plan()) {
+            throw std::runtime_error("benchmark context is not memory planned");
         }
     }));
 
@@ -370,6 +384,15 @@ std::vector<BenchmarkResult> run_benchmarks(const Options& options) {
     results.push_back(measure("warm_inference", options, [&] {
         executor.run(model.graph(), warm_context);
         static_cast<void>(warm_context.output(output_id));
+    }));
+
+    tinyinfer::ExecutionContext planned_context(model.graph(), memory_plan);
+    planned_context.bind_input(input_id,
+                               tinyinfer::Tensor::from_vector(
+                                   {1, 2}, {1.0F, -2.0F}));
+    results.push_back(measure("planned_warm_inference", options, [&] {
+        executor.run(model.graph(), planned_context);
+        static_cast<void>(planned_context.output(output_id));
     }));
     return results;
 }
