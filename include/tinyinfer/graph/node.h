@@ -18,7 +18,8 @@ enum class OpType {
     ReLU,
     GELU,
     Softmax,
-    LayerNorm
+    LayerNorm,
+    Count  // Sentinel: keep last so coverage tests enumerate every real OpType.
 };
 using AttributeValue = std::variant<std::int64_t, float, bool, std::string,
                                     std::vector<std::int64_t>>;

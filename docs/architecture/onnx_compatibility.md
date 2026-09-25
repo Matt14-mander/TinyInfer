@@ -102,6 +102,15 @@ domain='', op='Conv', opset=17
 
 ## Compatibility test matrix
 
+`operator_coverage_test.cpp` is the cross-layer gate for every `OpType`. Its
+enum-ordered cases check Schema, shape inference, CPU registration, and a
+forward pass against independent expected values. For every ONNX translator
+registration, the same test checks the first supported opset, rejection of
+the preceding opset, translation, and imported-model execution. Adding an
+operator requires a new case; an operator without ONNX support leaves its
+ONNX case fields empty. The test uses runtime checks so Release builds cannot
+silently disable these assertions.
+
 | Case | Expected result | Test |
 | --- | --- | --- |
 | Real opset-17 Gemm MLP | Import and execute with checked probabilities | `onnx_gemm_fixture_test.cpp` |

@@ -21,6 +21,13 @@ using OperatorTranslator =
 
 class OperatorRegistry {
 public:
+    struct Registration {
+        std::string domain;
+        std::string op_type;
+        std::int64_t first_opset;
+        std::int64_t last_opset;
+    };
+
     OperatorRegistry();
 
     void register_translator(std::string domain, std::string op_type,
@@ -31,6 +38,7 @@ public:
                   std::int64_t opset_version) const;
     TranslatedOperator translate(const NodeProto& node,
                                  std::int64_t opset_version) const;
+    std::vector<Registration> registrations() const;
 
 private:
     struct VersionedTranslator {

@@ -82,6 +82,10 @@ add_executable(tinyinfer_operator_schema_tests operator_schema_test.cpp)
 target_link_libraries(tinyinfer_operator_schema_tests PRIVATE TinyInfer::tinyinfer)
 add_test(NAME tinyinfer_operator_schema_tests COMMAND tinyinfer_operator_schema_tests)
 
+add_executable(tinyinfer_operator_coverage_tests operator_coverage_test.cpp)
+target_link_libraries(tinyinfer_operator_coverage_tests PRIVATE TinyInfer::tinyinfer)
+add_test(NAME tinyinfer_operator_coverage_tests COMMAND tinyinfer_operator_coverage_tests)
+
 add_executable(tinyinfer_graph_validation_tests graph_validation_test.cpp)
 target_link_libraries(tinyinfer_graph_validation_tests PRIVATE TinyInfer::tinyinfer)
 add_test(NAME tinyinfer_graph_validation_tests COMMAND tinyinfer_graph_validation_tests)

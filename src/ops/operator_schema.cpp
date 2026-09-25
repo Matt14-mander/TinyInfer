@@ -114,6 +114,7 @@ const OperatorSchema& operator_schema(OpType op) {
         case OpType::GELU: return kGELU;
         case OpType::Softmax: return kSoftmax;
         case OpType::LayerNorm: return kLayerNorm;
+        case OpType::Count: break;
     }
     throw std::invalid_argument("unknown operator type");
 }
@@ -245,6 +246,7 @@ std::vector<TensorSpec> infer_output_specs(
             }
             return {inputs[0]};
         }
+        case OpType::Count: break;
     }
     throw std::logic_error("operator shape inference is not implemented");
 }

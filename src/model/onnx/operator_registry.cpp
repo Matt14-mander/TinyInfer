@@ -132,4 +132,16 @@ TranslatedOperator OperatorRegistry::translate(
         std::to_string(opset_version));
 }
 
+std::vector<OperatorRegistry::Registration>
+OperatorRegistry::registrations() const {
+    std::vector<Registration> result;
+    for (const auto& entry : translators_) {
+        for (const auto& version : entry.second) {
+            result.push_back({entry.first.first, entry.first.second,
+                              version.first_opset, version.last_opset});
+        }
+    }
+    return result;
+}
+
 }  // namespace tinyinfer::onnx
