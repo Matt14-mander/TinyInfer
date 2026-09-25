@@ -24,11 +24,17 @@ Tensor storage + memory management
 
 - **Core** owns `Tensor`, `DataType`, layout, iteration, and memory abstractions. `TensorLayout` encapsulates shape, strides, indexing, reshape/transpose metadata, and checked size calculations. `TensorIterator` builds a shared broadcasted iteration space for stride-aware elementwise kernels. `Allocator` supplies raw memory, `Buffer` owns an allocation, and `Storage` identifies a shared byte range inside a Buffer. `CpuAllocator` handles independent buffers while `ArenaAllocator` supports bulk lifetime reuse. Core does not depend on graph or runtime.
 - **Ops** defines operator contracts, input/output arity, accepted attributes, dtype rules, and shape inference. Graph construction invokes these schemas before creating output Values, so invalid operators fail during model construction rather than execution.
-- **Graph** represents Tensor values as data-flow edges and operator nodes as producers/consumers. Values carry shape, dtype, kind, and producer metadata; nodes carry Value inputs/outputs and typed attributes. Whole-graph validation checks table integrity, constants, producers, schemas, and registered outputs. A stable Kahn sort produces execution order and rejects cycles. The Phase 4 optimizer provides `GraphPass`, `PassManager`, rebuilding through `GraphRewriter`, original-to-final ValueId mapping, per-pass statistics, cascading Constant Folding, and output-driven Dead Code Elimination.
+- **Graph** represents Tensor values as data-flow edges and operator nodes as producers/consumers. Values carry shape, dtype, kind, and producer metadata; nodes carry Value inputs/outputs and typed attributes. Whole-graph validation checks table integrity, constants, producers, schemas, and registered outputs. A stable Kahn sort produces execution order and rejects cycles. `GraphAnalysis` builds a read-only snapshot of distinct consumer nodes, per-input use counts, node outputs, and graph-output membership; rebuild it after a graph change. The Phase 4 optimizer provides `GraphPass`, `PassManager`, rebuilding through `GraphRewriter`, original-to-final ValueId mapping, per-pass statistics, cascading Constant Folding, and output-driven Dead Code Elimination.
 - **Model** owns an executable Graph plus stable external input/output name bindings. `ModelLoader` is the format-independent loading boundary. The ONNX importer keeps protobuf parsing behind an injected parser and translates a lightweight model description through an ONNX-specific operator registry.
 - **Runtime** coordinates execution, kernel selection, value binding, memory planning, and scheduling. `MemoryPlan` analyzes intermediate lifetimes and assigns non-overlapping Values to aligned slots in one shared Buffer. A planned `ExecutionContext` materializes outputs directly in those slots and releases dead Tensor handles after their final consumer; the default unplanned context remains available. Constants are loaded at construction and inputs are bound by the caller.
 - **Backend** is the hardware abstraction boundary. `CpuBackend` delegates node execution to a CPU `OperatorRegistry`, which maps each `OpType` to a callable kernel without coupling `Executor` to operator implementations. Metal and CUDA remain optional modules.
 - **Compiler** is reserved for a future low-level IR, fusion, code generation, and kernel selection.
+
+`GraphAnalysis::consumers(value)` lists each consuming node once in NodeId
+order. `use_count(value)` counts input slots, so `Add(x, x)` contributes two
+uses but one consumer. Registered graph outputs are queried separately through
+`is_graph_output(value)` and do not increment use-count. `outputs(node)` and
+`graph_outputs()` preserve their respective declared orders.
 
 ## Current scaffold decisions
 

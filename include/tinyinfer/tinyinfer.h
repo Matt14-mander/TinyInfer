@@ -13,6 +13,7 @@
 #include "tinyinfer/core/reduction_iterator.h"
 #include "tinyinfer/core/tensor.h"
 #include "tinyinfer/graph/graph.h"
+#include "tinyinfer/graph/graph_analysis.h"
 #include "tinyinfer/graph/node.h"
 #include "tinyinfer/graph/optimizer/constant_folding_pass.h"
 #include "tinyinfer/graph/optimizer/dead_code_elimination_pass.h"

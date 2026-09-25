@@ -19,6 +19,7 @@ add_library(tinyinfer
     src/ops/matmul.cpp
     src/ops/operator_schema.cpp
     src/graph/graph.cpp
+    src/graph/graph_analysis.cpp
     src/graph/optimizer/optimization_result.cpp
     src/graph/optimizer/graph_rewriter.cpp
     src/graph/optimizer/constant_folding_pass.cpp
