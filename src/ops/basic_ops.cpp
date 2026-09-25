@@ -142,6 +142,17 @@ void relu_out(Tensor& output, const Tensor& input) {
                                  });
 }
 
+Tensor tanh(const Tensor& input) {
+    Tensor output(input.shape(), DataType::Float32);
+    tanh_out(output, input);
+    return output;
+}
+
+void tanh_out(Tensor& output, const Tensor& input) {
+    run_unary_kernel_into<float>(output, input,
+                                 [](float value) { return std::tanh(value); });
+}
+
 Tensor gelu(const Tensor& input) {
     Tensor output(input.shape(), DataType::Float32);
     gelu_out(output, input);

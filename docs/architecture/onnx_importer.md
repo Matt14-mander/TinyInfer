@@ -46,7 +46,7 @@ and value context. The exact supported subset and negative-test contract are
 listed in the [ONNX compatibility profile](onnx_compatibility.md).
 
 The first importer slice supports one-output nodes and maps Add, Sub, Mul,
-MatMul, Gemm, Relu, Gelu, Softmax, and LayerNormalization. It imports
+MatMul, Gemm, Relu, Tanh, Gelu, Softmax, and LayerNormalization. It imports
 initializers as Graph constants, excludes initializer-backed values from runtime inputs,
 resolves nodes by their data dependencies, validates inferred output metadata,
 and preserves external model input/output names through `Model` bindings.
@@ -74,3 +74,22 @@ remain later optimizations.
 `tests/fixtures/phase3_mlp_gemm.onnx` is generated from the official ONNX
 protobuf definition by `tools/generate_onnx_mlp_fixture.py`. It contains two
 Gemm nodes, Relu, and Softmax with fixed weights and a checked reference output.
+
+`tests/fixtures/rl_actor_mlp_tanh.onnx` is exported by PyTorch itself using
+`tools/export_pytorch_rl_mlp_fixture.py` (torch 2.2.2, ONNX 1.16.0, opset 17).
+Its fixed-weight continuous-control actor maps four observations through
+`Linear → Tanh → Linear → Tanh` to two bounded actions. The fixture test checks
+two PyTorch reference outputs after ONNX import and CPU execution. The exporter
+is intentionally separate from the hand-built Gemm fixture so provenance is
+clear and export can be reproduced.
+
+To regenerate this binary fixture, create a temporary Python 3.11 environment and
+run:
+
+```bash
+python -m pip install 'torch==2.2.2' 'onnx==1.16.0' 'numpy<2'
+python tools/export_pytorch_rl_mlp_fixture.py
+```
+
+The exporter checks the ONNX graph and prints PyTorch outputs for two fixed
+observations. Regeneration is not part of the normal C++ build or test run.

@@ -92,6 +92,9 @@ OperatorRegistry::OperatorRegistry() {
     register_kernel(OpType::ReLU, [](const Node& node, ExecutionContext& context) {
         ops::relu_out(output(node, context), input(node, context, 0));
     });
+    register_kernel(OpType::Tanh, [](const Node& node, ExecutionContext& context) {
+        ops::tanh_out(output(node, context), input(node, context, 0));
+    });
     register_kernel(OpType::GELU, [](const Node& node, ExecutionContext& context) {
         const auto found = node.attributes.find("approximate");
         const auto approximate = found == node.attributes.end()

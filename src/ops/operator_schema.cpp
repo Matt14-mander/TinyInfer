@@ -21,6 +21,7 @@ const OperatorSchema kGemm{
      {"transA", AttributeType::Integer, false},
      {"transB", AttributeType::Integer, false}}};
 const OperatorSchema kReLU{OpType::ReLU, "ReLU", 1, 1, 1, {}};
+const OperatorSchema kTanh{OpType::Tanh, "Tanh", 1, 1, 1, {}};
 const OperatorSchema kGELU{
     OpType::GELU, "GELU", 1, 1, 1,
     {{"approximate", AttributeType::String, false}}};
@@ -111,6 +112,7 @@ const OperatorSchema& operator_schema(OpType op) {
         case OpType::MatMul: return kMatMul;
         case OpType::Gemm: return kGemm;
         case OpType::ReLU: return kReLU;
+        case OpType::Tanh: return kTanh;
         case OpType::GELU: return kGELU;
         case OpType::Softmax: return kSoftmax;
         case OpType::LayerNorm: return kLayerNorm;
@@ -197,6 +199,7 @@ std::vector<TensorSpec> infer_output_specs(
         }
 
         case OpType::ReLU:
+        case OpType::Tanh:
             return {inputs[0]};
 
         case OpType::GELU: {

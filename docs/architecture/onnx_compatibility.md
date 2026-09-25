@@ -49,6 +49,7 @@ in an imported graph.
 | `MatMul` | 13 | 2 | None | Float32 rank-2 matrices only |
 | `Gemm` | 13 | 2–3 | `alpha`, `beta`, `transA`, `transB` | Float32 rank-2 A/B; optional broadcastable C |
 | `Relu` | 13 | 1 | None | Float32 |
+| `Tanh` | 13 | 1 | None | Float32 |
 | `Gelu` | 20 | 1 | `approximate` | Float32; default `none` uses erf, explicit `tanh` uses approximation |
 | `Softmax` | 13 | 1 | `axis` | Float32, non-empty selected axis |
 | `LayerNormalization` | 17 | 2–3 | `axis`, `epsilon`, `stash_type` | Float32 X+Scale, optional Bias; final axis only (`axis=-1`), `stash_type=1`, 1-D Scale/Bias matching final dimension, Y output only |
@@ -114,6 +115,7 @@ silently disable these assertions.
 | Case | Expected result | Test |
 | --- | --- | --- |
 | Real opset-17 Gemm MLP | Import and execute with checked probabilities | `onnx_gemm_fixture_test.cpp` |
+| PyTorch-exported opset-17 RL actor MLP (`Gemm → Tanh → Gemm → Tanh`) | Import and compare actions for two observations with PyTorch references | `onnx_rl_mlp_fixture_test.cpp` |
 | Supported static Add model | Import successfully | `onnx_compatibility_test.cpp` |
 | Opset below 13 | `ModelValidation` | `onnx_compatibility_test.cpp` |
 | LayerNormalization at opset 16 / 17 | Reject 16; execute 17 with Scale and optional Bias | `onnx_compatibility_test.cpp` |

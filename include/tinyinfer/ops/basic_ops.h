@@ -19,6 +19,8 @@ Tensor mul(const Tensor& lhs, const Tensor& rhs);
 void mul_out(Tensor& output, const Tensor& lhs, const Tensor& rhs);
 Tensor relu(const Tensor& input);
 void relu_out(Tensor& output, const Tensor& input);
+Tensor tanh(const Tensor& input);
+void tanh_out(Tensor& output, const Tensor& input);
 Tensor gelu(const Tensor& input);
 void gelu_out(Tensor& output, const Tensor& input,
               std::string_view approximate = "tanh");

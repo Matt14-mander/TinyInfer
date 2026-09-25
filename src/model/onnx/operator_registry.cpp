@@ -70,6 +70,7 @@ OperatorRegistry::OperatorRegistry() {
     register_translator("", "MatMul", 13, latest, direct(OpType::MatMul));
     register_translator("", "Gemm", 13, latest, direct(OpType::Gemm));
     register_translator("", "Relu", 13, latest, direct(OpType::ReLU));
+    register_translator("", "Tanh", 13, latest, direct(OpType::Tanh));
     register_translator("", "Softmax", 13, latest, direct(OpType::Softmax));
     register_translator("", "LayerNormalization", 17, latest,
                         translate_layer_norm);

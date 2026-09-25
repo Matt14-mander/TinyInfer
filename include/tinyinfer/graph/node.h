@@ -16,6 +16,7 @@ enum class OpType {
     MatMul,
     Gemm,
     ReLU,
+    Tanh,
     GELU,
     Softmax,
     LayerNorm,
