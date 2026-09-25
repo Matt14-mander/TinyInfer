@@ -19,6 +19,7 @@
 #include "tinyinfer/graph/optimizer/dead_code_elimination_pass.h"
 #include "tinyinfer/graph/optimizer/graph_pass.h"
 #include "tinyinfer/graph/optimizer/graph_rewriter.h"
+#include "tinyinfer/graph/optimizer/matmul_add_canonicalization_pass.h"
 #include "tinyinfer/graph/optimizer/no_op_pass.h"
 #include "tinyinfer/graph/optimizer/optimization_result.h"
 #include "tinyinfer/graph/optimizer/pass_manager.h"

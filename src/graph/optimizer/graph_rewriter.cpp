@@ -39,6 +39,13 @@ ValueId GraphRewriter::copy_value(ValueId source_value) {
 }
 
 NodeId GraphRewriter::copy_node(NodeId source_node) {
+    const auto& node = source_.graph().node(source_node);
+    return replace_node(source_node, node.op, node.inputs, node.attributes);
+}
+
+NodeId GraphRewriter::replace_node(NodeId source_node, OpType replacement_op,
+                                   std::vector<ValueId> source_inputs,
+                                   NodeAttributes attributes) {
     if (finished_) {
         throw std::logic_error("cannot modify a finished graph rewrite");
     }
@@ -49,19 +56,23 @@ NodeId GraphRewriter::copy_node(NodeId source_node) {
         }
     }
     std::vector<ValueId> inputs;
-    inputs.reserve(node.inputs.size());
-    for (const auto input : node.inputs) {
+    inputs.reserve(source_inputs.size());
+    for (const auto input : source_inputs) {
         inputs.push_back(copy_value(input));
     }
 
     const auto mapped_node = graph_.add_node(
-        node.name, node.op, std::move(inputs), node.attributes);
+        node.name, replacement_op, std::move(inputs), std::move(attributes));
     const auto& mapped_outputs = graph_.node(mapped_node).outputs;
     if (mapped_outputs.size() != node.outputs.size()) {
         throw std::logic_error("rewritten node output count changed");
     }
     for (std::size_t index = 0; index < node.outputs.size(); ++index) {
         const auto source_output = node.outputs[index];
+        if (graph_.value(mapped_outputs[index]).spec !=
+            source_.graph().value(source_output).spec) {
+            throw std::logic_error("rewritten node output TensorSpec changed");
+        }
         value_mapping_[source_output] = mapped_outputs[index];
     }
     return mapped_node;

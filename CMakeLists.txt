@@ -22,6 +22,7 @@ add_library(tinyinfer
     src/graph/graph_analysis.cpp
     src/graph/optimizer/optimization_result.cpp
     src/graph/optimizer/graph_rewriter.cpp
+    src/graph/optimizer/matmul_add_canonicalization_pass.cpp
     src/graph/optimizer/constant_folding_pass.cpp
     src/graph/optimizer/dead_code_elimination_pass.cpp
     src/graph/optimizer/no_op_pass.cpp

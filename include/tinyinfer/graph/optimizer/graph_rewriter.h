@@ -13,6 +13,9 @@ public:
 
     ValueId copy_value(ValueId source_value);
     NodeId copy_node(NodeId source_node);
+    NodeId replace_node(NodeId source_node, OpType replacement_op,
+                        std::vector<ValueId> source_inputs,
+                        NodeAttributes attributes = {});
     ValueId replace_with_constant(ValueId source_value, Tensor value);
 
     const std::vector<ValueId>& value_mapping() const noexcept {

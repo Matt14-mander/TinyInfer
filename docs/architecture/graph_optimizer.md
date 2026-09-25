@@ -106,7 +106,7 @@ through Value producers. Only nodes and dependencies reached by that traversal
 are copied. Unreachable nodes, unused constants, and dead intermediate Values
 therefore disappear, while the complete external input interface is preserved.
 
-The recommended initial pipeline is:
+The baseline pipeline is:
 
 ```text
 ConstantFoldingPass -> DeadCodeEliminationPass
@@ -118,9 +118,33 @@ branches. Tests cover cascading folding, dead runtime-dependent branches,
 ValueId-map composition, constant-only graph outputs, numerical equivalence,
 and a no-change second optimization run.
 
+## MatMulAddCanonicalizationPass
+
+The pass recognizes `MatMul(A,B) -> Add(C)` and `Add(C, MatMul(A,B))` only when
+the product has exactly one use, is not a graph output, and the proposed
+`Gemm(A,B,C)` infers the same output TensorSpec as the Add. It emits Gemm with
+explicit `alpha=beta=1` and `transA=transB=0`, preserves the Add output
+binding, and maps the removed MatMul result to `kInvalidValueId`. Standalone
+MatMul and existing Gemm nodes remain unchanged. The pass is idempotent and
+does not remove unrelated constants. See
+[ADR-0004](../decisions/0004-canonicalize-matmul-add-to-gemm.md) for its
+eligibility rules and tradeoffs.
+
+The current CPU Gemm still applies scaling and bias in a separate loop, so
+canonicalization alone is not evidence of a faster kernel.
+
+For models using affine patterns, the suggested opt-in pass order is:
+
+```text
+ConstantFoldingPass -> DeadCodeEliminationPass
+    -> MatMulAddCanonicalizationPass -> DeadCodeEliminationPass
+```
+
 ## Next extension
 
 Tensor lifetime analysis and reusable execution buffers are now implemented as
 a runtime `MemoryPlan` that consumes the simplified Graph without modifying it.
 See [Runtime memory planning](memory_planner.md). The next graph transformation
-slice is inference-oriented operator fusion.
+slice can build on canonical Gemm nodes for activation fusion and an optimized
+affine CPU kernel, with numerical and memory benchmarks before claiming a
+speedup.
