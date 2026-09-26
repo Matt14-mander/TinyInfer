@@ -11,6 +11,7 @@
 namespace tinyinfer::ops {
 namespace {
 
+// the data type for float32
 void require_f32(const Tensor& tensor, const char* operation) {
     if (tensor.dtype() != DataType::Float32) {
         throw std::invalid_argument(std::string(operation) + " currently supports only float32 tensors");
@@ -56,9 +57,9 @@ void layer_norm_impl(Tensor& output, const Tensor& input, const Tensor* weight,
         for (std::size_t index = 0; index < iterator.reduction_numel(); ++index) {
             const auto offset = contiguous ? base + index
                                            : iterator.input_offset(group, index);
-            mean += input_data[offset];
+            mean += input_data[offset]; // sum
         }
-        mean /= static_cast<float>(iterator.reduction_numel());
+        mean /= static_cast<float>(iterator.reduction_numel()); // mean
 
         float variance = 0.0F;
         for (std::size_t index = 0; index < iterator.reduction_numel(); ++index) {
@@ -68,7 +69,7 @@ void layer_norm_impl(Tensor& output, const Tensor& input, const Tensor* weight,
             variance += centered * centered;
         }
         variance /= static_cast<float>(iterator.reduction_numel());
-        const auto inverse_stddev = 1.0F / std::sqrt(variance + epsilon);
+        const auto inverse_stddev = 1.0F / std::sqrt(variance + epsilon); // inverse standard deviation
 
         for (std::size_t index = 0; index < iterator.reduction_numel(); ++index) {
             const auto input_offset = contiguous
@@ -78,6 +79,7 @@ void layer_norm_impl(Tensor& output, const Tensor& input, const Tensor* weight,
                                           ? base + index
                                           : iterator.input_logical_index(group, index);
             auto value = (input_data[input_offset] - mean) * inverse_stddev;
+            // AffineTransform
             if (weight_data) value *= weight_data[weight->layout().storage_offset(index)];
             if (bias_data) value += bias_data[bias->layout().storage_offset(index)];
             output_data[output_index] = value;
@@ -87,6 +89,7 @@ void layer_norm_impl(Tensor& output, const Tensor& input, const Tensor* weight,
 
 }  // namespace
 
+// add operator for two tensor
 Tensor add(const Tensor& lhs, const Tensor& rhs) {
     TensorIterator iterator({lhs.layout(), rhs.layout()});
     Tensor output(iterator.shape(), DataType::Float32);
@@ -94,6 +97,7 @@ Tensor add(const Tensor& lhs, const Tensor& rhs) {
     return output;
 }
 
+// write the output tensor.
 void add_out(Tensor& output, const Tensor& lhs, const Tensor& rhs) {
     run_binary_kernel_into<float>(output, lhs, rhs,
                                   [](float left, float right) {
@@ -101,6 +105,7 @@ void add_out(Tensor& output, const Tensor& lhs, const Tensor& rhs) {
                                   });
 }
 
+// subtract operator for two tensor
 Tensor sub(const Tensor& lhs, const Tensor& rhs) {
     TensorIterator iterator({lhs.layout(), rhs.layout()});
     Tensor output(iterator.shape(), DataType::Float32);
@@ -108,6 +113,7 @@ Tensor sub(const Tensor& lhs, const Tensor& rhs) {
     return output;
 }
 
+// write the output tensor.
 void sub_out(Tensor& output, const Tensor& lhs, const Tensor& rhs) {
     run_binary_kernel_into<float>(output, lhs, rhs,
                                   [](float left, float right) {
@@ -115,6 +121,7 @@ void sub_out(Tensor& output, const Tensor& lhs, const Tensor& rhs) {
                                   });
 }
 
+// multiply operator for two tensor
 Tensor mul(const Tensor& lhs, const Tensor& rhs) {
     TensorIterator iterator({lhs.layout(), rhs.layout()});
     Tensor output(iterator.shape(), DataType::Float32);
@@ -122,6 +129,7 @@ Tensor mul(const Tensor& lhs, const Tensor& rhs) {
     return output;
 }
 
+// write the output tensor.
 void mul_out(Tensor& output, const Tensor& lhs, const Tensor& rhs) {
     run_binary_kernel_into<float>(output, lhs, rhs,
                                   [](float left, float right) {
@@ -129,12 +137,14 @@ void mul_out(Tensor& output, const Tensor& lhs, const Tensor& rhs) {
                                   });
 }
 
+// the rectified linear unit of each element in the input tensor.
 Tensor relu(const Tensor& input) {
     Tensor output(input.shape(), DataType::Float32);
     relu_out(output, input);
     return output;
 }
 
+// writes the result to the output tensor.
 void relu_out(Tensor& output, const Tensor& input) {
     run_unary_kernel_into<float>(output, input,
                                  [](float value) {
@@ -142,23 +152,27 @@ void relu_out(Tensor& output, const Tensor& input) {
                                  });
 }
 
+// the hyperbolic tangent of each element in the input tensor.
 Tensor tanh(const Tensor& input) {
     Tensor output(input.shape(), DataType::Float32);
     tanh_out(output, input);
     return output;
 }
 
+// writes the result to the output tensor.
 void tanh_out(Tensor& output, const Tensor& input) {
     run_unary_kernel_into<float>(output, input,
                                  [](float value) { return std::tanh(value); });
 }
 
+// the Gaussian error linear unit of each element in the input tensor.
 Tensor gelu(const Tensor& input) {
     Tensor output(input.shape(), DataType::Float32);
     gelu_out(output, input);
     return output;
 }
 
+// write the output tensor.
 void gelu_out(Tensor& output, const Tensor& input,
               std::string_view approximate) {
     if (approximate == "none") {
@@ -184,6 +198,7 @@ void gelu_out(Tensor& output, const Tensor& input,
         });
 }
 
+// reduce_sum computes the sum of the input tensor along the specified axes.
 Tensor reduce_sum(const Tensor& input,
                   const std::vector<std::int64_t>& axes, bool keepdim) {
     require_f32(input, "reduce_sum");
@@ -209,6 +224,7 @@ Tensor reduce_sum(const Tensor& input,
     return output;
 }
 
+// reduce_max computes the maximum of the input tensor along the specified axes.
 Tensor reduce_max(const Tensor& input,
                   const std::vector<std::int64_t>& axes, bool keepdim) {
     require_f32(input, "reduce_max");
@@ -236,12 +252,14 @@ Tensor reduce_max(const Tensor& input,
     return output;
 }
 
+// softmax of the input tensor along the specified axis.
 Tensor softmax(const Tensor& input, std::int64_t axis) {
     Tensor output(input.shape(), DataType::Float32);
     softmax_out(output, input, axis);
     return output;
 }
 
+// write the output tensor.
 void softmax_out(Tensor& output, const Tensor& input, std::int64_t axis) {
     require_f32(input, "softmax");
     ReductionIterator iterator(input.layout(), {axis});
@@ -289,27 +307,33 @@ void softmax_out(Tensor& output, const Tensor& input, std::int64_t axis) {
     }
 }
 
+//  Layer normalization
+// 仿射变换： weight * x_norm + bias
 Tensor layer_norm(const Tensor& input, float epsilon) {
     Tensor output(input.shape(), DataType::Float32);
-    layer_norm_impl(output, input, nullptr, nullptr, epsilon);
+    layer_norm_impl(output, input, nullptr, nullptr, epsilon); // epsilon (minimum value)
     return output;
 }
 
+// write the output tensor.
 void layer_norm_out(Tensor& output, const Tensor& input, float epsilon) {
     layer_norm_impl(output, input, nullptr, nullptr, epsilon);
 }
 
+// add weight value 缩放参数
 Tensor layer_norm(const Tensor& input, const Tensor& weight, float epsilon) {
     Tensor output(input.shape(), DataType::Float32);
     layer_norm_impl(output, input, &weight, nullptr, epsilon);
     return output;
 }
 
+// write the output tensor.
 void layer_norm_out(Tensor& output, const Tensor& input,
                     const Tensor& weight, float epsilon) {
     layer_norm_impl(output, input, &weight, nullptr, epsilon);
 }
 
+// add bias value 偏移参数
 Tensor layer_norm(const Tensor& input, const Tensor& weight,
                   const Tensor& bias, float epsilon) {
     Tensor output(input.shape(), DataType::Float32);
@@ -317,11 +341,13 @@ Tensor layer_norm(const Tensor& input, const Tensor& weight,
     return output;
 }
 
+// write the output tensor.
 void layer_norm_out(Tensor& output, const Tensor& input,
                     const Tensor& weight, const Tensor& bias, float epsilon) {
     layer_norm_impl(output, input, &weight, &bias, epsilon);
 }
 
+// linear computes the linear transformation of the input tensor using the weight and bias tensors.
 Tensor linear(const Tensor& input, const Tensor& weight, const Tensor& bias) {
     return add(matmul(input, weight), bias);
 }
