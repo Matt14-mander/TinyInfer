@@ -1,8 +1,12 @@
 # ONNX compatibility profile
 
-This document defines the ONNX subset supported by TinyInfer's v0.3 Model
-Runtime. Compatibility is split into parsing, graph import, and CPU execution;
-support at one layer does not imply support at the next layer.
+This document records two different contracts: what TinyInfer can execute as
+its **own Graph operators**, and which **ONNX subsets it can import with
+explicitly tested semantics**. They are not interchangeable. An `OpType`,
+CPU kernel, or ONNX registry entry does not by itself establish ONNX semantic
+compatibility. No operator is claimed to pass the complete ONNX conformance
+suite; the supported cases and the evidence for them are listed separately
+below.
 
 ## Model envelope
 
@@ -21,47 +25,68 @@ support at one layer does not imply support at the next layer.
 | Cycles and missing values | Rejected during `GraphImport` |
 
 The importer passes the default-domain opset to a version-aware operator
-registry. Registrations use inclusive version ranges and reject overlaps. An
-opset match is an availability check, not a claim of complete conformance for
-every later ONNX opset. Each operator below supports only the attributes and
-semantics explicitly implemented by TinyInfer.
+registry. Registrations use inclusive version ranges and reject overlaps. A
+registry hit means only that a translator is available for that opset; shape
+checks, dtype checks, import restrictions, execution, and ONNX semantics are
+separate gates. In particular, the open-ended registry ranges do **not** mean
+that every future ONNX operator revision has been reviewed.
 
-## Dtype layers
+## Data type boundaries
 
-| Dtype | TensorProto decode | Graph operator execution |
+| Dtype | ONNX TensorProto decode | Internal Graph/CPU operators | Imported ONNX graph execution |
+| --- | --- | --- | --- |
+| Float32 | Supported | Supported within the operator shapes below | Supported within the ONNX subset below |
+| Float16 | Supported as raw binary16 storage | Not supported by current Graph operator schemas | Not supported |
+| Int8 | Supported | Not supported by current Graph operator schemas | Not supported |
+| Int32 | Supported | Not supported by current Graph operator schemas | Not supported |
+
+Tensor storage and TensorProto decoding are not evidence of operator execution.
+Every current Graph operator schema requires Float32 inputs, even when an
+initializer of another dtype can be decoded.
+
+## Internal operator support (no ONNX claim)
+
+This table describes `OpType` + Schema/shape inference + CPU Backend, as
+tested with TinyInfer Graphs. All entries are Float32 and have one output.
+
+| Internal `OpType` | Implemented Graph/CPU subset | Internal test gate |
 | --- | --- | --- |
-| Float32 | Supported | Supported |
-| Float16 | Supported as raw binary16 storage | Not yet supported by imported operators |
-| Int8 | Supported | Not yet supported by imported operators |
-| Int32 | Supported | Not yet supported by imported operators |
+| `Add`, `Subtract`, `Multiply` | Two inputs; multidirectional elementwise broadcasting | `operator_coverage_test.cpp` |
+| `MatMul` | Two rank-2 matrices | `operator_coverage_test.cpp`, `matmul_kernel_test.cpp` |
+| `Gemm` | Rank-2 A/B; optional broadcastable C; `alpha`, `beta`, `transA`, `transB` (transpose flags 0 or 1) | `operator_coverage_test.cpp`, `gemm_test.cpp` |
+| `ReLU`, `Tanh` | Unary, output shape equals input shape | `operator_coverage_test.cpp` |
+| `GELU` | Unary; internal default is the `tanh` approximation, with `none` also available | `operator_coverage_test.cpp`, `elementwise_ops_test.cpp` |
+| `Softmax` | Unary; chosen non-empty axis; default axis is -1 | `operator_coverage_test.cpp`, `reduction_normalization_test.cpp` |
+| `LayerNorm` | Unary input with optional final-dimension weight and bias; `epsilon` | `operator_coverage_test.cpp`, `reduction_normalization_test.cpp` |
 
-Operator Schema currently requires Float32 inputs. Parser support for a dtype
-therefore means an initializer can be decoded, not that a CPU kernel can use it
-in an imported graph.
+The `LayerNorm` one-input and `GELU` default behaviors in this table are
+**internal APIs**, not promises about ONNX `LayerNormalization` or `Gelu`.
 
-## Operator profile
+## ONNX import subset and semantic evidence
 
-| ONNX operator | Registered from opset | Inputs | Supported attributes | Current constraints |
-| --- | ---: | ---: | --- | --- |
-| `Add` | 13 | 2 | None | Float32, NumPy-style broadcasting |
-| `Sub` | 13 | 2 | None | Float32, NumPy-style broadcasting |
-| `Mul` | 13 | 2 | None | Float32, NumPy-style broadcasting |
-| `MatMul` | 13 | 2 | None | Float32 rank-2 matrices only |
-| `Gemm` | 13 | 2–3 | `alpha`, `beta`, `transA`, `transB` | Float32 rank-2 A/B; optional broadcastable C |
-| `Relu` | 13 | 1 | None | Float32 |
-| `Tanh` | 13 | 1 | None | Float32 |
-| `Gelu` | 20 | 1 | `approximate` | Float32; default `none` uses erf, explicit `tanh` uses approximation |
-| `Softmax` | 13 | 1 | `axis` | Float32, non-empty selected axis |
-| `LayerNormalization` | 17 | 2–3 | `axis`, `epsilon`, `stash_type` | Float32 X+Scale, optional Bias; final axis only (`axis=-1`), `stash_type=1`, 1-D Scale/Bias matching final dimension, Y output only |
+All rows below are conditional on the model envelope above: a static-shape,
+default-domain model with one non-empty output per node and Float32 execution.
+"Registered from" reports the translator's lower opset bound, not full
+support for every model or later opset. "Evidence" distinguishes synthetic
+TinyInfer-built ONNX models from a file actually exported by PyTorch.
 
-Unknown attributes are rejected during Shape Inference. This is intentional:
-silently ignoring an ONNX attribute could execute a model with different
-semantics.
+| ONNX operator | Registered from | Accepted subset / semantic boundary | Evidence available; not a full conformance claim |
+| --- | ---: | --- | --- |
+| `Add`, `Sub`, `Mul` | 13 | Two Float32 inputs; elementwise broadcasting; no attributes | Synthesized one-node import/execution in `operator_coverage_test.cpp`; a static Add model in `onnx_compatibility_test.cpp`. No broad ONNX backend suite. |
+| `MatMul` | 13 | Float32 rank-2 matrices only. [ONNX also defines N-dimensional MatMul](https://onnx.ai/onnx/operators/onnx__MatMul.html), which is outside this subset. | Synthesized one-node import/execution; no batched/vector ONNX cases. |
+| `Gemm` | 13 | Float32 rank-2 A/B; two inputs or a non-empty optional C; broadcastable C; `alpha`, `beta`, `transA`, `transB` with transpose flags 0 or 1. Explicit empty-string optional inputs are not accepted. | Synthesized one-node case, checked Gemm MLP fixture, and PyTorch-exported actor MLP. These exercise selected values/attributes, not every [ONNX Gemm](https://onnx.ai/onnx/operators/onnx__Gemm.html) combination. |
+| `Relu` | 13 | Unary Float32; no attributes | Synthesized one-node case and checked Gemm MLP fixture. |
+| `Tanh` | 13 | Unary Float32; no attributes | Synthesized one-node case and PyTorch-exported actor MLP compared with two PyTorch outputs. |
+| `Gelu` | 20 | Unary Float32; absent `approximate` becomes exact `none` (erf); explicit `none` or `tanh` accepted. This differs from internal GELU's default. | Synthesized one-node case plus default/explicit/invalid-attribute tests; no exported-model or broad differential suite. |
+| `Softmax` | 13 | Unary Float32; valid, non-empty axis; default -1 | Synthesized one-node case and checked Gemm MLP fixture; no broad rank/axis differential suite. |
+| `LayerNormalization` | 17 | Float32 X and 1-D Scale, optional 1-D Bias; final axis only (`axis=-1` or omitted), `stash_type=1` or omitted, one Y output. Other [ONNX axes, broadcast forms, and optional Mean/InvStdDev outputs](https://onnx.ai/onnx/operators/onnx__LayerNormalization.html) are outside this subset. | Synthesized one-node case plus accepted/rejected attribute and input tests; no exported-model or broad differential suite. |
 
-`Gelu` preserves ONNX's exact-erf default; the internal eager GELU retains its
-historical tanh default. `LayerNormalization` translates only the subset that
-the current final-axis Float32 kernel implements. Other axes, stash types,
-parameter shapes, and extra outputs are rejected rather than silently changed.
+Unknown attributes are rejected during shape inference; the ONNX-specific
+`Gelu` and `LayerNormalization` translators reject unsupported semantics
+earlier. An accepted model has passed the implemented restrictions, **not**
+an ONNX reference-backend or full conformance comparison. That distinction
+matters especially for numerical tolerances, unusual shapes, and future
+opset revisions.
 
 ## Structured diagnostics
 
@@ -101,20 +126,25 @@ node_index=0, node=add_bias, op=Conv]: unsupported ONNX operator or opset:
 domain='', op='Conv', opset=17
 ```
 
-## Compatibility test matrix
+## Test matrix: what each test actually establishes
 
-`operator_coverage_test.cpp` is the cross-layer gate for every `OpType`. Its
-enum-ordered cases check Schema, shape inference, CPU registration, and a
-forward pass against independent expected values. For every ONNX translator
-registration, the same test checks the first supported opset, rejection of
-the preceding opset, translation, and imported-model execution. Adding an
-operator requires a new case; an operator without ONNX support leaves its
-ONNX case fields empty. The test uses runtime checks so Release builds cannot
-silently disable these assertions.
+The gates are deliberately separate. `operator_coverage_test.cpp` checks each
+internal `OpType` in enum order: Schema, shape inference, CPU registration,
+and a forward result. For each declared ONNX translator it additionally
+checks the lower opset boundary, translation, and execution of a *synthetic*
+one-node imported model. That is cross-layer plumbing, not a full ONNX
+semantic test. Its checks remain active in Release builds.
+
+| Layer / evidence level | What is verified | What is **not** established |
+| --- | --- | --- |
+| Internal operator coverage | TinyInfer Graph can infer and execute one positive Float32 case per `OpType` | ONNX import or ONNX semantics |
+| Translator/opset coverage | Registration boundary and synthetic one-node import/execution | All legal ONNX shapes, dtypes, attributes, and future opsets |
+| Targeted negative tests | Unsupported inputs/attributes fail with expected diagnostics | Rejection of every invalid ONNX model |
+| File fixtures | Built-in protobuf parser plus end-to-end inference; PyTorch fixture compares two outputs | Full operator conformance or numerical parity over diverse models |
 
 | Case | Expected result | Test |
 | --- | --- | --- |
-| Real opset-17 Gemm MLP | Import and execute with checked probabilities | `onnx_gemm_fixture_test.cpp` |
+| Hand-built opset-17 Gemm MLP | Import and execute with checked probabilities | `onnx_gemm_fixture_test.cpp` |
 | PyTorch-exported opset-17 RL actor MLP (`Gemm → Tanh → Gemm → Tanh`) | Import and compare actions for two observations with PyTorch references | `onnx_rl_mlp_fixture_test.cpp` |
 | Supported static Add model | Import successfully | `onnx_compatibility_test.cpp` |
 | Opset below 13 | `ModelValidation` | `onnx_compatibility_test.cpp` |
@@ -136,5 +166,8 @@ silently disable these assertions.
 | External TensorProto data | `TensorDecode` with tensor name | `protobuf_model_parser_test.cpp` |
 | Inconsistent TensorProto payload | `TensorDecode` with tensor name | `protobuf_model_parser_test.cpp` |
 
-This matrix is the v0.3 compatibility contract. A new ONNX feature is complete
-only when this profile and its positive and negative tests are updated.
+This is the current *tested ONNX subset*, not a general ONNX compatibility
+claim. A new operator first needs internal Schema/CPU coverage; ONNX support
+then requires a versioned translator, an explicitly bounded semantic subset,
+positive and negative import tests, and—before any broader compatibility
+claim—reference-backend or exporter differential tests for the claimed cases.
