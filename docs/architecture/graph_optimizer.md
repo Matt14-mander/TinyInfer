@@ -118,6 +118,23 @@ branches. Tests cover cascading folding, dead runtime-dependent branches,
 ValueId-map composition, constant-only graph outputs, numerical equivalence,
 and a no-change second optimization run.
 
+## Phase 4.2 acceptance boundary
+
+The Phase 4.2 graph-simplification slice consists of `PassManager`,
+`GraphRewriter`, cascading `ConstantFoldingPass`, and output-driven
+`DeadCodeEliminationPass`. Its functional contract is to preserve model input
+and output bindings, output TensorSpecs and numerical results, and compose
+ValueId mappings while removing eligible graph work. The two-pass pipeline is
+opt-in; model import and the default Executor do not run it implicitly.
+
+The [Phase 4.2 benchmark](../../benchmarks/README.md#phase-42-graph-optimization-benchmark)
+now checks the same real ONNX MLP as a no-change control and an ONNX-derived
+acceptance model with eligible constant and dead branches. Its Release results
+are recorded in the [Mac acceptance report](../benchmarks/mac-cpu-phase4.2.md).
+The reported speedup applies only to the acceptance model's removable work.
+MemoryPlan, MatMul+Add canonicalization, fusion, threading, and quantization
+are separate Phase 4 slices.
+
 ## MatMulAddCanonicalizationPass
 
 The pass recognizes `MatMul(A,B) -> Add(C)` and `Add(C, MatMul(A,B))` only when

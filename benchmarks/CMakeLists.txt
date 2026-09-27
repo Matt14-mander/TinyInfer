@@ -6,3 +6,9 @@ target_link_libraries(tinyinfer_model_benchmark PRIVATE TinyInfer::tinyinfer)
 target_compile_definitions(tinyinfer_model_benchmark PRIVATE
     TINYINFER_PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
     TINYINFER_BUILD_TYPE="$<CONFIG>")
+
+add_executable(tinyinfer_graph_optimization_benchmark graph_optimization_benchmark.cpp)
+target_link_libraries(tinyinfer_graph_optimization_benchmark PRIVATE TinyInfer::tinyinfer)
+target_compile_definitions(tinyinfer_graph_optimization_benchmark PRIVATE
+    TINYINFER_PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
+    TINYINFER_BUILD_TYPE="$<CONFIG>")

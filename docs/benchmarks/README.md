@@ -11,6 +11,8 @@ limitations needed to reproduce a result.
   an Intel Core i5-8257U MacBook Pro.
 - [ROG CPU v0.3 baseline](rog-cpu-v0.3.md): correctness coverage, Model Runtime,
   and MatMul results on an Intel Core i9-13980HX ROG machine.
+- [Mac CPU Phase 4.2 acceptance](mac-cpu-phase4.2.md): paired graph optimization
+  measurements and an unchanged ONNX control on the Intel Mac.
 
 Reports from different machines are comparable only when they use the same Git
 commit, Release configuration, native-architecture policy, fixture, and

@@ -83,6 +83,11 @@ threading, and quantization remain open.
 - Int8 quantization format, calibration, and kernels.
 
 Every optimization requires a reference implementation, tolerance tests, and before/after benchmarks.
+The Phase 4.2 graph-simplification slice has an opt-in model benchmark and a
+[Mac acceptance report](../benchmarks/mac-cpu-phase4.2.md) covering numerical
+equivalence, an unchanged ONNX control, graph-size reduction, and paired
+before/after inference measurements. Its results do not establish a speedup
+for models with no foldable constants or dead work.
 
 ## Phase 5 — Hardware Backends
 

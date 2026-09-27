@@ -95,6 +95,37 @@ Run the executable on each target machine. The program records build type,
 platform, architecture, and compiler; add the exact CPU model, operating
 system version, power mode, and Git commit when committing a benchmark report.
 
+## Phase 4.2 graph optimization benchmark
+
+`tinyinfer_graph_optimization_benchmark` imports the real Phase 3 ONNX Gemm MLP.
+It measures two pairs of warm CPU executions with pre-bound inputs and separate
+reused `ExecutionContext`s:
+
+- The imported ONNX model before and after Constant Folding + DCE is an
+  unchanged control. The passes should report no graph change.
+- An acceptance model built from the imported weights adds a constant-only
+  bias chain and an unused output head. The same passes reduce it from 11 to
+  4 nodes while preserving the imported model's probabilities.
+
+Before timing, the executable checks outputs for three inputs against the
+imported ONNX model, validates the expected node and pass counts, and checks
+that a second optimization run makes no change. It alternates which variant
+runs first in each timed sample to limit order bias. Model import, pass execution,
+and context creation are outside the inference timers. This benchmark does not
+use `MemoryPlan`, so it isolates graph simplification from runtime buffer reuse.
+
+```bash
+./build-bench/benchmarks/tinyinfer_graph_optimization_benchmark \
+  --warmup 20 --samples 200 --repeats 100 --format json
+```
+
+The benchmark reports per-variant p50, p95, and mean microseconds, graph sizes,
+and the p50 ratio. The acceptance model deliberately contains removable work;
+its speedup is not a prediction for an arbitrary ONNX model. The unchanged
+control shows measurement noise and the cost of running the optimized copy of
+a model with no matching patterns. See the
+[Phase 4.2 Mac acceptance report](../docs/benchmarks/mac-cpu-phase4.2.md).
+
 ## MatMul benchmark
 
 Run:
