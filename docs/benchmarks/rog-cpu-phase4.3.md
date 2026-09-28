@@ -36,10 +36,10 @@ Before timing, the benchmark verifies that:
 - logical intermediate memory decreases.
 
 The dedicated CTest additionally covers bias/no-bias, constant and dynamic
-bias, `transB=0/1`, alpha/beta scaling, downstream consumers, planned and
-unplanned execution, special floating-point values, observable or multiply
-used Gemm results, pass composition, mapping, schema rejection, and source
-model immutability.
+bias, `transA=0/1`, `transB=0/1`, alpha/beta scaling, downstream consumers,
+planned and unplanned execution, special floating-point values, observable or
+multiply used Gemm results, pass composition, mapping, schema rejection, and
+source model immutability.
 
 | Configuration | Result | Total test time |
 | --- | ---: | ---: |

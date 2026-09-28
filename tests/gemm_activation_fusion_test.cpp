@@ -25,6 +25,7 @@ struct Fixture {
     ValueId orphan;
     Tensor bias;
     bool dynamic_bias;
+    bool transpose_lhs;
 };
 
 Fixture make_fixture(bool with_bias = true, bool dynamic_bias = false,
@@ -32,9 +33,12 @@ Fixture make_fixture(bool with_bias = true, bool dynamic_bias = false,
                      OpType activation = OpType::ReLU,
                      bool expose_gemm = false,
                      bool extra_consumer = false,
-                     bool downstream = false) {
+                     bool downstream = false,
+                     bool transpose_lhs = false) {
     Graph graph;
-    const auto x = graph.add_input("x", {{2, 3}, DataType::Float32});
+    const auto x = graph.add_input(
+        "x", {transpose_lhs ? Shape{3, 2} : Shape{2, 3},
+              DataType::Float32});
     const auto weight = transpose_rhs
         ? graph.add_constant(
               "weight", Tensor::from_vector(
@@ -56,7 +60,7 @@ Fixture make_fixture(bool with_bias = true, bool dynamic_bias = false,
         "orphan", Tensor::from_vector({1}, {42.0F}));
     NodeAttributes attributes{{"alpha", 0.5F},
                               {"beta", 1.5F},
-                              {"transA", std::int64_t{0}},
+                              {"transA", std::int64_t{transpose_lhs ? 1 : 0}},
                               {"transB", std::int64_t{transpose_rhs ? 1 : 0}}};
     const auto gemm = graph.add_node("affine", OpType::Gemm, inputs, attributes);
     const auto gemm_output = graph.node(gemm).outputs.front();
@@ -86,12 +90,15 @@ Fixture make_fixture(bool with_bias = true, bool dynamic_bias = false,
     return {Model(std::move(graph), std::move(model_inputs),
                   std::move(outputs)),
             gemm_output, activation_output, orphan,
-            std::move(bias_tensor), with_bias && dynamic_bias};
+            std::move(bias_tensor), with_bias && dynamic_bias,
+            transpose_lhs};
 }
 
 std::vector<Tensor> execute(const Fixture& fixture, const Model& model,
                             bool planned = false) {
-    const auto x = Tensor::from_vector({2, 3}, {1, -2, 3, -4, 5, -6});
+    const auto x = fixture.transpose_lhs
+        ? Tensor::from_vector({3, 2}, {1, -4, -2, 5, 3, -6})
+        : Tensor::from_vector({2, 3}, {1, -2, 3, -4, 5, -6});
     CpuBackend backend;
     Executor executor(backend);
     std::vector<Tensor> outputs;
@@ -221,7 +228,8 @@ void check_pipeline_composition() {
     const auto output = graph.node(relu).outputs.front();
     graph.mark_output(output);
     const Model model(std::move(graph), {{"x", x}}, {{"y", output}});
-    const Fixture fixture{model, sum, output, kInvalidValueId, Tensor{}, false};
+    const Fixture fixture{model, sum, output, kInvalidValueId,
+                          Tensor{}, false, false};
     const auto reference = execute(fixture, model);
 
     PassManager pipeline;
@@ -243,19 +251,49 @@ void check_pipeline_composition() {
 void check_special_values() {
     const auto infinity = std::numeric_limits<float>::infinity();
     const auto nan = std::numeric_limits<float>::quiet_NaN();
-    const auto lhs = Tensor::from_vector({1, 4}, {-infinity, nan, -0.0F, 2.0F});
-    const auto rhs = Tensor::from_vector(
-        {4, 4}, {1, 0, 0, 0, 0, 1, 0, 0,
-                 0, 0, 1, 0, 0, 0, 0, 1});
-    Tensor unfused({1, 4});
-    Tensor fused({1, 4});
-    ops::gemm_out(unfused, lhs, rhs);
-    ops::relu_out(unfused, unfused);
-    ops::gemm_relu_out(fused, lhs, rhs);
-    for (std::size_t index = 0; index < fused.numel(); ++index) {
-        expect_scalar(fused.at(index), unfused.at(index),
-                      "special-value behavior changed");
+    const std::vector<std::pair<float, float>> cases{
+        {-infinity, 0.0F}, {nan, 0.0F}, {-0.0F, 0.0F},
+        {-2.0F, 0.0F}, {2.0F, 2.0F}, {infinity, infinity}};
+    const auto rhs = Tensor::from_vector({1, 1}, {1.0F});
+    for (const auto& test : cases) {
+        const auto lhs = Tensor::from_vector({1, 1}, {test.first});
+        Tensor unfused({1, 1});
+        Tensor fused({1, 1});
+        ops::gemm_out(unfused, lhs, rhs);
+        ops::relu_out(unfused, unfused);
+        ops::gemm_relu_out(fused, lhs, rhs);
+        expect_scalar(unfused.at(0), test.second,
+                      "unfused special-value result is incorrect");
+        expect_scalar(fused.at(0), test.second,
+                      "fused special-value result is incorrect");
+        if (test.second == 0.0F) {
+            require(!std::signbit(unfused.at(0)) && !std::signbit(fused.at(0)),
+                    "ReLU zero result must have a positive sign");
+        }
     }
+}
+
+void check_transposed_lhs_reference() {
+    const auto fixture = make_fixture(true, false, true, OpType::ReLU,
+                                      false, false, false, true);
+    check_fused(fixture);
+    GemmActivationFusionPass pass;
+    const auto optimized = pass.run(fixture.model);
+    require(optimized.changed(), "transA=1 Gemm + ReLU was not fused");
+    const std::vector<float> expected{5.5F, 0.0F, 0.0F, 40.0F,
+                                      0.0F, 25.5F, 2.5F, 0.0F};
+    const auto check_expected = [&](const Model& model) {
+        const auto outputs = execute(fixture, model);
+        require(outputs.size() == 1 &&
+                    outputs.front().numel() == expected.size(),
+                "transA=1 output shape is incorrect");
+        for (std::size_t index = 0; index < expected.size(); ++index) {
+            expect_scalar(outputs.front().at(index), expected[index],
+                          "transA=1 output value is incorrect");
+        }
+    };
+    check_expected(fixture.model);
+    check_expected(optimized.model);
 }
 
 void check_schema_rejects_unknown_activation() {
@@ -287,5 +325,6 @@ int main() {
 
     check_pipeline_composition();
     check_special_values();
+    check_transposed_lhs_reference();
     check_schema_rejects_unknown_activation();
 }
