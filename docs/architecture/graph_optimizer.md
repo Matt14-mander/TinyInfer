@@ -154,14 +154,38 @@ For models using affine patterns, the suggested opt-in pass order is:
 
 ```text
 ConstantFoldingPass -> DeadCodeEliminationPass
-    -> MatMulAddCanonicalizationPass -> DeadCodeEliminationPass
+    -> MatMulAddCanonicalizationPass
+    -> GemmActivationFusionPass
+    -> DeadCodeEliminationPass
 ```
+
+## GemmActivationFusionPass
+
+The Phase 4.3 pass recognizes a single-use, non-output `Gemm -> ReLU` edge and
+replaces the pair with the internal `FusedGemmActivation` operator. It copies
+all Gemm inputs and affine attributes, adds `activation="relu"`, and requires
+the fused schema to infer the original ReLU output TensorSpec. Gemm results
+with another consumer or a model-output binding remain untouched.
+
+The CPU fused operator runs MatMul followed by one combined scaling, bias, and
+ReLU epilogue. This eliminates the separate ReLU traversal and its graph
+intermediate, but does not yet execute the epilogue inside the SIMD MatMul
+micro-kernel. The pass is optional, preserves model interfaces, composes with
+`MatMulAddCanonicalizationPass`, and is idempotent. See
+[ADR-0005](../decisions/0005-fuse-gemm-relu.md) for the boundary and rejected
+alternatives.
+
+The dedicated
+[Phase 4.3 benchmark](../../benchmarks/README.md#phase-43-gemm--relu-fusion-benchmark)
+checks numerical equivalence and a non-ReLU control before measuring paired
+planned warm inference. It reports graph nodes, logical intermediate bytes,
+planned buffer bytes, latency, and speedup.
 
 ## Next extension
 
 Tensor lifetime analysis and reusable execution buffers are now implemented as
 a runtime `MemoryPlan` that consumes the simplified Graph without modifying it.
-See [Runtime memory planning](memory_planner.md). The next graph transformation
-slice can build on canonical Gemm nodes for activation fusion and an optimized
-affine CPU kernel, with numerical and memory benchmarks before claiming a
-speedup.
+See [Runtime memory planning](memory_planner.md). Later work can move the fused
+epilogue into packed SIMD MatMul kernels, add shape-aware kernel selection, or
+extend fusion to another activation only after its schema, edge cases, and
+benchmark are explicit.

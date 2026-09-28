@@ -20,6 +20,13 @@ const OperatorSchema kGemm{
      {"beta", AttributeType::Float, false},
      {"transA", AttributeType::Integer, false},
      {"transB", AttributeType::Integer, false}}};
+const OperatorSchema kFusedGemmActivation{
+    OpType::FusedGemmActivation, "FusedGemmActivation", 2, 3, 1,
+    {{"alpha", AttributeType::Float, false},
+     {"beta", AttributeType::Float, false},
+     {"transA", AttributeType::Integer, false},
+     {"transB", AttributeType::Integer, false},
+     {"activation", AttributeType::String, true}}};
 const OperatorSchema kReLU{OpType::ReLU, "ReLU", 1, 1, 1, {}};
 const OperatorSchema kTanh{OpType::Tanh, "Tanh", 1, 1, 1, {}};
 const OperatorSchema kGELU{
@@ -111,6 +118,7 @@ const OperatorSchema& operator_schema(OpType op) {
         case OpType::Subtract: return kSubtract;
         case OpType::MatMul: return kMatMul;
         case OpType::Gemm: return kGemm;
+        case OpType::FusedGemmActivation: return kFusedGemmActivation;
         case OpType::ReLU: return kReLU;
         case OpType::Tanh: return kTanh;
         case OpType::GELU: return kGELU;
@@ -159,7 +167,13 @@ std::vector<TensorSpec> infer_output_specs(
             return {TensorSpec{{inputs[0].shape[0], inputs[1].shape[1]},
                                inputs[0].dtype}};
 
-        case OpType::Gemm: {
+        case OpType::Gemm:
+        case OpType::FusedGemmActivation: {
+            if (op == OpType::FusedGemmActivation &&
+                std::get<std::string>(attributes.at("activation")) != "relu") {
+                throw std::invalid_argument(
+                    "FusedGemmActivation currently supports only relu");
+            }
             if (inputs[0].dtype != inputs[1].dtype ||
                 (inputs.size() == 3 && inputs[0].dtype != inputs[2].dtype)) {
                 throw std::invalid_argument("Gemm input dtypes must match");

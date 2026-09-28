@@ -45,6 +45,7 @@ What becomes easier, harder, or deliberately deferred?
 - [ADR-0002: Deep-copy Tensors and share Storage explicitly through views](0002-deep-copy-tensors-and-share-storage-explicitly.md)
 - [ADR-0003: Centralize elementwise traversal in TensorIterator](0003-centralize-elementwise-traversal-in-tensor-iterator.md)
 - [ADR-0004: Canonicalize eligible MatMul + Add to Gemm](0004-canonicalize-matmul-add-to-gemm.md)
+- [ADR-0005: Fuse eligible Gemm + ReLU](0005-fuse-gemm-relu.md)
 
 ## Initial decision backlog
 

@@ -30,7 +30,8 @@ integrity before a stable topological order is produced. `Executor` consumes thi
 order and dispatches nodes through the CPU registry using `ExecutionContext`.
 
 Operator outputs are inferred automatically during graph construction. The
-current schemas cover Add, Subtract, Multiply, MatMul, Gemm, ReLU, GELU,
+current schemas cover Add, Subtract, Multiply, MatMul, Gemm, the internal
+FusedGemmActivation operator, ReLU, GELU,
 Softmax, and LayerNorm, including broadcasting, dtype, rank, axis, and attribute
 validation.
 
@@ -41,7 +42,7 @@ validation.
 | v0.1 Tensor Engine | Complete: Tensor, eager operators, CPU execution, MLP inference |
 | v0.2 Graph Runtime | Complete (MVP): graph model, validation, execution context, CPU dispatch, Graph MLP |
 | v0.3 Model Runtime | Complete: protobuf parser, real Gemm MLP fixture, restricted ONNX import, diagnostics, compatibility profile, and Mac/ROG CPU baselines |
-| v0.4 Optimization Engine | In progress: graph simplification, lifetime planning, buffer reuse, and CPU SIMD MatMul; fusion, threading, and quantization remain planned |
+| v0.4 Optimization Engine | In progress: graph simplification, lifetime planning, buffer reuse, CPU SIMD MatMul, and Gemm + ReLU fusion; threading and quantization remain planned |
 
 See the [documentation index](docs/README.md) for an overview. The current
 system design lives under `docs/architecture`, learning-oriented walkthroughs
@@ -112,7 +113,7 @@ cmake --build build --target tinyinfer_matmul_benchmark
 - **Reduction and normalization:** `ReductionIterator`, ReduceSum, ReduceMax, arbitrary-axis Softmax, and LayerNorm with optional affine weight and bias.
 - **CPU MatMul:** reference, direct stride-aware, cache-blocked, reusable RHS packing, and AVX2/SSE2/ARM NEON micro-kernel paths with scalar fallback.
 - **Graph runtime:** Value-based graphs, schema inference, validation, stable topological sorting, `ExecutionContext`, CPU Operator Registry, and end-to-end numerical execution.
-- **Graph optimization:** composable passes, checked Model interface preservation, Graph reconstruction, ValueId-map composition, pass statistics, cascading Constant Folding, and output-driven Dead Code Elimination.
+- **Graph optimization:** composable passes, checked Model interface preservation, Graph reconstruction, ValueId-map composition, pass statistics, cascading Constant Folding, output-driven Dead Code Elimination, MatMul + Add canonicalization, and Gemm + ReLU fusion.
 - **Runtime memory planning:** static intermediate lifetimes, deterministic slot assignment, one shared aligned Buffer, direct output kernels, dead-value release, and cross-invocation buffer reuse.
 - **Verification:** focused unit tests, eager and Graph MLP integration tests, sanitizer validation, and a correctness-checking MatMul benchmark.
 
@@ -142,7 +143,8 @@ RHS packing, and SIMD paths. The GraphPass/PassManager pipeline now includes a
 rebuilding GraphRewriter, cascading Constant Folding, and output-driven Dead
 Code Elimination with composed ValueId mappings. Lifetime analysis and buffer
 reuse are now connected to `ExecutionContext` through a static `MemoryPlan`.
-The next work is fused inference operators, shape-aware
+The first fused inference operator now combines Gemm scaling, bias, and ReLU
+in one CPU epilogue. The next work is in-register fused epilogues, shape-aware
 kernel selection, optional threading, and a measured Int8 path. Every
 optimization must preserve the v0.3 correctness contract and be justified by
 reproducible before-and-after benchmarks.

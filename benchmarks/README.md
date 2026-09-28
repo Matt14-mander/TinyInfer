@@ -126,6 +126,29 @@ control shows measurement noise and the cost of running the optimized copy of
 a model with no matching patterns. See the
 [Phase 4.2 Mac acceptance report](../docs/benchmarks/mac-cpu-phase4.2.md).
 
+## Phase 4.3 Gemm + ReLU fusion benchmark
+
+`tinyinfer_gemm_activation_fusion_benchmark` constructs a deterministic
+Float32 `Gemm -> ReLU` model, applies `GemmActivationFusionPass`, and measures
+the original and fused models with separate planned `ExecutionContext`s. Before
+timing it verifies numerical equivalence, the expected two-to-one node rewrite,
+idempotence, reduced logical intermediate memory, and that a `Gemm -> Tanh`
+control is not changed.
+
+```bash
+./build-bench/benchmarks/tinyinfer_gemm_activation_fusion_benchmark \
+  --m 16 --k 128 --n 128 \
+  --warmup 10 --samples 50 --repeats 10 --format json
+```
+
+The dimensions and measurement volume are configurable. Output includes p50,
+p95, and mean microseconds, node counts, naive intermediate bytes, planned
+buffer bytes, and the p50 speedup. The timer covers planned warm graph
+execution only; model construction, optimization, correctness checks,
+MemoryPlan construction, and input binding are excluded. This implementation
+combines the affine and ReLU epilogue traversal but does not yet fuse that
+epilogue into the SIMD MatMul micro-kernel.
+
 ## MatMul benchmark
 
 Run:

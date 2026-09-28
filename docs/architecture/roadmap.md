@@ -73,12 +73,13 @@ Graph Optimizer slice now provides GraphPass, PassManager, OptimizationResult,
 composed ValueId mapping, pass statistics, interface validation, and an
 end-to-end NoOpPass. GraphRewriter, cascading Constant Folding, and
 output-driven Dead Code Elimination are also implemented. Static memory
-planning and runtime buffer reuse are implemented. Graph-level fusion,
+planning and runtime buffer reuse are implemented. Gemm + ReLU graph fusion
+and its combined CPU epilogue are implemented. In-register MatMul epilogues,
 threading, and quantization remain open.
 
 - Graph reconstruction, Constant Folding, and Dead Code Elimination. (Complete)
 - Lifetime analysis and buffer reuse. (Complete)
-- Linear + bias + activation fusion.
+- Gemm + ReLU graph/operator fusion with a combined CPU epilogue. (Complete)
 - MatMul tiling, cache blocking, SIMD, and optional threading.
 - Int8 quantization format, calibration, and kernels.
 
@@ -88,6 +89,13 @@ The Phase 4.2 graph-simplification slice has an opt-in model benchmark and a
 equivalence, an unchanged ONNX control, graph-size reduction, and paired
 before/after inference measurements. Its results do not establish a speedup
 for models with no foldable constants or dead work.
+
+The Phase 4.3 fusion slice conservatively rewrites eligible `Gemm -> ReLU`
+pairs, preserves observable pre-activation values, and composes after
+MatMul + Add canonicalization. Its dedicated benchmark checks correctness,
+logical/planned intermediate memory, and paired planned warm latency before
+reporting a speedup. ROG measurements are recorded in the
+[Phase 4.3 acceptance report](../benchmarks/rog-cpu-phase4.3.md).
 
 ## Phase 5 — Hardware Backends
 

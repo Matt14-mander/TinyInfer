@@ -16,12 +16,14 @@ add_library(tinyinfer
     src/core/reduction_iterator.cpp
     src/core/tensor.cpp
     src/ops/basic_ops.cpp
+    src/ops/gemm.cpp
     src/ops/matmul.cpp
     src/ops/operator_schema.cpp
     src/graph/graph.cpp
     src/graph/graph_analysis.cpp
     src/graph/optimizer/optimization_result.cpp
     src/graph/optimizer/graph_rewriter.cpp
+    src/graph/optimizer/gemm_activation_fusion_pass.cpp
     src/graph/optimizer/matmul_add_canonicalization_pass.cpp
     src/graph/optimizer/constant_folding_pass.cpp
     src/graph/optimizer/dead_code_elimination_pass.cpp

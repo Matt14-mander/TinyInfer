@@ -15,6 +15,7 @@ enum class OpType {
     Subtract,
     MatMul,
     Gemm,
+    FusedGemmActivation,
     ReLU,
     Tanh,
     GELU,

@@ -5,7 +5,7 @@
 #include <utility>
 
 #include "tinyinfer/ops/basic_ops.h"
-#include "tinyinfer/core/tensor_iterator.h"
+#include "tinyinfer/ops/gemm.h"
 #include "tinyinfer/runtime/execution_context.h"
 
 namespace tinyinfer::cpu {
@@ -38,6 +38,25 @@ float float_attribute(const Node& node, const char* name, float default_value) {
                : std::get<float>(iterator->second);
 }
 
+void execute_gemm(const Node& node, ExecutionContext& context,
+                  bool apply_relu) {
+    const auto trans_a = integer_attribute(node, "transA", 0);
+    const auto trans_b = integer_attribute(node, "transB", 0);
+    const auto alpha = float_attribute(node, "alpha", 1.0F);
+    const auto beta = float_attribute(node, "beta", 1.0F);
+    const Tensor* bias =
+        node.inputs.size() == 3 ? &input(node, context, 2) : nullptr;
+    if (apply_relu) {
+        ops::gemm_relu_out(output(node, context), input(node, context, 0),
+                           input(node, context, 1), bias, alpha, beta,
+                           trans_a, trans_b);
+        return;
+    }
+    ops::gemm_out(output(node, context), input(node, context, 0),
+                  input(node, context, 1), bias, alpha, beta,
+                  trans_a, trans_b);
+}
+
 }  // namespace
 
 OperatorRegistry::OperatorRegistry() {
@@ -60,34 +79,18 @@ OperatorRegistry::OperatorRegistry() {
         ops::matmul_out(output(node, context), input(node, context, 0),
                         input(node, context, 1));
     });
-    register_kernel(OpType::Gemm, [](const Node& node, ExecutionContext& context) {
-        const auto trans_a = integer_attribute(node, "transA", 0);
-        const auto trans_b = integer_attribute(node, "transB", 0);
-        const auto alpha = float_attribute(node, "alpha", 1.0F);
-        const auto beta = float_attribute(node, "beta", 1.0F);
-
-        auto lhs = input(node, context, 0);
-        auto rhs = input(node, context, 1);
-        if (trans_a != 0) lhs.transpose(0, 1);
-        if (trans_b != 0) rhs.transpose(0, 1);
-        auto& result = output(node, context);
-        ops::matmul_out(result, lhs, rhs);
-        if (node.inputs.size() == 3) {
-            const auto& bias = input(node, context, 2);
-            TensorIterator iterator({result.layout(), bias.layout()});
-            auto* result_data = result.data<float>();
-            const auto* bias_data = bias.data<float>();
-            for (std::size_t index = 0; index < iterator.numel(); ++index) {
-                result_data[index] =
-                    alpha * result_data[index] +
-                    beta * bias_data[iterator.operand_offset(1, index)];
-            }
-        } else if (alpha != 1.0F) {
-            auto* result_data = result.data<float>();
-            for (std::size_t index = 0; index < result.numel(); ++index) {
-                result_data[index] *= alpha;
-            }
+    register_kernel(OpType::Gemm, [](const Node& node,
+                                     ExecutionContext& context) {
+        execute_gemm(node, context, false);
+    });
+    register_kernel(OpType::FusedGemmActivation,
+                    [](const Node& node, ExecutionContext& context) {
+        const auto activation = node.attribute<std::string>("activation");
+        if (activation != "relu") {
+            throw std::invalid_argument(
+                "FusedGemmActivation currently supports only relu");
         }
+        execute_gemm(node, context, true);
     });
     register_kernel(OpType::ReLU, [](const Node& node, ExecutionContext& context) {
         ops::relu_out(output(node, context), input(node, context, 0));
