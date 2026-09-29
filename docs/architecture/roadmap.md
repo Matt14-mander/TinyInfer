@@ -97,6 +97,14 @@ logical/planned intermediate memory, and paired planned warm latency before
 reporting a speedup. ROG measurements are recorded in the
 [Phase 4.3 acceptance report](../benchmarks/rog-cpu-phase4.3.md).
 
+Phase 4.4 is proposed as **Prepared CPU inference**: a stable execution plan,
+one-time packing of constant matrix weights, and transpose handling without
+operand data copies on the prepared path. Its baseline is Phase 4.3 planned
+execution, with preparation cost and persistent packed memory reported
+separately. See the [Phase 4.4 plan](../plans/phase4.4.md) for implementation
+order, ownership rules, fallback behavior, and acceptance gates. This work has
+not yet been implemented; in-register epilogues remain a later slice.
+
 ## Phase 5 — Hardware Backends
 
 Stabilize capability and buffer interfaces, then add Metal and CUDA with explicit fallback behavior and cross-backend tests.
