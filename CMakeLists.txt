@@ -38,12 +38,14 @@ add_library(tinyinfer
     src/runtime/execution_context.cpp
     src/runtime/executor.cpp
     src/backend/cpu/cpu_backend.cpp
+    src/backend/cpu/execution_plan.cpp
     src/backend/cpu/operator_registry.cpp
     src/backend/cpu/matmul_kernel.cpp
 )
 add_library(TinyInfer::tinyinfer ALIAS tinyinfer)
 target_compile_features(tinyinfer PUBLIC cxx_std_17)
 target_include_directories(tinyinfer PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
+target_include_directories(tinyinfer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 if(MSVC)
     target_compile_options(tinyinfer PRIVATE /W4)

@@ -19,3 +19,9 @@ target_link_libraries(tinyinfer_gemm_activation_fusion_benchmark
     PRIVATE TinyInfer::tinyinfer)
 target_compile_definitions(tinyinfer_gemm_activation_fusion_benchmark PRIVATE
     TINYINFER_BUILD_TYPE="$<CONFIG>")
+
+add_executable(tinyinfer_cpu_execution_plan_benchmark cpu_execution_plan_benchmark.cpp)
+target_link_libraries(tinyinfer_cpu_execution_plan_benchmark PRIVATE TinyInfer::tinyinfer)
+target_compile_definitions(tinyinfer_cpu_execution_plan_benchmark PRIVATE
+    TINYINFER_BUILD_TYPE="$<CONFIG>"
+    TINYINFER_NATIVE_ARCH=$<BOOL:${TINYINFER_ENABLE_NATIVE_ARCH}>)

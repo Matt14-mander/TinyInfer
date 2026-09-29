@@ -7,8 +7,46 @@
 
 #include "tinyinfer/core/tensor_iterator.h"
 #include "tinyinfer/ops/matmul.h"
+#include "ops/gemm_internal.h"
 
 namespace tinyinfer::ops {
+
+namespace detail {
+
+void apply_gemm_epilogue(Tensor& output, const Tensor* bias,
+                         float alpha, float beta, bool apply_relu) {
+    auto* output_data = output.data<float>();
+    if (bias != nullptr) {
+        TensorIterator iterator({output.layout(), bias->layout()});
+        if (iterator.shape() != output.shape()) {
+            throw std::invalid_argument(
+                "Gemm bias must broadcast to the output shape");
+        }
+        const auto* bias_data = bias->data<float>();
+        for (std::size_t index = 0; index < iterator.numel(); ++index) {
+            auto value = alpha * output_data[index] +
+                         beta * bias_data[iterator.operand_offset(1, index)];
+            if (apply_relu) {
+                value = std::max(0.0F, value);
+            }
+            output_data[index] = value;
+        }
+        return;
+    }
+
+    if (alpha != 1.0F || apply_relu) {
+        for (std::size_t index = 0; index < output.numel(); ++index) {
+            auto value = alpha * output_data[index];
+            if (apply_relu) {
+                value = std::max(0.0F, value);
+            }
+            output_data[index] = value;
+        }
+    }
+}
+
+}  // namespace detail
+
 namespace {
 
 enum class Epilogue { None, ReLU };
@@ -43,34 +81,8 @@ void run_gemm(Tensor& output, const Tensor& lhs, const Tensor& rhs,
     }
 
     matmul_out(output, *lhs_operand, *rhs_operand);
-    auto* output_data = output.data<float>();
-    if (bias != nullptr) {
-        TensorIterator iterator({output.layout(), bias->layout()});
-        if (iterator.shape() != output.shape()) {
-            throw std::invalid_argument(
-                "Gemm bias must broadcast to the output shape");
-        }
-        const auto* bias_data = bias->data<float>();
-        for (std::size_t index = 0; index < iterator.numel(); ++index) {
-            auto value = alpha * output_data[index] +
-                         beta * bias_data[iterator.operand_offset(1, index)];
-            if (epilogue == Epilogue::ReLU) {
-                value = std::max(0.0F, value);
-            }
-            output_data[index] = value;
-        }
-        return;
-    }
-
-    if (alpha != 1.0F || epilogue == Epilogue::ReLU) {
-        for (std::size_t index = 0; index < output.numel(); ++index) {
-            auto value = alpha * output_data[index];
-            if (epilogue == Epilogue::ReLU) {
-                value = std::max(0.0F, value);
-            }
-            output_data[index] = value;
-        }
-    }
+    detail::apply_gemm_epilogue(output, bias, alpha, beta,
+                                epilogue == Epilogue::ReLU);
 }
 
 }  // namespace

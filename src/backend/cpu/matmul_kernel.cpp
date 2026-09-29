@@ -119,17 +119,20 @@ void accumulate_simd_dot(float* output, const float* lhs_row,
 
 }  // namespace
 
-PackedMatMulRhs::PackedMatMulRhs(const Tensor& rhs) {
+PackedMatMulRhs::PackedMatMulRhs(const Tensor& rhs)
+    : PackedMatMulRhs(rhs, false) {}
+
+PackedMatMulRhs::PackedMatMulRhs(const Tensor& rhs, bool transpose) {
     if (rhs.dtype() != DataType::Float32 || rhs.rank() != 2) {
         throw std::invalid_argument(
             "PackedMatMulRhs expects a rank-2 float32 tensor");
     }
-    inner_ = static_cast<std::size_t>(rhs.shape()[0]);
-    columns_ = static_cast<std::size_t>(rhs.shape()[1]);
+    inner_ = static_cast<std::size_t>(rhs.shape()[transpose ? 1 : 0]);
+    columns_ = static_cast<std::size_t>(rhs.shape()[transpose ? 0 : 1]);
     data_.resize(inner_ * columns_);
     const auto* source = rhs.data<float>();
-    const auto inner_stride = static_cast<std::size_t>(rhs.strides()[0]);
-    const auto column_stride = static_cast<std::size_t>(rhs.strides()[1]);
+    const auto inner_stride = static_cast<std::size_t>(rhs.strides()[transpose ? 1 : 0]);
+    const auto column_stride = static_cast<std::size_t>(rhs.strides()[transpose ? 0 : 1]);
     for (std::size_t inner = 0; inner < inner_; ++inner) {
         for (std::size_t column = 0; column < columns_; ++column) {
             data_[inner * columns_ + column] =
@@ -254,6 +257,8 @@ void matmul_packed_simd(const Tensor& lhs, const PackedMatMulRhs& rhs,
     if (output.numel() > 0) {
         std::fill(output_data, output_data + output.numel(), 0.0F);
     }
+    // Avoid forming row pointers from null storage for a zero-K product.
+    if (rows == 0 || inner == 0 || columns == 0) return;
 
     for (std::size_t row_block = 0; row_block < rows;
          row_block += block_size.rows) {

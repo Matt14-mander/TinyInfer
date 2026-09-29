@@ -17,6 +17,8 @@ limitations. These documents should change when the code changes.
   OptimizationResult, ValueId mapping, and pipeline invariants.
 - [Runtime memory planning](memory_planner.md): Value lifetimes, reusable buffer
   slots, planned execution, and current memory-accounting boundaries.
+- [Prepared CPU execution](cpu_execution_plan.md): stable snapshot, stored steps,
+  one-time constant packing, per-context storage, and public API boundaries.
 - [Development roadmap](roadmap.md): phase status, boundaries, and exit
   criteria.
 

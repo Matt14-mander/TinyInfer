@@ -157,3 +157,19 @@ add_test(NAME tinyinfer_onnx_rl_mlp_fixture_tests COMMAND tinyinfer_onnx_rl_mlp_
 add_executable(tinyinfer_gemm_tests gemm_test.cpp)
 target_link_libraries(tinyinfer_gemm_tests PRIVATE TinyInfer::tinyinfer)
 add_test(NAME tinyinfer_gemm_tests COMMAND tinyinfer_gemm_tests)
+
+add_executable(tinyinfer_cpu_execution_plan_tests cpu_execution_plan_test.cpp)
+target_link_libraries(tinyinfer_cpu_execution_plan_tests PRIVATE TinyInfer::tinyinfer)
+target_compile_definitions(tinyinfer_cpu_execution_plan_tests PRIVATE
+    TINYINFER_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+add_test(NAME tinyinfer_cpu_execution_plan_tests COMMAND tinyinfer_cpu_execution_plan_tests)
+
+# Existing tests also use assert(). Keep those checks active in Release gates.
+get_property(TINYINFER_TEST_TARGETS DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+foreach(TINYINFER_TEST_TARGET IN LISTS TINYINFER_TEST_TARGETS)
+    if(MSVC)
+        target_compile_options(${TINYINFER_TEST_TARGET} PRIVATE /UNDEBUG)
+    else()
+        target_compile_options(${TINYINFER_TEST_TARGET} PRIVATE -UNDEBUG)
+    endif()
+endforeach()

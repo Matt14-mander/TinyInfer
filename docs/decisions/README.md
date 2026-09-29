@@ -47,6 +47,8 @@ What becomes easier, harder, or deliberately deferred?
 - [ADR-0004: Canonicalize eligible MatMul + Add to Gemm](0004-canonicalize-matmul-add-to-gemm.md)
 - [ADR-0005: Fuse eligible Gemm + ReLU](0005-fuse-gemm-relu.md)
 
+- [ADR-0006: Own prepared CPU state](0006-own-prepared-cpu-state.md)
+
 ## Initial decision backlog
 
 - Represent graph edges as Values rather than connecting Nodes directly.

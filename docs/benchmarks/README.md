@@ -14,6 +14,10 @@ limitations needed to reproduce a result.
 - [Mac CPU Phase 4.2 acceptance](mac-cpu-phase4.2.md): paired graph optimization
   measurements and an unchanged ONNX control on the Intel Mac.
 
+- [ROG CPU Phase 4.3 acceptance](rog-cpu-phase4.3.md): Gemm + ReLU fusion.
+- [Mac CPU Phase 4.4 measurements](mac-cpu-phase4.4.md): prepared execution,
+  preparation costs, static weights and dynamic fallback controls.
+
 Reports from different machines are comparable only when they use the same Git
 commit, Release configuration, native-architecture policy, fixture, and
 benchmark arguments.

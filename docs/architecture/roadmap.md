@@ -74,7 +74,8 @@ composed ValueId mapping, pass statistics, interface validation, and an
 end-to-end NoOpPass. GraphRewriter, cascading Constant Folding, and
 output-driven Dead Code Elimination are also implemented. Static memory
 planning and runtime buffer reuse are implemented. Gemm + ReLU graph fusion
-and its combined CPU epilogue are implemented. In-register MatMul epilogues,
+and its combined CPU epilogue are implemented. Prepared CPU execution now
+reuses cached steps, MemoryPlan and constant matrix packing. In-register MatMul epilogues,
 threading, and quantization remain open.
 
 - Graph reconstruction, Constant Folding, and Dead Code Elimination. (Complete)
@@ -97,13 +98,15 @@ logical/planned intermediate memory, and paired planned warm latency before
 reporting a speedup. ROG measurements are recorded in the
 [Phase 4.3 acceptance report](../benchmarks/rog-cpu-phase4.3.md).
 
-Phase 4.4 is proposed as **Prepared CPU inference**: a stable execution plan,
+Phase 4.4 implements **Prepared CPU inference**: a stable execution plan,
 one-time packing of constant matrix weights, and transpose handling without
 operand data copies on the prepared path. Its baseline is Phase 4.3 planned
 execution, with preparation cost and persistent packed memory reported
 separately. See the [Phase 4.4 plan](../plans/phase4.4.md) for implementation
-order, ownership rules, fallback behavior, and acceptance gates. This work has
-not yet been implemented; in-register epilogues remain a later slice.
+order, ownership rules, fallback behavior, and acceptance gates. Portable and
+native Release correctness plus targeted sanitizer checks pass. The
+[Mac report](../benchmarks/mac-cpu-phase4.4.md) records local measurements;
+ROG performance acceptance remains pending. In-register epilogues remain a later slice.
 
 ## Phase 5 — Hardware Backends
 

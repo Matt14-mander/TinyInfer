@@ -1,6 +1,6 @@
 # Phase 4.4 — Prepared CPU inference
 
-- Status: Proposed; implementation has not started
+- Status: Implemented; local correctness and Mac performance verified; ROG gate pending
 - Planning date: 2026-09-29
 - Source baseline: `51cfb7f` (Phase 4.3 Gemm + ReLU fusion)
 
@@ -44,7 +44,7 @@ new activation fusion, threading, Int8, GPU backends, and a compiler IR are
 later slices. The Phase 4.4 path continues using the Phase 4.3 separate combined
 epilogue so that preparation reuse has an independently measurable result.
 
-## Proposed architecture
+## Architecture
 
 ```text
 ONNX / Model
@@ -58,7 +58,7 @@ ONNX / Model
     -> prepared CPU execution
 ```
 
-`CpuExecutionPlan` is a proposed name, not an implemented public API. The
+`CpuExecutionPlan` is now the implemented public API. The
 preparation boundary receives an already optimized Model. It does not silently
 change ONNX import or choose graph passes for the caller. Optimize first,
 prepare second. A new model requires a new plan.
@@ -174,6 +174,16 @@ Exit criteria:
    resolved through the path/fallback policy. This is a proposed review threshold.
 5. Reports include per-run data, environment and source revision, preparation
    cost, persistent memory, and limitations. There is no universal speedup promise.
+
+## Implementation status (2026-09-29)
+
+- 4.4.0–4.4.3 implemented, including direct transB packing and private transA views.
+- 40/40 tests pass in portable and native Release, with assertions enabled.
+- 3/3 targeted ASan + UBSan tests pass.
+- Mac: 24 scenarios × 3 processes measured; see the [report](../benchmarks/mac-cpu-phase4.4.md).
+- ROG: awaiting target-host execution; the [runner and commands](../../benchmarks/README.md#reproducible-mac--rog-suite) are ready.
+- Cross-host Phase 4.4 performance acceptance remains open until ROG results
+  satisfy the control-regression and repeatability gates.
 
 ## Completion statement
 

@@ -172,3 +172,82 @@ finishes.
 `TINYINFER_ENABLE_NATIVE_ARCH` is optional and disabled by default so release
 binaries remain portable. Enabling it lets x86 builds select AVX2/FMA when the
 host supports them; baseline x86-64 uses SSE2, and ARM builds use NEON.
+
+## Phase 4.4 prepared CPU benchmark
+
+`tinyinfer_cpu_execution_plan_benchmark` compares the **same optimized graph**
+using Phase 4.3 Executor + MemoryPlan and CpuExecutionPlan. Both retain the
+Phase 4.3 separate combined epilogue. Static B is packed once by the prepared
+path; `--dynamic-b` retains the current kernel and packs B each run. Synthetic
+cases use FusedGemmActivation; `--model` imports an ONNX model and applies the
+explicit Constant Folding, DCE, MatMul + Add canonicalization, Gemm + ReLU
+fusion, DCE pipeline. The actor's Tanh remains an ordinary operator.
+
+```bash
+cmake --build build-bench --target tinyinfer_cpu_execution_plan_benchmark
+./build-bench/benchmarks/tinyinfer_cpu_execution_plan_benchmark \
+  --m 16 --k 128 --n 128 --trans-b 1 \
+  --warmup 20 --samples 100 --repeats 10 --format json
+./build-bench/benchmarks/tinyinfer_cpu_execution_plan_benchmark \
+  --m 16 --k 128 --n 128 --dynamic-b --format json
+./build-bench/benchmarks/tinyinfer_cpu_execution_plan_benchmark \
+  --model tests/fixtures/rl_actor_mlp_tanh.onnx --format json
+```
+
+Correctness is checked before and after timing at absolute-plus-relative
+`1e-5 + 1e-5 * abs(reference)`. Timers report microseconds:
+
+| Measurement | Included work |
+| --- | --- |
+| `topological_order` | One existing graph sort |
+| `baseline_memory_plan` | One existing static lifetime/slot analysis |
+| `preparation` | Model snapshot, MemoryPlan, stored steps and constant packing |
+| `baseline_context_init` / `prepared_context_init` | Context/activation allocation and constant copies |
+| `rhs_pack` | Packing effective RHS for all matrix nodes; effective operand copies prepared outside this timer |
+| `baseline_rhs_transpose_copy` | Baseline deep-copy plus RHS transpose metadata for transB nodes |
+| `baseline_first_inference` / `prepared_first_inference` | One run in a newly created/bound context; plan/packing already prepared |
+| `baseline_warm` / `prepared_warm` | Reused contexts, inputs, buffers; alternate variant order per sample |
+
+Preparation/component/context timers measure at most 20 single-invocation
+samples, with one warm-up. Local temporary destruction is inside preparation
+and context timers, so these are lifecycle cost measurements. First inference
+runs in a fresh context, with existing model and code caches already warm; it
+is not process-cold startup. Warm samples average `repeats` runs each.
+
+Import, optimization, input creation/binding, and copied output extraction are
+outside inference timers. Do not add component medians to predict end-to-end
+latency. `p50_speedup` divides variant medians; `paired_speedup_p50` is the
+median of the same-sample baseline/prepared ratios. Packed bytes count payload
+only, and activation bytes count MemoryPlan capacity. See
+[prepared API memory boundaries](../docs/architecture/cpu_execution_plan.md).
+`runtime_pack_count` is a count of successful fallback matrix dispatches.
+`full_preparation_amortization_calls` charges all mean preparation cost against
+positive mean per-call savings; absent values mean no positive savings.
+
+### Reproducible Mac / ROG suite
+
+The standard-library Python runner executes all shape/transpose cases, dynamic
+controls and both fixtures in **three sequential processes per case**. It stores
+raw JSON, source/environment metadata and summary tables under an ignored path:
+
+```bash
+python3 benchmarks/run_phase44.py \
+  --executable build-bench/benchmarks/tinyinfer_cpu_execution_plan_benchmark \
+  --output benchmark-results/phase4.4/mac --samples 100 --repeats 10 --runs 3
+```
+
+ROG PowerShell (from the repository root, using its configured C++ toolchain):
+
+```powershell
+cmake -S . -B build-phase44-native -DCMAKE_BUILD_TYPE=Release -DTINYINFER_BUILD_TESTS=ON -DTINYINFER_BUILD_EXAMPLES=OFF -DTINYINFER_BUILD_BENCHMARKS=ON -DTINYINFER_ENABLE_NATIVE_ARCH=ON
+cmake --build build-phase44-native --config Release --parallel 4
+ctest --test-dir build-phase44-native -C Release --output-on-failure
+# Multi-config generators place the executable under benchmarks/Release.
+python benchmarks/run_phase44.py --executable build-phase44-native/benchmarks/Release/tinyinfer_cpu_execution_plan_benchmark.exe --output benchmark-results/phase4.4/rog --samples 100 --repeats 10 --runs 3
+```
+
+For a single-config ROG generator the executable is directly under `benchmarks/`.
+Also run the full Release suite with `TINYINFER_ENABLE_NATIVE_ARCH=OFF` in a
+separate build directory. Keep power mode, CPU/OS/compiler, revision and pending
+source changes with the report. Investigate repeatable control regressions over
+5%; compare ratios within a host. See the [Mac report](../docs/benchmarks/mac-cpu-phase4.4.md).

@@ -16,10 +16,12 @@ struct MatMulBlockSize {
 class PackedMatMulRhs {
 public:
     explicit PackedMatMulRhs(const Tensor& rhs);
+    PackedMatMulRhs(const Tensor& rhs, bool transpose);
 
     std::size_t inner() const noexcept { return inner_; }
     std::size_t columns() const noexcept { return columns_; }
     const float* data() const noexcept { return data_.data(); }
+    std::size_t size_bytes() const noexcept { return data_.size() * sizeof(float); }
 
 private:
     std::size_t inner_{0};
