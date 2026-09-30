@@ -16,6 +16,7 @@ bool is_power_of_two(std::size_t value) noexcept {
 
 }  // namespace
 
+// 固定容量的 ArenaAllocator 实现，使用一个预分配的缓冲区来管理内存分配。
 ArenaAllocator::ArenaAllocator(std::size_t capacity,
                                std::shared_ptr<Allocator> backing_allocator,
                                std::size_t alignment)
@@ -53,8 +54,9 @@ void* ArenaAllocator::allocate(std::size_t bytes, std::size_t alignment) {
         throw std::bad_alloc();
     }
 
+    // Calculate the pointer to the allocated memory within the buffer
     auto* pointer = static_cast<unsigned char*>(buffer_) + aligned_offset;
-    offset_ = aligned_offset + bytes;
+    offset_ = aligned_offset + bytes; 
     peak_used_ = std::max(peak_used_, offset_);
     ++allocation_count_;
     ++active_allocations_;
@@ -64,6 +66,7 @@ void* ArenaAllocator::allocate(std::size_t bytes, std::size_t alignment) {
 void ArenaAllocator::deallocate(void* pointer, std::size_t, std::size_t) noexcept {
     if (pointer == nullptr || buffer_ == nullptr || active_allocations_ == 0) return;
 
+    // Check if the pointer is within the bounds of the arena's buffer
     const auto address = reinterpret_cast<std::uintptr_t>(pointer);
     const auto begin = reinterpret_cast<std::uintptr_t>(buffer_);
     if (address >= begin && address < begin + capacity_) --active_allocations_;
