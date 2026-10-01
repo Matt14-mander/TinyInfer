@@ -9,9 +9,10 @@
 #include <utility>
 
 #include "tinyinfer/ops/operator_schema.h"
-
+// 有向无环图，拓扑排序
 namespace tinyinfer {
 
+// 值-张量数据 输入（Input）、常量（Constant）、中间值（Intermediate）
 ValueId Graph::add_input(std::string name, TensorSpec spec) {
     require_unique_name(name);
     validate_spec(spec);
@@ -78,6 +79,7 @@ const Node& Graph::node(NodeId id) const {
     return nodes_[id];
 }
 
+// 存储所有GraphValue的值
 const GraphValue& Graph::value(ValueId id) const {
     if (id >= values_.size()) {
         throw std::out_of_range("graph value id is out of range");
@@ -85,6 +87,7 @@ const GraphValue& Graph::value(ValueId id) const {
     return values_[id];
 }
 
+// 获取常量张量，存储实际的Tensor数据
 const Tensor& Graph::constant(ValueId id) const {
     value(id);
     if (!constants_[id]) {
@@ -111,6 +114,7 @@ void Graph::validate() const {
     static_cast<void>(topological_order());
 }
 
+// 拓扑排序，返回节点的拓扑顺序
 std::vector<NodeId> Graph::topological_order() const {
     if (constants_.size() != values_.size()) {
         throw std::logic_error("graph value and constant tables are inconsistent");
@@ -265,11 +269,13 @@ std::vector<NodeId> Graph::topological_order() const {
     return order;
 }
 
+// 验证形状和数据类型的合法性
 void Graph::validate_spec(const TensorSpec& spec) {
     const TensorLayout layout(spec.shape);
     layout.size_bytes(spec.dtype);
 }
 
+// 保证命名空间没有重复且非空
 void Graph::require_unique_name(const std::string& name) const {
     if (name.empty()) throw std::invalid_argument("graph names must not be empty");
     const auto value_match = std::find_if(
