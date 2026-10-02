@@ -6,6 +6,8 @@
 
 namespace tinyinfer {
 
+// Buffer implementation 
+// 申请内存
 Buffer::Buffer(std::size_t size_bytes, std::shared_ptr<Allocator> allocator,
                std::size_t alignment)
     : size_bytes_(size_bytes),
@@ -21,6 +23,7 @@ Buffer::Buffer(std::size_t size_bytes, std::shared_ptr<Allocator> allocator,
     }
 }
 
+// 释放内存
 Buffer::~Buffer() {
     allocator_->deallocate(data_, size_bytes_, alignment_);
 }
