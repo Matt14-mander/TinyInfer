@@ -25,3 +25,11 @@ target_link_libraries(tinyinfer_cpu_execution_plan_benchmark PRIVATE TinyInfer::
 target_compile_definitions(tinyinfer_cpu_execution_plan_benchmark PRIVATE
     TINYINFER_BUILD_TYPE="$<CONFIG>"
     TINYINFER_NATIVE_ARCH=$<BOOL:${TINYINFER_ENABLE_NATIVE_ARCH}>)
+
+add_executable(tinyinfer_cpu_performance_analysis_benchmark cpu_performance_analysis_benchmark.cpp)
+target_link_libraries(tinyinfer_cpu_performance_analysis_benchmark PRIVATE TinyInfer::tinyinfer)
+target_include_directories(tinyinfer_cpu_performance_analysis_benchmark PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_definitions(tinyinfer_cpu_performance_analysis_benchmark PRIVATE
+    TINYINFER_BUILD_TYPE="$<CONFIG>"
+    TINYINFER_NATIVE_ARCH=$<BOOL:${TINYINFER_ENABLE_NATIVE_ARCH}>
+    TINYINFER_COMPILER_VERSION="${CMAKE_CXX_COMPILER_VERSION}")

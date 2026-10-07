@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+"""Run Phase 4.5 analysis cases sequentially; retain raw per-process JSON."""
+import argparse
+import hashlib
+import json
+import platform
+import statistics
+from datetime import datetime, timezone
+import subprocess
+from pathlib import Path
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--executable', required=True, type=Path)
+    parser.add_argument('--output', required=True, type=Path)
+    parser.add_argument('--samples', type=int, default=100)
+    parser.add_argument('--repeats', type=int, default=10)
+    parser.add_argument('--warmup', type=int, default=20)
+    parser.add_argument('--runs', type=int, default=3)
+    args = parser.parse_args()
+    if min(args.samples, args.repeats, args.warmup, args.runs) < 1:
+        parser.error('measurement counts must be positive')
+    root = Path(__file__).resolve().parents[1]
+    exe = args.executable.resolve()
+    args.output.mkdir(parents=True, exist_ok=True)
+    revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
+    diff = subprocess.check_output(['git', 'diff', 'HEAD'], cwd=root)
+    environment = dict(measurement_started_utc=datetime.now(timezone.utc).isoformat(),
+                       executable_sha256=hashlib.sha256(exe.read_bytes()).hexdigest(),
+                       platform=platform.platform(), machine=platform.machine(),
+                       processor=platform.processor(), source_revision=revision,
+                       tracked_diff_sha256=hashlib.sha256(diff).hexdigest(),
+                       git_status=subprocess.check_output(['git', 'status', '--short'], cwd=root, text=True),
+                       arguments=vars(args).copy())
+    environment['analysis_source_sha256'] = {
+        name: hashlib.sha256((root / name).read_bytes()).hexdigest()
+        for name in ('benchmarks/cpu_performance_analysis_benchmark.cpp',
+                     'benchmarks/run_phase45.py', 'benchmarks/CMakeLists.txt')}
+    environment['arguments'] = {k: str(v) if isinstance(v, Path) else v
+                                for k, v in environment['arguments'].items()}
+    (args.output / 'environment.json').write_text(json.dumps(environment, indent=2) + '\n')
+    shapes = [(m, size, size) for size in (128, 512) for m in (1, 16, 64)] + [(3, 127, 131)]
+    cases = []
+    for m, k, n in shapes:
+        for trans in (0, 1):
+            cases.append((f'm{m}_k{k}_n{n}_t{trans}',
+                          ['--m', str(m), '--k', str(k), '--n', str(n), '--trans-b', str(trans)]))
+    for bias in ('none', 'scalar', 'row', 'column', 'full'):
+        cases.append((f'm16_k128_n128_bias_{bias}', ['--bias', bias]))
+    cases.append(('m16_k128_n128_no_relu', ['--activation', 'none']))
+    cases.append(('m16_k128_n128_dynamic', ['--dynamic-b']))
+    cases.append(('m3_k127_n128_aligned_n', ['--m', '3', '--k', '127', '--n', '128']))
+    cases.append(('m3_k128_n128_aligned_kn', ['--m', '3', '--k', '128', '--n', '128']))
+    for fixture in ('phase3_mlp_gemm', 'rl_actor_mlp_tanh'):
+        cases.append((fixture, ['--model', str(root / 'tests' / 'fixtures' / (fixture + '.onnx'))]))
+    results = {}
+    for name, options in cases:
+        runs = []
+        for run in range(1, args.runs + 1):
+            command = [str(exe), *options, '--warmup', str(args.warmup),
+                       '--samples', str(args.samples), '--repeats', str(args.repeats), '--format', 'json']
+            result = json.loads(subprocess.check_output(command, cwd=root, text=True))
+            if result['build_type'] != 'Release':
+                raise RuntimeError('analysis requires Release')
+            result['command'] = command
+            (args.output / f'{name}_run{run}.json').write_text(json.dumps(result, indent=2) + '\n', encoding='utf-8')
+            runs.append(result)
+        results[name] = runs
+        p50 = [run['prepared_run']['p50_us'] for run in runs]
+        print(f'{name}: prepared p50 {min(p50):.3f}–{max(p50):.3f} us', flush=True)
+    (args.output / 'summary.json').write_text(json.dumps(results, indent=2) + '\n', encoding='utf-8')
+    lines = ['| Case | Prepared run | Bookkeeping control | Captured matrix chain | Input copy | Output copy |',
+             '| --- | ---: | ---: | ---: | ---: | ---: |']
+    for name, runs in results.items():
+        fields = ('prepared_run', 'context_bookkeeping_control', 'captured_matrix_chain',
+                  'input_binding_copy', 'output_extraction_copy')
+        medians = [statistics.median(r[field]['p50_us'] for r in runs) for field in fields]
+        lines.append('| ' + name + ' | ' + ' | '.join(f'{v:.3f}' for v in medians) + ' |')
+    lines += ['', '| Case / matrix node | MatMul | Epilogue | Complete | Scalar tail control |',
+              '| --- | ---: | ---: | ---: | ---: |']
+    for name, runs in results.items():
+        for index, node in enumerate(runs[0]['matrix_nodes']):
+            fields = ('matmul', 'epilogue', 'complete', 'scalar_tail_control')
+            values = []
+            for field in fields:
+                values.append('n/a' if field not in node else
+                              f"{statistics.median(r['matrix_nodes'][index][field]['p50_us'] for r in runs):.3f}")
+            lines.append(f"| {name} / {node['node']} | " + ' | '.join(values) + ' |')
+    (args.output / 'summary.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+
+if __name__ == '__main__':
+    main()

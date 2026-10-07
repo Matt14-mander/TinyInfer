@@ -264,3 +264,53 @@ source changes with the report. Investigate repeatable control regressions over
 The completed [ROG report](../docs/benchmarks/rog-cpu-phase4.4.md) includes both
 ISA configurations, preparation components, payload memory and all per-process
 statistics.
+
+## Phase 4.5 prepared CPU performance analysis
+
+This benchmark measures the unchanged Phase 4.4 prepared path and direct
+component controls. Build:
+
+```bash
+cmake -S . -B build-bench -DCMAKE_BUILD_TYPE=Release \
+  -DTINYINFER_BUILD_BENCHMARKS=ON -DTINYINFER_ENABLE_NATIVE_ARCH=ON
+cmake --build build-bench --target tinyinfer_cpu_performance_analysis_benchmark
+./build-bench/benchmarks/tinyinfer_cpu_performance_analysis_benchmark \
+  --m 16 --k 128 --n 128 --bias vector --activation relu \
+  --warmup 20 --samples 100 --repeats 10 --format json
+python3 benchmarks/run_phase45.py \
+  --executable build-bench/benchmarks/tinyinfer_cpu_performance_analysis_benchmark \
+  --output benchmark-results/phase4.5/mac-native --samples 100 --repeats 10 --runs 3
+```
+
+The runner executes 25 cases in three sequential processes each. Use separate
+portable/native builds; do not run build/test jobs during latency measurement.
+ROG PowerShell can use its existing Ninja configuration, or a new directory:
+
+```powershell
+cmake -S . -B build-phase45-native -G Ninja -DCMAKE_BUILD_TYPE=Release -DTINYINFER_BUILD_BENCHMARKS=ON -DTINYINFER_BUILD_EXAMPLES=OFF -DTINYINFER_ENABLE_NATIVE_ARCH=ON
+cmake --build build-phase45-native --target tinyinfer_cpu_performance_analysis_benchmark --parallel 4
+python benchmarks/run_phase45.py --executable build-phase45-native/benchmarks/tinyinfer_cpu_performance_analysis_benchmark.exe --output benchmark-results/phase4.5/rog-native --samples 100 --repeats 10 --runs 3
+```
+
+Run from a developer shell with the working MSVC toolchain/environment used in
+Phase 4.4. With a Visual Studio multi-config generator, build `--config Release`
+and select the executable under `benchmarks/Release`. Repeat in a separate
+portable directory with native architecture OFF.
+
+JSON contains full prepared execution, metadata bookkeeping control, captured
+matrix-chain execution, input/output copies, per-matrix MatMul/epilogue/complete,
+scalar-tail control and isolated ordinary operator registry dispatch. Pool resets
+for epilogue are outside timers; each output is transformed once per sample.
+`epilogue_pool_bytes` records the per-node buffer pool payload.
+Every process checks prepared versus ordinary outputs, direct matrix outputs,
+epilogue buffers, scalar tails and isolated ordinary outputs. Setup uses frozen
+operands from ordinary execution and retains the public runtime unchanged.
+
+Read the [analysis boundary](../docs/plans/phase4.5.md#450--analysis-boundary)
+before interpreting ratios. Components have different cache/loop conditions;
+they cannot be added into an exact graph latency or used to claim achieved
+fusion speedup. Dynamic B still packs every production invocation; direct
+captured-component timing excludes that packing. Tail control uses a strided
+scalar kernel rather than instrumenting the production tail. The CLI also permits `--bias none --activation none` to inspect the no-op
+epilogue floor; the standard suite uses no-bias/ReLU and vector-bias/None controls. Output extraction and input binding
+copy payloads and are excluded from prepared-run latency.

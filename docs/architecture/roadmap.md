@@ -109,7 +109,14 @@ native Release correctness plus targeted sanitizer checks pass. The
 the [ROG report](../benchmarks/rog-cpu-phase4.4.md) completes acceptance on
 2026-10-07 with 40/40 portable and native tests plus 24 scenarios × 3 processes
 per configuration. Phase 4.4 is complete for static FP32 prepared inference.
-In-register epilogues remain a later slice.
+Phase 4.5 starts with performance analysis of that prepared baseline: complete
+execution, matrix arithmetic, existing affine/ReLU epilogues, metadata controls,
+scalar-tail and input/output-copy diagnostics. The dedicated benchmark changes
+no production execution behavior. The
+[Mac analysis](../benchmarks/mac-cpu-phase4.5.md) covers 150 checked native/portable
+processes and supports common-bias specialization before register
+epilogue fusion. ROG analysis reproduction and kernel implementation remain
+pending; see the [Phase 4.5 plan](../plans/phase4.5.md).
 
 ## Phase 5 — Hardware Backends
 

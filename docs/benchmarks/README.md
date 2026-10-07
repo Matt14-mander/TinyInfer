@@ -23,6 +23,10 @@ limitations needed to reproduce a result.
 - [ROG Phase 4.4 detailed statistics](rog-cpu-phase4.4-details.md): all 144
   processes, component costs, context creation and first execution.
 
+- [Mac CPU Phase 4.5 analysis](mac-cpu-phase4.5.md): prepared execution components,
+  bias/tail controls, application copies, and implementation priorities.
+  [Per-process evidence](mac-cpu-phase4.5-details.md) retains p50/p95/mean.
+
 Reports from different machines are comparable only when they use the same Git
 commit, Release configuration, native-architecture policy, fixture, and
 benchmark arguments.
