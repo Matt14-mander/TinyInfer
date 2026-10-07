@@ -106,7 +106,10 @@ separately. See the [Phase 4.4 plan](../plans/phase4.4.md) for implementation
 order, ownership rules, fallback behavior, and acceptance gates. Portable and
 native Release correctness plus targeted sanitizer checks pass. The
 [Mac report](../benchmarks/mac-cpu-phase4.4.md) records local measurements;
-ROG performance acceptance remains pending. In-register epilogues remain a later slice.
+the [ROG report](../benchmarks/rog-cpu-phase4.4.md) completes acceptance on
+2026-10-07 with 40/40 portable and native tests plus 24 scenarios × 3 processes
+per configuration. Phase 4.4 is complete for static FP32 prepared inference.
+In-register epilogues remain a later slice.
 
 ## Phase 5 — Hardware Backends
 

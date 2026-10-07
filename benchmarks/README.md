@@ -202,8 +202,9 @@ Correctness is checked before and after timing at absolute-plus-relative
 | `topological_order` | One existing graph sort |
 | `baseline_memory_plan` | One existing static lifetime/slot analysis |
 | `preparation` | Model snapshot, MemoryPlan, stored steps and constant packing |
+| `model_snapshot` | Independent deep Model copy and destruction; preparation component diagnostic |
 | `baseline_context_init` / `prepared_context_init` | Context/activation allocation and constant copies |
-| `rhs_pack` | Packing effective RHS for all matrix nodes; effective operand copies prepared outside this timer |
+| `baseline_rhs_pack` | Packing effective RHS for all matrix nodes; effective operand copies prepared outside this timer |
 | `baseline_rhs_transpose_copy` | Baseline deep-copy plus RHS transpose metadata for transB nodes |
 | `baseline_first_inference` / `prepared_first_inference` | One run in a newly created/bound context; plan/packing already prepared |
 | `baseline_warm` / `prepared_warm` | Reused contexts, inputs, buffers; alternate variant order per sample |
@@ -223,6 +224,15 @@ only, and activation bytes count MemoryPlan capacity. See
 `runtime_pack_count` is a count of successful fallback matrix dispatches.
 `full_preparation_amortization_calls` charges all mean preparation cost against
 positive mean per-call savings; absent values mean no positive savings.
+
+`snapshot_constant_bytes` and `context_constant_bytes` count logical constant
+payload retained in the plan and copied into each context. `context_input_bytes`
+counts bound input payload; `plan_accounted_payload_bytes` adds snapshot constants
+and packed weights, while `context_accounted_payload_bytes` adds context
+constants, inputs and activation capacity. These totals exclude metadata,
+allocator/vector capacity, caller-owned source models, output copies and runtime
+fallback scratch; they are not RSS measurements. `detailed-summary.md` preserves
+component, context, memory and per-process p50/p95/mean tables.
 
 ### Reproducible Mac / ROG suite
 
@@ -251,3 +261,6 @@ Also run the full Release suite with `TINYINFER_ENABLE_NATIVE_ARCH=OFF` in a
 separate build directory. Keep power mode, CPU/OS/compiler, revision and pending
 source changes with the report. Investigate repeatable control regressions over
 5%; compare ratios within a host. See the [Mac report](../docs/benchmarks/mac-cpu-phase4.4.md).
+The completed [ROG report](../docs/benchmarks/rog-cpu-phase4.4.md) includes both
+ISA configurations, preparation components, payload memory and all per-process
+statistics.

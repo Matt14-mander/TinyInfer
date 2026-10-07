@@ -1,6 +1,9 @@
 # Mac CPU — Phase 4.4 prepared execution
 
 - Status: Local correctness and Mac performance gates passed; ROG gate pending
+- Closure update (2026-10-07): the [ROG report](rog-cpu-phase4.4.md) now passes
+  portable/native correctness and performance gates and closes Phase 4.4.
+  The original Mac measurements and historical pending status below are retained.
 - Measurement date: 2026-09-29
 - Source: `d3849e898ac9e9074f5aa15eb93b731988eaed48` plus the Phase 4.4 implementation in this working tree
 - Baseline: Phase 4.3 optimized graph, Executor + MemoryPlan + combined Gemm epilogue

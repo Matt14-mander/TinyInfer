@@ -1,6 +1,7 @@
 # Phase 4.4 — Prepared CPU inference
 
-- Status: Implemented; local correctness and Mac performance verified; ROG gate pending
+- Status: Complete; Mac and ROG correctness/performance gates passed
+- Acceptance completed: 2026-10-07
 - Planning date: 2026-09-29
 - Source baseline: `51cfb7f` (Phase 4.3 Gemm + ReLU fusion)
 
@@ -184,6 +185,23 @@ Exit criteria:
 - ROG: awaiting target-host execution; the [runner and commands](../../benchmarks/README.md#reproducible-mac--rog-suite) are ready.
 - Cross-host Phase 4.4 performance acceptance remains open until ROG results
   satisfy the control-regression and repeatability gates.
+
+## ROG acceptance and closure (2026-10-07)
+
+The pending ROG gate above is now complete. Fresh portable SSE2 and native
+AVX2 Release builds each passed 40/40 tests with assertions enabled. Both
+configurations ran all 24 scenarios in three sequential processes per case,
+for 144 total processes. Static cases gained in all measured processes; all
+dynamic controls passed the 5% repeatable-regression gate. Static sessions
+completed 1,021 runs without runtime packing; dynamic B remained uncached.
+
+The benchmark now reports independent model-snapshot cost and explicit plan
+and per-context payload memory. The runner preserves full component/context
+and per-process latency tables. See the
+[ROG acceptance report](../benchmarks/rog-cpu-phase4.4.md) and
+[detailed statistics](../benchmarks/rog-cpu-phase4.4-details.md). Phase 4.4 is
+accepted for the static FP32 prepared CPU slice; subsequent kernel work uses
+this prepared path as its baseline.
 
 ## Completion statement
 

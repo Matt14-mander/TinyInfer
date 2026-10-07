@@ -250,7 +250,28 @@ Report benchmark(const Options& options, const Model& model, const Bindings& inp
     report.metrics["activation_bytes"] = static_cast<double>(prepared.activation_bytes());
     report.metrics["graph_nodes"] = static_cast<double>(graph.size());
     report.metrics["stage_samples"] = static_cast<double>(std::min<std::size_t>(20, options.samples));
+    std::size_t constant_bytes = 0;
+    for (const auto& value : graph.values()) {
+        if (graph.is_constant(value.id)) {
+            constant_bytes += TensorLayout(value.spec.shape).size_bytes(value.spec.dtype);
+        }
+    }
+    std::size_t input_bytes = 0;
+    for (const auto& input : inputs) {
+        input_bytes += TensorLayout(input.second.shape()).size_bytes(input.second.dtype());
+    }
+    report.metrics["snapshot_constant_bytes"] = static_cast<double>(constant_bytes);
+    report.metrics["context_constant_bytes"] = static_cast<double>(constant_bytes);
+    report.metrics["context_input_bytes"] = static_cast<double>(input_bytes);
+    report.metrics["plan_accounted_payload_bytes"] =
+        static_cast<double>(constant_bytes + prepared.packed_weight_bytes());
+    report.metrics["context_accounted_payload_bytes"] =
+        static_cast<double>(constant_bytes + input_bytes + prepared.activation_bytes());
     std::size_t scratch_result = 0;
+    report.add("model_snapshot", measure_stage(options, [&] {
+        const Model candidate(model);
+        scratch_result += candidate.graph().value_count();
+    }));
     report.add("topological_order", measure_stage(options, [&] {
         const auto order = graph.topological_order();
         scratch_result += order.size();

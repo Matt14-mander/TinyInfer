@@ -93,6 +93,16 @@ metadata, and temporary fallback allocations are additional. Static RHS is
 retained in both snapshot and packed form to keep ordinary operator/constant
 output semantics and reuse the current ExecutionContext implementation.
 
+The acceptance benchmark additionally reports snapshot/context constant payload
+and bound inputs. Its accounted plan payload is snapshot constants plus packed
+weights; accounted context payload is copied constants plus inputs plus planned
+activations. For C live contexts, the measured payload model is
+`plan_accounted_payload_bytes + C * context_accounted_payload_bytes`.
+Caller source models, metadata, allocator capacity, extracted output copies and
+fallback scratch are outside this model. Independent snapshot, ordering,
+MemoryPlan, RHS packing and transpose-copy timers describe preparation work;
+their medians must not be summed into a predicted end-to-end latency.
+
 ## Validation and boundaries
 
 The new tests compare current kernels and independent ONNX fixture outputs,
@@ -105,4 +115,5 @@ This is an explicit CPU FP32 preparation layer. It introduces no dynamic shapes,
 new activation fusion, in-register epilogue, compiler IR, autotuning, threading,
 quantization or GPU backend. See the [Phase 4.4 plan](../plans/phase4.4.md),
 [ownership decision](../decisions/0006-own-prepared-cpu-state.md), and
-[Mac measurements](../benchmarks/mac-cpu-phase4.4.md).
+[Mac measurements](../benchmarks/mac-cpu-phase4.4.md) and
+[ROG acceptance](../benchmarks/rog-cpu-phase4.4.md).

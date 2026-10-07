@@ -72,6 +72,41 @@ def main():
         lines.append(f'| {name} | {med("baseline_warm_p50_us"):.3f} | {med("prepared_warm_p50_us"):.3f} | '
                      f'{min(ratios):.3f}–{max(ratios):.3f}x | {med("preparation_p50_us"):.3f} | {int(med("packed_weight_bytes"))} |')
     (args.output / 'summary.md').write_text('\n'.join(lines) + '\n')
+    sections = [lines]
+    for title, fields in (
+        ('Preparation components (median process p50, us)',
+         ['model_snapshot_p50_us', 'topological_order_p50_us',
+          'baseline_memory_plan_p50_us', 'baseline_rhs_pack_p50_us',
+          'baseline_rhs_transpose_copy_p50_us']),
+        ('Context and first inference (median process p50, us)',
+         ['baseline_context_init_p50_us', 'prepared_context_init_p50_us',
+          'baseline_first_inference_p50_us', 'prepared_first_inference_p50_us']),
+        ('Memory payload and packing counts (bytes / counts)',
+         ['snapshot_constant_bytes', 'context_input_bytes', 'activation_bytes',
+          'packed_weight_bytes', 'plan_accounted_payload_bytes',
+          'context_accounted_payload_bytes', 'pack_count',
+          'runtime_pack_count', 'session_run_count'])):
+        table = ['## ' + title, '', '| Case | ' + ' | '.join(fields) + ' |',
+                 '| --- | ' + ' | '.join(['---:'] * len(fields)) + ' |']
+        for name, runs in results.items():
+            values = [statistics.median(r[field] for r in runs) for field in fields]
+            table.append('| ' + name + ' | ' + ' | '.join(f'{v:.3f}' for v in values) + ' |')
+        sections.append(table)
+    table = ['## Per-process latency and amortization', '',
+             '| Case | Run | Baseline p50 / p95 / mean us | Prepared p50 / p95 / mean us | Paired ratio | Full prep estimated calls |',
+             '| --- | ---: | --- | --- | ---: | ---: |']
+    for name, runs in results.items():
+        for index, run in enumerate(runs, 1):
+            before = ' / '.join(f'{run["baseline_warm_" + field + "_us"]:.3f}'
+                                for field in ('p50', 'p95', 'mean'))
+            after = ' / '.join(f'{run["prepared_warm_" + field + "_us"]:.3f}'
+                               for field in ('p50', 'p95', 'mean'))
+            calls = run.get('full_preparation_amortization_calls', 'n/a')
+            table.append(f'| {name} | {index} | {before} | {after} | '
+                         f'{run["paired_speedup_p50"]:.3f}x | {calls} |')
+    sections.append(table)
+    (args.output / 'detailed-summary.md').write_text(
+        '\n\n'.join('\n'.join(section) for section in sections) + '\n', encoding='utf-8')
 
 
 if __name__ == '__main__':

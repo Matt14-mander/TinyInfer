@@ -17,6 +17,11 @@ limitations needed to reproduce a result.
 - [ROG CPU Phase 4.3 acceptance](rog-cpu-phase4.3.md): Gemm + ReLU fusion.
 - [Mac CPU Phase 4.4 measurements](mac-cpu-phase4.4.md): prepared execution,
   preparation costs, static weights and dynamic fallback controls.
+- [ROG CPU Phase 4.4 acceptance](rog-cpu-phase4.4.md): portable/native 40/40
+  correctness gates, 24 scenarios per configuration, preparation components,
+  persistent payload memory and performance interpretation.
+- [ROG Phase 4.4 detailed statistics](rog-cpu-phase4.4-details.md): all 144
+  processes, component costs, context creation and first execution.
 
 Reports from different machines are comparable only when they use the same Git
 commit, Release configuration, native-architecture policy, fixture, and

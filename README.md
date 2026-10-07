@@ -146,7 +146,11 @@ Code Elimination with composed ValueId mappings. Lifetime analysis and buffer
 reuse are now connected to `ExecutionContext` through a static `MemoryPlan`.
 The first fused inference operator now combines Gemm scaling, bias, and ReLU
 in one CPU epilogue. Static FP32 models can now use an explicit prepared CPU
-plan to reuse execution steps and constant matrix packing. The next work is in-register fused epilogues, shape-aware
-kernel selection, optional threading, and a measured Int8 path. Every
+plan to reuse execution steps and constant matrix packing.
+Phase 4.4 is accepted on Mac and ROG; the
+[ROG report](docs/benchmarks/rog-cpu-phase4.4.md) includes portable/native tests,
+24 scenarios per configuration, preparation costs and persistent memory.
+The next work is in-register fused epilogues, shape-aware kernel selection,
+optional threading, and a measured Int8 path. Every
 optimization must preserve the v0.3 correctness contract and be justified by
 reproducible before-and-after benchmarks.
