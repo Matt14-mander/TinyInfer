@@ -232,7 +232,7 @@ Report benchmark(const Options& options, const Model& model, const Bindings& inp
     Report report;
     const auto& graph = model.graph();
     const MemoryPlan memory(graph);
-    const CpuExecutionPlan prepared(model);
+    const CpuExecutionPlan prepared(model, {CpuGemmEpilogueMode::Legacy});
     CpuBackend backend;
     Executor executor(backend);
     ExecutionContext baseline(graph, memory);
@@ -281,7 +281,7 @@ Report benchmark(const Options& options, const Model& model, const Bindings& inp
         scratch_result += candidate.buffer_size_bytes();
     }));
     report.add("preparation", measure_stage(options, [&] {
-        const CpuExecutionPlan candidate(model);
+        const CpuExecutionPlan candidate(model, {CpuGemmEpilogueMode::Legacy});
         scratch_result += candidate.packed_weight_bytes();
     }));
     report.add("baseline_context_init", measure_stage(options, [&] {

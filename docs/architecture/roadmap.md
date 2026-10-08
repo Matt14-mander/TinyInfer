@@ -115,8 +115,12 @@ scalar-tail and input/output-copy diagnostics. The dedicated benchmark changes
 no production execution behavior. The
 [Mac analysis](../benchmarks/mac-cpu-phase4.5.md) covers 150 checked native/portable
 processes and supports common-bias specialization before register
-epilogue fusion. ROG analysis reproduction and kernel implementation remain
-pending; see the [Phase 4.5 plan](../plans/phase4.5.md).
+epilogue fusion. The first kernel slice now implements both paths. The
+[local fusion comparison](../benchmarks/mac-cpu-phase4.5-fusion.md) checks 156
+processes and selects specialization as the default. Register fusion passed
+correctness but regressed on SSE2 and remains explicit experimental. Its
+performance tuning and ROG acceptance remain pending; see the
+[Phase 4.5 plan](../plans/phase4.5.md).
 
 ## Phase 5 — Hardware Backends
 

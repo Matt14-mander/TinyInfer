@@ -30,8 +30,12 @@ T attribute(const Node& node, const char* name, T default_value) {
 namespace detail {
 
 struct CpuExecutionPlanState {
-    explicit CpuExecutionPlanState(const Model& source)
+    explicit CpuExecutionPlanState(const Model& source, CpuExecutionPlanOptions options)
         : model(source), memory_plan(model.graph()) {
+        if (options.gemm_epilogue != CpuGemmEpilogueMode::Legacy &&
+            options.gemm_epilogue != CpuGemmEpilogueMode::Specialized &&
+            options.gemm_epilogue != CpuGemmEpilogueMode::Fused)
+            throw std::invalid_argument("invalid prepared Gemm epilogue mode");
         const auto& graph = model.graph();
         std::map<std::pair<ValueId, bool>, std::size_t> packing;
         for (const auto id : graph.topological_order()) {
@@ -51,6 +55,13 @@ struct CpuExecutionPlanState {
                 step.alpha = gemm ? attribute(node, "alpha", 1.0F) : 1.0F;
                 step.beta = gemm ? attribute(node, "beta", 1.0F) : 1.0F;
                 step.relu = node.op == OpType::FusedGemmActivation;
+                if (gemm) {
+                    const Shape* bias_shape = node.inputs.size() == 3
+                        ? &graph.value(node.inputs[2]).spec.shape : nullptr;
+                    step.epilogue = cpu::GemmEpilogue(graph.value(node.outputs[0]).spec.shape,
+                        bias_shape, step.alpha, step.beta, step.relu);
+                    step.epilogue_mode = options.gemm_epilogue;
+                }
                 step.fallback_reason = "runtime RHS; use existing CPU kernel";
                 if (graph.is_constant(rhs)) {
                     const auto key = std::make_pair(rhs, trans_b);
@@ -86,8 +97,8 @@ struct CpuExecutionPlanState {
 
 }  // namespace detail
 
-CpuExecutionPlan::CpuExecutionPlan(const Model& model)
-    : state_(std::make_shared<detail::CpuExecutionPlanState>(model)) {}
+CpuExecutionPlan::CpuExecutionPlan(const Model& model, CpuExecutionPlanOptions options)
+    : state_(std::make_shared<detail::CpuExecutionPlanState>(model, options)) {}
 
 CpuExecutionContext CpuExecutionPlan::create_context() const {
     return CpuExecutionContext(state_);
@@ -133,6 +144,8 @@ CpuExecutionContext& CpuExecutionContext::operator=(CpuExecutionContext&& other)
         context_ = std::move(other.context_);
         runs_ = other.runs_;
         runtime_packs_ = other.runtime_packs_;
+        fused_gemms_ = other.fused_gemms_;
+        specialized_gemms_ = other.specialized_gemms_;
     }
     return *this;
 }
@@ -169,12 +182,27 @@ void CpuExecutionContext::run() {
                 lhs_view->transpose(0, 1);
             }
             auto& output = context_->prepare_output(node.outputs.at(0));
-            cpu::matmul_packed_simd(lhs_view ? *lhs_view : lhs,
-                                    state_->weights.at(step.packed_weight_index), output);
-            if (step.op != OpType::MatMul) {
+            const auto& operand = lhs_view ? *lhs_view : lhs;
+            if (step.op == OpType::MatMul) {
+                cpu::matmul_packed_simd(operand, state_->weights.at(step.packed_weight_index), output);
+            } else {
                 const Tensor* bias = node.inputs.size() == 3
                     ? &input_context.value(node.inputs.at(2)) : nullptr;
-                ops::detail::apply_gemm_epilogue(output, bias, step.alpha, step.beta, step.relu);
+                if (step.epilogue_mode == CpuGemmEpilogueMode::Legacy) {
+                    cpu::matmul_packed_simd(operand, state_->weights.at(step.packed_weight_index), output);
+                    ops::detail::apply_gemm_epilogue(output, bias, step.alpha, step.beta, step.relu);
+                } else {
+                    const auto epilogue = step.epilogue.bind(bias);
+                    if (step.epilogue_mode == CpuGemmEpilogueMode::Fused) {
+                        cpu::matmul_packed_gemm(operand, state_->weights.at(step.packed_weight_index), output, epilogue);
+                        if (epilogue.supports_fusion()) ++fused_gemms_;
+                        else if (epilogue.supports_specialization()) ++specialized_gemms_;
+                    } else {
+                        cpu::matmul_packed_simd(operand, state_->weights.at(step.packed_weight_index), output);
+                        cpu::apply_gemm_epilogue(output, epilogue);
+                        if (epilogue.supports_specialization()) ++specialized_gemms_;
+                    }
+                }
             }
         } else {
             state_->registry.execute(node, *context_);

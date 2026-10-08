@@ -314,3 +314,42 @@ captured-component timing excludes that packing. Tail control uses a strided
 scalar kernel rather than instrumenting the production tail. The CLI also permits `--bias none --activation none` to inspect the no-op
 epilogue floor; the standard suite uses no-bias/ReLU and vector-bias/None controls. Output extraction and input binding
 copy payloads and are excluded from prepared-run latency.
+
+## Phase 4.5 Gemm kernel fusion comparison
+
+Use the same Release executable with `--fusion-comparison`. This measures three
+reused prepared contexts: `Legacy`, direct broadcast `Specialized`, and final
+K-block register `Fused`. Order rotates every sample; each sample averages
+`repeats` runs. JSON reports each latency distribution and the median of paired
+sample speedups (baseline time / candidate time). Setup, input binding and output
+copy/checks are outside timers. All three plans retain the same graph, packing
+and activation buffer policy. Dynamic B remains a fallback control.
+
+```bash
+python3 benchmarks/run_phase45_fusion.py \
+  --executable build-bench/benchmarks/tinyinfer_cpu_performance_analysis_benchmark \
+  --output benchmark-results/phase4.5-fusion/mac-native \
+  --warmup 20 --samples 100 --repeats 10 --runs 3
+```
+
+The suite has 26 cases, including an extra no-bias/None no-op control. Run native
+then portable sequentially after all builds/tests finish. Raw JSON, environment
+and source hashes are retained in the output directory. Ratios above one mean
+faster. Report process ranges and p95 alongside medians; inspect repeatable
+regressions above 5% before making host acceptance claims.
+
+ROG PowerShell, after building/testing both configurations:
+
+```powershell
+python benchmarks/run_phase45_fusion.py --executable build-phase45-native/benchmarks/tinyinfer_cpu_performance_analysis_benchmark.exe --output benchmark-results/phase4.5-fusion/rog-native --warmup 20 --samples 100 --repeats 10 --runs 3
+python benchmarks/run_phase45_fusion.py --executable build-phase45-portable/benchmarks/tinyinfer_cpu_performance_analysis_benchmark.exe --output benchmark-results/phase4.5-fusion/rog-portable --warmup 20 --samples 100 --repeats 10 --runs 3
+```
+
+For Visual Studio generators use `benchmarks/Release` executables. Historical
+Phase 4.4 and Phase 4.5 component analysis select Legacy explicitly; the default
+production plan can therefore evolve without redefining those baselines.
+
+The [local fusion report](../docs/benchmarks/mac-cpu-phase4.5-fusion.md) selects
+Specialized as the production default. Fused is experimental: numerical gates
+passed, but its initial SIMD implementation has performance regressions, especially
+in portable SSE2. Phase 4.5 remains open for fusion tuning and ROG acceptance.

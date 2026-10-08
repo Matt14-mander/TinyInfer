@@ -150,7 +150,10 @@ plan to reuse execution steps and constant matrix packing.
 Phase 4.4 is accepted on Mac and ROG; the
 [ROG report](docs/benchmarks/rog-cpu-phase4.4.md) includes portable/native tests,
 24 scenarios per configuration, preparation costs and persistent memory.
-The next work is in-register fused epilogues, shape-aware kernel selection,
+Phase 4.5 adds a default specialized Gemm epilogue and an explicit experimental
+register-fusion mode. The [local comparison](docs/benchmarks/mac-cpu-phase4.5-fusion.md)
+accepts specialization; fusion performance tuning and ROG validation remain open.
+The next work is final-K SIMD loop tuning, shape-aware kernel selection,
 optional threading, and a measured Int8 path. Every
 optimization must preserve the v0.3 correctness contract and be justified by
 reproducible before-and-after benchmarks.

@@ -38,6 +38,7 @@ struct Options {
     std::string model_path;
     std::string bias{"vector"};
     bool relu{true};
+    bool fusion_comparison{false};
 };
 
 struct Statistics {
@@ -79,7 +80,7 @@ Options parse_options(int argc, char** argv) {
         if (argument == "--help") {
             std::cout << "Usage: " << argv[0]
                       << " [--m N] [--k N] [--n N] [--warmup N]"
-                         " [--samples N] [--repeats N] [--format json] [--trans-b 0|1] [--dynamic-b] [--model PATH] [--bias none|scalar|vector|row|column|full] [--activation none|relu]\n";
+                         " [--samples N] [--repeats N] [--format json] [--trans-b 0|1] [--dynamic-b] [--model PATH] [--bias none|scalar|vector|row|column|full] [--activation none|relu] [--fusion-comparison]\n";
             std::exit(0);
         } else if (argument == "--m") {
             options.m = positive_size(value("--m"), "--m");
@@ -99,6 +100,8 @@ Options parse_options(int argc, char** argv) {
             options.transpose_b = transpose == "1";
         } else if (argument == "--dynamic-b") {
             options.dynamic_b = true;
+        } else if (argument == "--fusion-comparison") {
+            options.fusion_comparison = true;
         } else if (argument == "--bias") {
             options.bias = value("--bias");
             const std::vector<std::string> supported{"none", "scalar", "vector", "row", "column", "full"};
@@ -341,7 +344,7 @@ Metrics measure(const Options& options, std::vector<Task>& tasks) {
         }
     }
     Metrics result;
-    for (auto& task : tasks) result.push_back({task.name, summarize(std::move(task.samples))});
+    for (auto& task : tasks) result.push_back({task.name, summarize(task.samples)});
     return result;
 }
 
@@ -373,6 +376,79 @@ std::string escape(const std::string& source) {
     return out;
 }
 
+int run_fusion_comparison(const Options& options) {
+    const auto model = make_model(options);
+    const auto inputs = make_inputs(model);
+    const std::vector<CpuGemmEpilogueMode> modes{
+        CpuGemmEpilogueMode::Legacy, CpuGemmEpilogueMode::Specialized, CpuGemmEpilogueMode::Fused};
+    std::vector<CpuExecutionPlan> plans;
+    std::vector<CpuExecutionContext> sessions;
+    plans.reserve(3); sessions.reserve(3);
+    for (auto mode : modes) {
+        plans.emplace_back(model, CpuExecutionPlanOptions{mode});
+        sessions.push_back(plans.back().create_context());
+        bind(sessions.back(), inputs); sessions.back().run();
+    }
+    for (const auto& out : model.outputs()) for (std::size_t i=1;i<3;++i)
+        expect_close(sessions[i].output(out.second), sessions[0].output(out.second));
+    std::vector<Task> tasks;
+    const std::vector<std::string> names{"legacy", "specialized", "fused"};
+    for (std::size_t i=0;i<3;++i) tasks.push_back({names[i], []{}, [&,i]{sessions[i].run();}});
+    const auto metrics = measure(options, tasks);
+    std::vector<double> specialized, fused, incremental;
+    for (std::size_t i=0;i<options.samples;++i) {
+        specialized.push_back(tasks[0].samples[i]/tasks[1].samples[i]);
+        fused.push_back(tasks[0].samples[i]/tasks[2].samples[i]);
+        incremental.push_back(tasks[1].samples[i]/tasks[2].samples[i]);
+    }
+    for (const auto& out : model.outputs()) for (std::size_t i=1;i<3;++i)
+        expect_close(sessions[i].output(out.second), sessions[0].output(out.second));
+    for (std::size_t i=0;i<3;++i) {
+        if (plans[i].activation_bytes()!=plans[0].activation_bytes() || plans[i].pack_count()!=plans[0].pack_count())
+            throw std::runtime_error("comparison memory/packing policy changed");
+        const auto dynamic = std::count_if(plans[i].steps().begin(),plans[i].steps().end(),[](const auto& step){
+            return matrix_op(step.op) && step.path==CpuExecutionPath::ExistingKernel;
+        });
+        if (sessions[i].runtime_pack_count()!=sessions[i].run_count()*dynamic)
+            throw std::runtime_error("comparison runtime packing differs");
+        // Benchmark inputs/constants are contiguous; strided runtime rebinding is
+        // covered by the kernel integration tests rather than this timing suite.
+        std::size_t eligible = 0;
+        if (i != 0) for (const auto& step : plans[i].steps()) {
+            if (step.path == CpuExecutionPath::PackedConstantRhs && step.op != OpType::MatMul &&
+                (i == 2 ? step.epilogue.supports_fusion() : step.epilogue.supports_specialization()))
+                ++eligible;
+        }
+        const auto selected = i == 2 ? sessions[i].fused_gemm_count() : sessions[i].specialized_gemm_count();
+        if (selected != eligible * sessions[i].run_count())
+            throw std::runtime_error("comparison epilogue dispatch differs");
+    }
+    std::cout << std::fixed << std::setprecision(6)
+              << "{\n\"build_type\": \"" << TINYINFER_BUILD_TYPE
+              << "\",\n\"compiler\": \"" << escape(compiler_name())
+              << "\",\n\"native_arch\": " << TINYINFER_NATIVE_ARCH
+              << ",\n\"simd_width\": " << cpu::matmul_simd_width()
+              << ",\n\"workload\": \"" << escape(options.model_path.empty()?"synthetic_gemm":options.model_path)
+              << "\",\n\"samples\": " << options.samples << ",\n\"repeats\": " << options.repeats
+              << ",\n\"warmup\": " << options.warmup << ",\n\"pack_count\": " << plans[0].pack_count()
+              << ",\n\"activation_bytes\": " << plans[0].activation_bytes()
+              << ",\n\"packed_weight_bytes\": " << plans[0].packed_weight_bytes();
+    if (options.model_path.empty()) {
+        std::cout << ",\n\"m\": " << options.m << ",\n\"k\": " << options.k << ",\n\"n\": " << options.n
+                  << ",\n\"trans_b\": " << options.transpose_b << ",\n\"dynamic_b\": " << options.dynamic_b
+                  << ",\n\"bias\": \"" << options.bias << "\",\n\"relu\": " << options.relu;
+    }
+    for (const auto& metric : metrics) print_metric(metric);
+    std::cout << ",\n\"specialized_vs_legacy_paired_p50\": " << summarize(specialized).p50_us
+              << ",\n\"fused_vs_legacy_paired_p50\": " << summarize(fused).p50_us
+              << ",\n\"fused_vs_specialized_paired_p50\": " << summarize(incremental).p50_us
+              << ",\n\"fused_gemm_count\": " << sessions[2].fused_gemm_count()
+              << ",\n\"specialized_gemm_count\": " << sessions[1].specialized_gemm_count()
+              << ",\n\"runtime_pack_count\": " << sessions[2].runtime_pack_count()
+              << ",\n\"run_count\": " << sessions[2].run_count() << "\n}\n";
+    return 0;
+}
+
 int run(const Options& options) {
     const auto model = make_model(options);
     const auto& graph = model.graph();
@@ -382,7 +458,7 @@ int run(const Options& options) {
     ExecutionContext captured(graph); // No plan: retain all outputs for capture.
     bind(captured, inputs);
     for (auto id : order) registry.execute(graph.node(id), captured);
-    const CpuExecutionPlan plan(model);
+    const CpuExecutionPlan plan(model, {CpuGemmEpilogueMode::Legacy});
     auto session = plan.create_context();
     bind(session, inputs);
     session.run();
@@ -507,7 +583,8 @@ int run(const Options& options) {
 } // namespace
 
 int main(int argc, char** argv) {
-    try { return run(parse_options(argc, argv)); }
+    try { const auto options=parse_options(argc, argv);
+        return options.fusion_comparison ? run_fusion_comparison(options) : run(options); }
     catch (const std::exception& error) {
         std::cerr << "cpu performance analysis: " << error.what() << '\n';
         return 1;

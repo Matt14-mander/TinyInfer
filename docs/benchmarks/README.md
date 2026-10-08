@@ -30,3 +30,7 @@ limitations needed to reproduce a result.
 Reports from different machines are comparable only when they use the same Git
 commit, Release configuration, native-architecture policy, fixture, and
 benchmark arguments.
+
+- [Mac Phase 4.5 specialization/fusion](mac-cpu-phase4.5-fusion.md): three-mode
+  paired comparison; specialization accepted locally, fusion performance pending.
+  [Per-process evidence](mac-cpu-phase4.5-fusion-details.md) records all distributions.

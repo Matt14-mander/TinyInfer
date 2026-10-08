@@ -39,6 +39,7 @@ add_library(tinyinfer
     src/runtime/executor.cpp
     src/backend/cpu/cpu_backend.cpp
     src/backend/cpu/execution_plan.cpp
+    src/backend/cpu/gemm_epilogue.cpp
     src/backend/cpu/operator_registry.cpp
     src/backend/cpu/matmul_kernel.cpp
 )

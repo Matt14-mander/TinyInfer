@@ -7,11 +7,18 @@
 #include <vector>
 
 #include "tinyinfer/model/model.h"
+#include "tinyinfer/backend/cpu/gemm_epilogue.h"
 
 namespace tinyinfer {
 
 class ExecutionContext;
 namespace detail { struct CpuExecutionPlanState; }
+
+// Explicit alternatives support semantic/performance comparisons on the same plan.
+enum class CpuGemmEpilogueMode { Legacy, Specialized, Fused };
+struct CpuExecutionPlanOptions {
+    CpuGemmEpilogueMode gemm_epilogue{CpuGemmEpilogueMode::Specialized};
+};
 
 enum class CpuExecutionPath { PackedConstantRhs, ExistingKernel };
 
@@ -25,6 +32,8 @@ struct CpuExecutionStep {
     bool relu{false};
     float alpha{1.0F};
     float beta{1.0F};
+    cpu::GemmEpilogue epilogue;
+    CpuGemmEpilogueMode epilogue_mode{CpuGemmEpilogueMode::Legacy};
 };
 
 // Owns a model snapshot, order, memory plan, and immutable packed CPU weights.
@@ -32,7 +41,7 @@ struct CpuExecutionStep {
 class CpuExecutionContext;
 class CpuExecutionPlan {
 public:
-    explicit CpuExecutionPlan(const Model& model);
+    explicit CpuExecutionPlan(const Model& model, CpuExecutionPlanOptions options = {});
     CpuExecutionPlan(const CpuExecutionPlan&) = default;
     CpuExecutionPlan& operator=(const CpuExecutionPlan&) = default;
 
@@ -67,6 +76,8 @@ public:
     Tensor output(ValueId id) const;
     Tensor output(const std::string& name) const;
     std::size_t run_count() const noexcept { return runs_; }
+    std::size_t fused_gemm_count() const noexcept { return fused_gemms_; }
+    std::size_t specialized_gemm_count() const noexcept { return specialized_gemms_; }
     std::size_t runtime_pack_count() const noexcept { return runtime_packs_; }
 
 private:
@@ -80,6 +91,8 @@ private:
     std::unique_ptr<ExecutionContext> context_;
     std::size_t runs_{0};
     std::size_t runtime_packs_{0};
+    std::size_t fused_gemms_{0};
+    std::size_t specialized_gemms_{0};
 };
 
 }  // namespace tinyinfer

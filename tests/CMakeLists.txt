@@ -164,6 +164,11 @@ target_compile_definitions(tinyinfer_cpu_execution_plan_tests PRIVATE
     TINYINFER_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 add_test(NAME tinyinfer_cpu_execution_plan_tests COMMAND tinyinfer_cpu_execution_plan_tests)
 
+add_executable(tinyinfer_gemm_kernel_fusion_tests gemm_kernel_fusion_test.cpp)
+target_link_libraries(tinyinfer_gemm_kernel_fusion_tests PRIVATE TinyInfer::tinyinfer)
+target_include_directories(tinyinfer_gemm_kernel_fusion_tests PRIVATE ${PROJECT_SOURCE_DIR}/src)
+add_test(NAME tinyinfer_gemm_kernel_fusion_tests COMMAND tinyinfer_gemm_kernel_fusion_tests)
+
 # Existing tests also use assert(). Keep those checks active in Release gates.
 get_property(TINYINFER_TEST_TARGETS DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
 foreach(TINYINFER_TEST_TARGET IN LISTS TINYINFER_TEST_TARGETS)

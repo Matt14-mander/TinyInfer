@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "tinyinfer/core/tensor.h"
+#include "tinyinfer/backend/cpu/gemm_epilogue.h"
 
 namespace tinyinfer::cpu {
 
@@ -42,6 +43,12 @@ void matmul_blocked(const Tensor& lhs, const Tensor& rhs, Tensor& output,
 // Uses reusable contiguous RHS packing and a platform SIMD micro-kernel.
 void matmul_packed_simd(const Tensor& lhs, const PackedMatMulRhs& rhs,
                         Tensor& output, MatMulBlockSize block_size = {});
+
+// Applies affine/ReLU before the final K-block store. Strided columns use a
+// separate direct epilogue fallback; zero-K products still apply the epilogue.
+void matmul_packed_gemm(const Tensor& lhs, const PackedMatMulRhs& rhs,
+                        Tensor& output, const GemmEpilogue& epilogue,
+                        MatMulBlockSize block_size = {});
 
 std::size_t matmul_simd_width() noexcept;
 

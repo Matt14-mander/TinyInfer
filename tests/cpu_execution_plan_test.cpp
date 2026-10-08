@@ -102,8 +102,8 @@ Tensor ordinary(const MatrixCase& fixture) {
     return context.output(fixture.model.output_id("y"));
 }
 
-void check_matrix(MatrixCase fixture) {
-    CpuExecutionPlan plan(fixture.model);
+void check_matrix(MatrixCase fixture, CpuGemmEpilogueMode mode = CpuGemmEpilogueMode::Specialized) {
+    CpuExecutionPlan plan(fixture.model, {mode});
     require(plan.pack_count() == (fixture.dynamic_b ? 0U : 1U), "incorrect pack count");
     require(plan.packed_weight_bytes() == (fixture.dynamic_b ? 0U : fixture.b.size_bytes()),
             "incorrect packed payload size");
@@ -258,6 +258,8 @@ void check_onnx(const char* name, const char* input_name, const char* output_nam
 }  // namespace
 
 int main() {
+    require(CpuExecutionPlanOptions{}.gemm_epilogue == CpuGemmEpilogueMode::Specialized,
+            "unaccepted register fusion became the default");
     for (auto op : {OpType::Gemm, OpType::FusedGemmActivation}) {
         for (bool ta : {false, true}) for (bool tb : {false, true}) {
             for (bool dynamic_b : {false, true}) {
@@ -265,6 +267,8 @@ int main() {
                 for (const auto& shape : std::vector<Shape>{{}, {5}, {1, 5}, {2, 1}, {2, 5}}) {
                     for (bool dynamic_c : {false, true}) {
                         check_matrix(matrix_case(op, ta, tb, dynamic_b, &shape, dynamic_c));
+                        check_matrix(matrix_case(op, ta, tb, dynamic_b, &shape, dynamic_c,
+                                                 2, 3, 5, 1, 1), CpuGemmEpilogueMode::Fused);
                     }
                 }
             }

@@ -1,6 +1,6 @@
 # Phase 4.5 — Prepared CPU performance analysis and Gemm epilogue
 
-- Status: Local analysis complete; ROG analysis reproduction pending; kernel work not started
+- Status: Local specialization accepted; register fusion correctness passed but performance not accepted; ROG validation pending
 - Start date: 2026-10-07 (Asia/Shanghai)
 - Source baseline: `f472304` (Phase 4.4 ROG acceptance)
 
@@ -124,3 +124,31 @@ ordinary-operator overhead. Larger K512 cases remain mainly matrix computation.
 These controls cannot establish exact stage percentages or a future speedup.
 ROG Phase 4.5 reproduction remains pending; use the same runner and record its
 ISA/compiler/environment before finalizing host-specific support decisions.
+
+
+## First kernel slice result (2026-10-08)
+
+The decoded epilogue, direct broadcast traversal and final-K register fusion
+candidate are implemented. Local native/portable Release suites passed 41/41;
+ASan/UBSan passed four targeted tests. A new runner compares three explicit
+prepared modes in 26 cases × three processes × two builds (156 checked processes).
+See the [fusion report](../benchmarks/mac-cpu-phase4.5-fusion.md) and
+[per-process evidence](../benchmarks/mac-cpu-phase4.5-fusion-details.md).
+
+Specialized is the default: common bias workloads and fixtures improve, while
+no-bias/no-op/dynamic-B controls have no repeatable >5% paired regression.
+Fused is an explicit experimental mode. It frequently trails specialization
+and regresses on SSE2 controls, so register fusion performance is not accepted.
+Nonunit biased coefficients retain the old helper; strided bias columns use
+specialization. Dynamic B, packing format, reduction and buffer policies are unchanged.
+
+Next acceptance work:
+
+1. Inspect generated SIMD loops/final-K dispatch and register pressure; remove
+   the observed SSE2 overhead, then repeat paired controls before enabling fusion.
+2. Reproduce correctness and the same three-mode comparison on ROG, native and
+   portable, retaining all process statistics and environment metadata.
+3. Validate NEON on ARM before claiming that backend. Evaluate multi-row tiling
+   separately once the fused candidate has a justified support/selection policy.
+
+Phase 4.5 remains open for register fusion performance and target-host gates.

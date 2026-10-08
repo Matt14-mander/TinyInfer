@@ -67,8 +67,8 @@ entries. A future dtype/format backend must extend this contract and cache key.
 
 Packing reads effective RHS strides directly, including transB, so it creates
 no temporary operand copy. Prepared transA creates a private shared-storage
-layout view. The packed SIMD MatMul writes into planned output storage; Gemm
-then uses the existing combined alpha/beta/bias/ReLU traversal. Dynamic bias
+layout view. The packed SIMD MatMul writes into planned output storage. Phase 4.5 adds
+Gemm epilogue modes described below. Dynamic bias
 is read from the current context on every run. Dynamic B uses the existing
 operator implementation and cannot enter the constant cache.
 
@@ -117,3 +117,43 @@ quantization or GPU backend. See the [Phase 4.4 plan](../plans/phase4.4.md),
 [ownership decision](../decisions/0006-own-prepared-cpu-state.md), and
 [Mac measurements](../benchmarks/mac-cpu-phase4.4.md) and
 [ROG acceptance](../benchmarks/rog-cpu-phase4.4.md).
+
+## Gemm epilogue modes (Phase 4.5)
+
+`CpuExecutionPlanOptions{CpuGemmEpilogueMode::Legacy}` selects the existing
+TensorIterator epilogue. `Specialized` uses decoded broadcast strides and a
+separate direct traversal and is the default after local paired measurements.
+The explicit experimental `Fused` mode applies eligible affine/bias/ReLU
+operations to the accumulator on the final K block before its existing store.
+This is arithmetic kernel fusion; the earlier graph Gemm/ReLU rewrite alone
+still used a separate epilogue traversal.
+
+The initial scope is rank-2 FP32 constant packed B, None/ReLU, no bias with any
+alpha, or scalar/vector/row/column/full bias with alpha=beta=1. Broadcast column
+stride must be zero or one for SIMD fusion. A strided column bias falls back to
+the specialized traversal; biased nonunit coefficients retain the original
+helper, including its compiler contraction behavior. Dynamic B uses the existing
+operator path. Zero K zero-fills and then applies the epilogue once. Tail columns
+apply it once after their final scalar accumulation.
+
+The SIMD ReLU uses an ordered positive mask to match `std::max(0.0F, x)`:
+NaN and either signed zero produce positive zero. MatMul reduction order, tiling,
+packed format, activation buffer and weight ownership are unchanged. NEON has an
+implementation but requires target execution before claiming ARM acceptance.
+
+Steps expose pointer-free epilogue prototypes and the requested mode. Every
+run binds current bias storage and strides; runtime eligibility can differ from
+prototype shape eligibility. The low-level bound descriptor borrows its Tensor
+and storage until the kernel returns and must not alias output. Context counters
+`fused_gemm_count()` and `specialized_gemm_count()` count successful selected
+Gemm dispatches, cumulatively. Fallback to the original helper is neither count.
+Zero-K fused dispatches use a separate epilogue internally. Counters describe
+dispatch selection, not hardware instructions or eliminated memory traffic.
+
+The historical Phase 4.4 and Phase 4.5 analysis benchmarks explicitly select
+Legacy. Use `--fusion-comparison` for paired warm prepared execution with all
+three modes, identical graphs and buffer policy, and rotated measurement order.
+
+The initial register fusion candidate passed local numerical gates but regressed
+on portable SSE2 and often trailed specialization on AVX2. It is not accepted as
+the default performance optimization. See the [fusion measurement report](../benchmarks/mac-cpu-phase4.5-fusion.md).

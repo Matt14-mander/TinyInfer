@@ -63,11 +63,13 @@ std::size_t simd_width() noexcept {
 #endif
 }
 
+template <bool Fused>
 void accumulate_simd_dot(float* output, const float* lhs_row,
                          std::size_t lhs_inner_stride,
                          const float* packed_rhs, std::size_t columns,
                          std::size_t column, std::size_t inner_begin,
-                         std::size_t inner_end) {
+                         std::size_t inner_end, const GemmEpilogue* epilogue,
+                         std::size_t row, bool final_block) {
 #if defined(__AVX2__)
     auto accumulator = _mm256_loadu_ps(output + column);
     for (auto k = inner_begin; k < inner_end; ++k) {
@@ -81,6 +83,20 @@ void accumulate_simd_dot(float* output, const float* lhs_row,
             accumulator, _mm256_mul_ps(lhs_vector, rhs_vector));
 #endif
     }
+    if constexpr (Fused) {
+        if (final_block) {
+            if (epilogue->alpha() != 1.0F || epilogue->relu())
+                accumulator = _mm256_mul_ps(accumulator, _mm256_set1_ps(epilogue->alpha()));
+            if (epilogue->bias_layout() != GemmBiasLayout::None) {
+                const auto* bias = epilogue->bias_data() + row * epilogue->row_stride();
+                const auto values = epilogue->column_stride() == 0
+                    ? _mm256_set1_ps(*bias) : _mm256_loadu_ps(bias + column);
+                accumulator = _mm256_add_ps(accumulator, values);
+            }
+            // std::max(0, x) returns +0 for NaN and both signed zeros.
+            if (epilogue->relu()) accumulator = _mm256_and_ps(_mm256_cmp_ps(accumulator, _mm256_set1_ps(0.0F), _CMP_GT_OQ), accumulator);
+        }
+    }
     _mm256_storeu_ps(output + column, accumulator);
 #elif defined(__SSE2__)
     auto accumulator = _mm_loadu_ps(output + column);
@@ -90,6 +106,20 @@ void accumulate_simd_dot(float* output, const float* lhs_row,
             _mm_loadu_ps(packed_rhs + k * columns + column);
         accumulator = _mm_add_ps(accumulator,
                                  _mm_mul_ps(lhs_vector, rhs_vector));
+    }
+    if constexpr (Fused) {
+        if (final_block) {
+            if (epilogue->alpha() != 1.0F || epilogue->relu())
+                accumulator = _mm_mul_ps(accumulator, _mm_set1_ps(epilogue->alpha()));
+            if (epilogue->bias_layout() != GemmBiasLayout::None) {
+                const auto* bias = epilogue->bias_data() + row * epilogue->row_stride();
+                const auto values = epilogue->column_stride() == 0
+                    ? _mm_set1_ps(*bias) : _mm_loadu_ps(bias + column);
+                accumulator = _mm_add_ps(accumulator, values);
+            }
+            // std::max(0, x) returns +0 for NaN and both signed zeros.
+            if (epilogue->relu()) accumulator = _mm_and_ps(_mm_cmpgt_ps(accumulator, _mm_set1_ps(0.0F)), accumulator);
+        }
     }
     _mm_storeu_ps(output + column, accumulator);
 #elif defined(__ARM_NEON) || defined(__ARM_NEON__)
@@ -104,6 +134,20 @@ void accumulate_simd_dot(float* output, const float* lhs_row,
         accumulator = vmlaq_f32(accumulator, rhs_vector, lhs_vector);
 #endif
     }
+    if constexpr (Fused) {
+        if (final_block) {
+            if (epilogue->alpha() != 1.0F || epilogue->relu())
+                accumulator = vmulq_n_f32(accumulator, epilogue->alpha());
+            if (epilogue->bias_layout() != GemmBiasLayout::None) {
+                const auto* bias = epilogue->bias_data() + row * epilogue->row_stride();
+                const auto values = epilogue->column_stride() == 0
+                    ? vdupq_n_f32(*bias) : vld1q_f32(bias + column);
+                accumulator = vaddq_f32(accumulator, values);
+            }
+            if (epilogue->relu()) accumulator = vreinterpretq_f32_u32(vandq_u32(
+                vcgtq_f32(accumulator, vdupq_n_f32(0.0F)), vreinterpretq_u32_f32(accumulator)));
+        }
+    }
     vst1q_f32(output + column, accumulator);
 #else
     (void)output;
@@ -114,6 +158,9 @@ void accumulate_simd_dot(float* output, const float* lhs_row,
     (void)column;
     (void)inner_begin;
     (void)inner_end;
+    (void)epilogue;
+    (void)row;
+    (void)final_block;
 #endif
 }
 
@@ -238,8 +285,10 @@ void matmul_blocked(const Tensor& lhs, const Tensor& rhs, Tensor& output,
     }
 }
 
-void matmul_packed_simd(const Tensor& lhs, const PackedMatMulRhs& rhs,
-                        Tensor& output, MatMulBlockSize block_size) {
+namespace {
+template <bool Fused>
+void run_packed(const Tensor& lhs, const PackedMatMulRhs& rhs,
+                Tensor& output, MatMulBlockSize block_size, const GemmEpilogue* epilogue) {
     validate_packed_matmul(lhs, rhs, output);
     if (block_size.rows == 0 || block_size.columns == 0 ||
         block_size.inner == 0) {
@@ -258,7 +307,10 @@ void matmul_packed_simd(const Tensor& lhs, const PackedMatMulRhs& rhs,
         std::fill(output_data, output_data + output.numel(), 0.0F);
     }
     // Avoid forming row pointers from null storage for a zero-K product.
-    if (rows == 0 || inner == 0 || columns == 0) return;
+    if (rows == 0 || inner == 0 || columns == 0) {
+        if constexpr (Fused) apply_gemm_epilogue(output, *epilogue);
+        return;
+    }
 
     for (std::size_t row_block = 0; row_block < rows;
          row_block += block_size.rows) {
@@ -278,10 +330,10 @@ void matmul_packed_simd(const Tensor& lhs, const PackedMatMulRhs& rhs,
                     const auto width = simd_width();
                     if (width > 1) {
                         for (; column + width <= column_end; column += width) {
-                            accumulate_simd_dot(
+                            accumulate_simd_dot<Fused>(
                                 output_row, lhs_row, lhs_inner_stride,
                                 rhs_data, columns, column, inner_block,
-                                inner_end);
+                                inner_end, epilogue, row, inner_end == inner);
                         }
                     }
                     for (; column < column_end; ++column) {
@@ -290,12 +342,34 @@ void matmul_packed_simd(const Tensor& lhs, const PackedMatMulRhs& rhs,
                             sum += lhs_row[k * lhs_inner_stride] *
                                    rhs_data[k * columns + column];
                         }
+                        if constexpr (Fused) {
+                            if (inner_end == inner) sum = epilogue->finish(sum, row, column);
+                        }
                         output_row[column] = sum;
                     }
                 }
             }
         }
     }
+}
+
+} // namespace
+
+void matmul_packed_simd(const Tensor& lhs, const PackedMatMulRhs& rhs,
+                        Tensor& output, MatMulBlockSize block_size) {
+    run_packed<false>(lhs, rhs, output, block_size, nullptr);
+}
+
+void matmul_packed_gemm(const Tensor& lhs, const PackedMatMulRhs& rhs,
+                        Tensor& output, const GemmEpilogue& epilogue,
+                        MatMulBlockSize block_size) {
+    epilogue.validate(output);
+    if (!epilogue.supports_fusion()) {
+        matmul_packed_simd(lhs, rhs, output, block_size);
+        apply_gemm_epilogue(output, epilogue);
+        return;
+    }
+    run_packed<true>(lhs, rhs, output, block_size, &epilogue);
 }
 
 std::size_t matmul_simd_width() noexcept {
