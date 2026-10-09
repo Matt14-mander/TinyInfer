@@ -34,3 +34,12 @@ benchmark arguments.
 - [Mac Phase 4.5 specialization/fusion](mac-cpu-phase4.5-fusion.md): three-mode
   paired comparison; specialization accepted locally, fusion performance pending.
   [Per-process evidence](mac-cpu-phase4.5-fusion-details.md) records all distributions.
+- [ROG Phase 4.5 analysis](rog-cpu-phase4.5.md): 150 checked native/portable
+  processes, component/copy diagnostics and buffer payloads.
+  [Per-process evidence](rog-cpu-phase4.5-details.md) retains all timers.
+- [ROG Phase 4.5 specialization/fusion](rog-cpu-phase4.5-fusion.md): 156 initial
+  processes plus 18 independent control rechecks; correctness passes, native
+  specialization no-bias/ReLU and fused no-op performance gates fail.
+  MSVC portable is scalar width 1, not SSE2.
+  [Initial/recheck evidence](rog-cpu-phase4.5-fusion-details.md) retains statistics
+  and artifact hashes.

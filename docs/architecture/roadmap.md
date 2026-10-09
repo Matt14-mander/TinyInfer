@@ -118,8 +118,13 @@ processes and supports common-bias specialization before register
 epilogue fusion. The first kernel slice now implements both paths. The
 [local fusion comparison](../benchmarks/mac-cpu-phase4.5-fusion.md) checks 156
 processes and selects specialization as the default. Register fusion passed
-correctness but regressed on SSE2 and remains explicit experimental. Its
-performance tuning and ROG acceptance remain pending; see the
+correctness but regressed on SSE2 and remains explicit experimental.
+ROG reproduction is now complete: 41/41 native and portable tests, 150 analysis
+processes, 156 comparison processes and 18 independent control rechecks.
+The [ROG report](../benchmarks/rog-cpu-phase4.5-fusion.md) finds a repeatable
+native specialization no-bias/ReLU regression and fused no-op regression.
+Those performance gates remain open. MSVC portable selects scalar width 1,
+not the Mac SSE2 path; see the
 [Phase 4.5 plan](../plans/phase4.5.md).
 
 ## Phase 5 — Hardware Backends

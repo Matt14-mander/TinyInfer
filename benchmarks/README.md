@@ -352,4 +352,12 @@ production plan can therefore evolve without redefining those baselines.
 The [local fusion report](../docs/benchmarks/mac-cpu-phase4.5-fusion.md) selects
 Specialized as the production default. Fused is experimental: numerical gates
 passed, but its initial SIMD implementation has performance regressions, especially
-in portable SSE2. Phase 4.5 remains open for fusion tuning and ROG acceptance.
+in Mac portable SSE2. [ROG testing](../docs/benchmarks/rog-cpu-phase4.5-fusion.md)
+is complete: 41/41 tests per build, 150 analysis processes, 156 three-mode
+processes and 18 independent control rechecks. Native specialization fails
+the repeated no-bias/ReLU 5% regression gate; native fused no-op also fails.
+Phase 4.5 remains open for performance remediation, not pending ROG execution.
+The MSVC native-OFF build reports explicit kernel width 1 (scalar fallback),
+not SSE2. Record actual `simd_width` rather than assuming OFF means width 4.
+The [ROG analysis](../docs/benchmarks/rog-cpu-phase4.5.md) retains component/copy
+diagnostics and buffer payloads; both reports link full per-process evidence.

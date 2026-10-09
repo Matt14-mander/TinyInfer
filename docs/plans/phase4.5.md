@@ -1,6 +1,6 @@
 # Phase 4.5 — Prepared CPU performance analysis and Gemm epilogue
 
-- Status: Local specialization accepted; register fusion correctness passed but performance not accepted; ROG validation pending
+- Status: ROG testing complete; native specialization no-bias/ReLU performance gate failed; register fusion remains experimental and not accepted
 - Start date: 2026-10-07 (Asia/Shanghai)
 - Source baseline: `f472304` (Phase 4.4 ROG acceptance)
 
@@ -122,8 +122,8 @@ Code inspection and bias controls support common-bias specialization first:
 The tiny fixtures show very short matrix diagnostics and visible epilogue/
 ordinary-operator overhead. Larger K512 cases remain mainly matrix computation.
 These controls cannot establish exact stage percentages or a future speedup.
-ROG Phase 4.5 reproduction remains pending; use the same runner and record its
-ISA/compiler/environment before finalizing host-specific support decisions.
+ROG Phase 4.5 reproduction was pending at this stage; the 2026-10-09 results
+below complete reproduction and record the remaining host-specific failures.
 
 
 ## First kernel slice result (2026-10-08)
@@ -146,9 +146,44 @@ Next acceptance work:
 
 1. Inspect generated SIMD loops/final-K dispatch and register pressure; remove
    the observed SSE2 overhead, then repeat paired controls before enabling fusion.
-2. Reproduce correctness and the same three-mode comparison on ROG, native and
-   portable, retaining all process statistics and environment metadata.
+2. ROG reproduction completed on 2026-10-09, native and portable, with all
+   process statistics and environment metadata retained. Resolve the native
+   specialization no-bias/ReLU control regression before accepting that host.
 3. Validate NEON on ARM before claiming that backend. Evaluate multi-row tiling
    separately once the fused candidate has a justified support/selection policy.
 
-Phase 4.5 remains open for register fusion performance and target-host gates.
+Phase 4.5 remains open for register fusion performance and the failed native
+specialization control gate, not for unexecuted ROG reproduction.
+
+## ROG test closure (2026-10-09)
+
+Fresh MSVC Release builds passed 41/41 tests each, with assertions retained.
+The analysis runner completed 25 cases × 3 processes × 2 builds (150); the
+three-mode runner completed 26 cases × 3 processes × 2 builds (156). Three
+controls were independently rechecked in three processes per build (18).
+All 324 benchmark processes passed numerical and packing/dispatch checks.
+
+See the [ROG analysis](../benchmarks/rog-cpu-phase4.5.md) and its
+[per-process appendix](../benchmarks/rog-cpu-phase4.5-details.md), plus the
+[three-mode acceptance report](../benchmarks/rog-cpu-phase4.5-fusion.md) and
+[initial/recheck evidence](../benchmarks/rog-cpu-phase4.5-fusion-details.md).
+
+Native AVX2 specialization improves common biased workloads and both fixtures,
+but the no-bias/ReLU control fails the 5% latency regression gate in all three
+initial and all three follow-up processes (about 9–11% and 10–14% more latency).
+Native register fusion also fails the no-op control in every initial/recheck
+process. Therefore testing is complete, but native specialization performance
+acceptance and general fusion acceptance are not complete. Existing production
+defaults were not changed by the validation.
+
+MSVC portable reports explicit kernel width 1 (scalar fallback); native reports
+8. Portable specialization meets its control gate, but this is not validation
+of the Mac SSE2 width-4 path. SIMD feature detection on MSVC and NEON execution
+remain explicit boundaries. ROG sanitizer execution is not claimed; historical
+Mac ASan/UBSan evidence is preserved.
+
+Next: remediate the native no-bias/ReLU specialization path and fused no-op
+overhead, then rerun the target/control gates without discarding these results.
+Inspect code generation before attributing the regressions to a particular
+cause. Keep portable SIMD detection and ARM execution as separately verified
+work; do not enable experimental fusion from biased-target gains alone.

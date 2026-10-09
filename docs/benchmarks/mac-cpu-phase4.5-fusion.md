@@ -4,7 +4,12 @@
 - Source: `89d5418` plus the working kernel/API/test/benchmark changes.
 - Status: specialization accepted locally as the default; register fusion passes
   correctness but **fails performance acceptance** and remains explicit experimental.
-- Phase 4.5 target-host acceptance remains pending; Phase 4.4 ROG acceptance is unchanged.
+- At measurement time, Phase 4.5 target-host acceptance remained pending;
+  Phase 4.4 ROG acceptance is unchanged.
+- Update (2026-10-09): [ROG testing](rog-cpu-phase4.5-fusion.md) is complete,
+  but native specialization no-bias/ReLU and fused no-op performance gates fail.
+  MSVC portable uses scalar width 1; it does not replace these SSE2 results.
+  The historical measurements and decisions below are unchanged.
 
 ## Implementation and boundary
 
