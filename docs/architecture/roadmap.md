@@ -123,7 +123,10 @@ ROG reproduction is now complete: 41/41 native and portable tests, 150 analysis
 processes, 156 comparison processes and 18 independent control rechecks.
 The [ROG report](../benchmarks/rog-cpu-phase4.5-fusion.md) finds a repeatable
 native specialization no-bias/ReLU regression and fused no-op regression.
-Those performance gates remain open. MSVC portable selects scalar width 1,
+The [targeted fixes](../benchmarks/rog-cpu-phase4.5-fix.md) resolve those two
+regressions on 2026-10-10: 41/41 tests per build, 156 balanced-order comparisons
+and 18 independent control rechecks. Specialization passes the ROG median/control
+gates; broader register fusion remains experimental. MSVC portable selects scalar width 1,
 not the Mac SSE2 path; see the
 [Phase 4.5 plan](../plans/phase4.5.md).
 

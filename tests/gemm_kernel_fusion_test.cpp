@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
+#include <iostream>
 
 using namespace tinyinfer;
 void require(bool value, const char* message) { if (!value) throw std::runtime_error(message); }
@@ -108,4 +109,54 @@ void invalid() {
     cpu::PackedMatMulRhs packed(b); auto epi=proto.bind(&valid);
     rejects([&]{cpu::matmul_packed_gemm(a,packed,output,epi,{0,3,4});});
 }
-int main(){shapes(); specials(); strides_and_rebinding(); invalid();}
+void no_bias_fast_paths() {
+    const auto n=static_cast<std::int64_t>(2*cpu::matmul_simd_width()+1);
+    const Shape shape{3,n};
+    const std::vector<float> special{0,-0.0F,1,-1,
+        std::numeric_limits<float>::infinity(),-std::numeric_limits<float>::infinity(),
+        std::numeric_limits<float>::quiet_NaN()};
+    for(float alpha : {1.0F,0.0F,-0.0F,-1.0F,
+                       std::numeric_limits<float>::infinity(),
+                       std::numeric_limits<float>::quiet_NaN()}) {
+        for(bool relu : {false,true}) {
+            Tensor original(shape);
+            for(std::size_t i=0;i<original.numel();++i) original.at(i)=special[i%special.size()];
+            Tensor expected(original),actual(original);
+            const auto epi=cpu::GemmEpilogue(shape,nullptr,alpha,
+                std::numeric_limits<float>::quiet_NaN(),relu).bind(nullptr);
+            require(epi.is_identity()==(alpha==1.0F&&!relu),"identity classification differs");
+            require(epi.supports_fusion()!=epi.is_identity(),"no-bias fusion eligibility differs");
+            ops::detail::apply_gemm_epilogue(expected,nullptr,alpha,epi.beta(),relu);
+            cpu::apply_gemm_epilogue(actual,epi);
+            close(actual,expected);
+            // Exercise zero-K, multiple K blocks, and scalar columns per tile.
+            for(auto k : {0,33,67}) check(values({3,k},1),values({k,n},2),nullptr,
+                                        alpha,epi.beta(),relu,{2,3,7});
+        }
+    }
+    const auto identity=cpu::GemmEpilogue(shape,nullptr,1,1,false).bind(nullptr);
+    Tensor wrong({1,n}); rejects([&]{cpu::apply_gemm_epilogue(wrong,identity);});
+    const auto a=values({3,33},1),b=values({33,n},2);
+    cpu::PackedMatMulRhs packed(b); Tensor output(shape);
+    rejects([&]{cpu::matmul_packed_gemm(a,packed,output,identity,{0,3,7});});
+    rejects([&]{cpu::matmul_packed_gemm(a,packed,wrong,identity);});
+
+    Graph graph;
+    const auto x=graph.add_input("x",{{3,33},DataType::Float32});
+    const auto w=graph.add_constant("w",b);
+    const auto node=graph.add_node("identity_epilogue",OpType::Gemm,{x,w});
+    const auto out=graph.node(node).outputs[0]; graph.mark_output(out);
+    Model model(std::move(graph),{{"x",x}},{{"y",out}});
+    CpuExecutionPlan fused(model,{CpuGemmEpilogueMode::Fused}),
+                     legacy(model,{CpuGemmEpilogueMode::Legacy});
+    auto session=fused.create_context(),reference=legacy.create_context();
+    session.bind_input("x",a); reference.bind_input("x",a);
+    session.run(); reference.run(); close(session.output("y"),reference.output("y"));
+    require(session.fused_gemm_count()==0,"identity epilogue counted as register fusion");
+    require(session.specialized_gemm_count()==1,"identity fallback dispatch not recorded");
+    require(session.runtime_pack_count()==0,"identity fast path repacked constant RHS");
+}
+int main(){
+    try { shapes(); specials(); strides_and_rebinding(); invalid(); no_bias_fast_paths(); }
+    catch(const std::exception& error) { std::cerr << error.what() << '\n'; return 1; }
+}

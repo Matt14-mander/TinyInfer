@@ -62,13 +62,15 @@ float GemmEpilogue::finish(float value, std::size_t row, std::size_t column) con
 
 void apply_gemm_epilogue(Tensor& output, const GemmEpilogue& epilogue) {
     epilogue.validate(output);
-    if (!epilogue.supports_specialization()) {
+    // Without bias there is no broadcast traversal to specialize. The shared
+    // linear helper avoids per-element descriptor/layout tests and preserves
+    // alpha multiplication, NaN and signed-zero behavior exactly as Legacy.
+    if (epilogue.bias_layout() == GemmBiasLayout::None ||
+        !epilogue.supports_specialization()) {
         ops::detail::apply_gemm_epilogue(output, epilogue.bias_tensor(), epilogue.alpha(),
                                         epilogue.beta(), epilogue.relu());
         return;
     }
-    if (epilogue.bias_layout() == GemmBiasLayout::None &&
-        epilogue.alpha() == 1.0F && !epilogue.relu()) return;
     auto* data = output.data<float>();
     const auto columns = static_cast<std::size_t>(output.shape()[1]);
     for (std::size_t row = 0; row < static_cast<std::size_t>(output.shape()[0]); ++row)

@@ -1,7 +1,11 @@
 # ROG CPU — Phase 4.5 specialization and register fusion
 
 - Measurement date: 2026-10-09 (Asia/Shanghai).
-- Status: ROG correctness and benchmark campaign complete; **native specialization
+- Update (2026-10-10): the two reported regressions are remediated; see the
+  [targeted fix report](rog-cpu-phase4.5-fix.md) and its full intermediate/final
+  evidence. The measurements and failed gates below are historical, not the
+  current specialization acceptance status. General fusion remains experimental.
+- Status at measurement: ROG correctness and benchmark campaign complete; **native specialization
   performance gate fails** on the no-bias/ReLU control. Register fusion is not
   accepted as the default. Phase 4.5 remains open for performance remediation.
 - Source: `9394f9f4aff08e7d6ce4ce3627b36e3b59a9ecbb`, clean tracked worktree during measurement.

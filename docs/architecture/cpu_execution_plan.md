@@ -132,8 +132,13 @@ The initial scope is rank-2 FP32 constant packed B, None/ReLU, no bias with any
 alpha, or scalar/vector/row/column/full bias with alpha=beta=1. Broadcast column
 stride must be zero or one for SIMD fusion. A strided column bias falls back to
 the specialized traversal; biased nonunit coefficients retain the original
-helper, including its compiler contraction behavior. Dynamic B uses the existing
-operator path. Zero K zero-fills and then applies the epilogue once. Tail columns
+helper, including its compiler contraction behavior. The dynamic RHS retains its
+operator path. No-bias Specialized dispatch reuses the linear Legacy helper
+without binding a bias descriptor. With no bias, alpha=1 and no activation,
+the epilogue is identity: both the prepared and low-level Fused entry select
+plain packed MatMul, not register fusion. See the
+[targeted ROG fix report](../benchmarks/rog-cpu-phase4.5-fix.md).
+Zero K zero-fills and then applies the epilogue once. Tail columns
 apply it once after their final scalar accumulation.
 
 The SIMD ReLU uses an ordered positive mask to match `std::max(0.0F, x)`:
@@ -141,12 +146,14 @@ NaN and either signed zero produce positive zero. MatMul reduction order, tiling
 packed format, activation buffer and weight ownership are unchanged. NEON has an
 implementation but requires target execution before claiming ARM acceptance.
 
-Steps expose pointer-free epilogue prototypes and the requested mode. Every
-run binds current bias storage and strides; runtime eligibility can differ from
+Steps expose pointer-free epilogue prototypes and the requested mode. Bias-bearing
+runs bind current bias storage and strides; runtime eligibility can differ from
 prototype shape eligibility. The low-level bound descriptor borrows its Tensor
 and storage until the kernel returns and must not alias output. Context counters
 `fused_gemm_count()` and `specialized_gemm_count()` count successful selected
-Gemm dispatches, cumulatively. Fallback to the original helper is neither count.
+Gemm dispatches, cumulatively. Unsupported biased-coefficient fallback to the
+original helper is neither count. The no-bias simple path and identity Fused
+fallback count as Specialized; identity never increments the fusion count.
 Zero-K fused dispatches use a separate epilogue internally. Counters describe
 dispatch selection, not hardware instructions or eliminated memory traffic.
 

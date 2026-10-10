@@ -188,9 +188,16 @@ void CpuExecutionContext::run() {
             } else {
                 const Tensor* bias = node.inputs.size() == 3
                     ? &input_context.value(node.inputs.at(2)) : nullptr;
-                if (step.epilogue_mode == CpuGemmEpilogueMode::Legacy) {
+                // No bias has no runtime layout to bind. Specialization can use
+                // the same linear helper as Legacy; an identity Fused request
+                // also has no register epilogue work. Keep these decisions per
+                // prepared step, outside both output traversal and K blocks.
+                if (step.epilogue_mode == CpuGemmEpilogueMode::Legacy ||
+                    (!bias && (step.epilogue_mode == CpuGemmEpilogueMode::Specialized ||
+                               step.epilogue.is_identity()))) {
                     cpu::matmul_packed_simd(operand, state_->weights.at(step.packed_weight_index), output);
                     ops::detail::apply_gemm_epilogue(output, bias, step.alpha, step.beta, step.relu);
+                    if (step.epilogue_mode != CpuGemmEpilogueMode::Legacy) ++specialized_gemms_;
                 } else {
                     const auto epilogue = step.epilogue.bind(bias);
                     if (step.epilogue_mode == CpuGemmEpilogueMode::Fused) {

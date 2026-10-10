@@ -364,6 +364,12 @@ void matmul_packed_gemm(const Tensor& lhs, const PackedMatMulRhs& rhs,
                         Tensor& output, const GemmEpilogue& epilogue,
                         MatMulBlockSize block_size) {
     epilogue.validate(output);
+    if (epilogue.is_identity()) {
+        // There is nothing to fuse. Use the identical arithmetic kernel as
+        // Legacy, removing final-K/descriptor checks from every output tile.
+        matmul_packed_simd(lhs, rhs, output, block_size);
+        return;
+    }
     if (!epilogue.supports_fusion()) {
         matmul_packed_simd(lhs, rhs, output, block_size);
         apply_gemm_epilogue(output, epilogue);

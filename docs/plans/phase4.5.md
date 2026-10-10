@@ -1,6 +1,6 @@
 # Phase 4.5 — Prepared CPU performance analysis and Gemm epilogue
 
-- Status: ROG testing complete; native specialization no-bias/ReLU performance gate failed; register fusion remains experimental and not accepted
+- Status: ROG no-bias/ReLU specialization and fused identity regressions fixed; balanced-order specialization gates passed; general register fusion remains experimental
 - Start date: 2026-10-07 (Asia/Shanghai)
 - Source baseline: `f472304` (Phase 4.4 ROG acceptance)
 
@@ -152,8 +152,9 @@ Next acceptance work:
 3. Validate NEON on ARM before claiming that backend. Evaluate multi-row tiling
    separately once the fused candidate has a justified support/selection policy.
 
-Phase 4.5 remains open for register fusion performance and the failed native
-specialization control gate, not for unexecuted ROG reproduction.
+Phase 4.5 remains open for general register fusion performance, not for
+unexecuted ROG reproduction. The native specialization gate failure below is
+historical; the 2026-10-10 targeted fix and balanced-order rerun resolves it.
 
 ## ROG test closure (2026-10-09)
 
@@ -187,3 +188,30 @@ overhead, then rerun the target/control gates without discarding these results.
 Inspect code generation before attributing the regressions to a particular
 cause. Keep portable SIMD detection and ARM execution as separately verified
 work; do not enable experimental fusion from biased-target gains alone.
+
+## Targeted ROG fixes (2026-10-10)
+
+The no-bias epilogue now reuses the existing linear helper instead of evaluating
+generic layout/attribute branches per output element. Prepared no-bias
+specialization skips descriptor binding; identity Fused requests select plain
+packed MatMul and are no longer counted as register fusion. Both full Release
+suites pass 41/41 with additional special-value, zero-K, tail and counter tests.
+
+Fixed-allocation-order intermediate results are retained, including a remaining
+no-bias median failure after the shared-call fast path. The benchmark now cycles
+plan/context allocation positions across processes as well as rotating timing
+order within each process. This controls the fixed mode/buffer-position
+confound without asserting a particular hardware stall cause or attributing the
+protocol change to kernel speedup.
+
+The final 26 × 3 × 2 comparison and 18 independent balanced control processes
+pass numerical/counter checks. The two requested native target controls pass
+the 5% gate in all six initial/recheck processes each. Every full-suite
+Specialized case median and each recheck control median passes in native and
+portable; isolated non-target process outliers remain documented. MSVC portable
+still selects scalar width 1, not SSE2. No default-mode change was made.
+
+See the [fix and code-generation analysis](../benchmarks/rog-cpu-phase4.5-fix.md)
+and [all intermediate/final statistics](../benchmarks/rog-cpu-phase4.5-fix-details.md).
+General fusion remains experimental: the native fused no-bias/ReLU path can
+still trail Specialized, and Mac SSE2/ARM acceptance is not supplied by this run.

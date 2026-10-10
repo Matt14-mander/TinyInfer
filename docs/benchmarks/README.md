@@ -39,7 +39,13 @@ benchmark arguments.
   [Per-process evidence](rog-cpu-phase4.5-details.md) retains all timers.
 - [ROG Phase 4.5 specialization/fusion](rog-cpu-phase4.5-fusion.md): 156 initial
   processes plus 18 independent control rechecks; correctness passes, native
-  specialization no-bias/ReLU and fused no-op performance gates fail.
+  specialization no-bias/ReLU and fused no-op gates failed in the initial
+  2026-10-09 measurements (see the targeted fix update below).
   MSVC portable is scalar width 1, not SSE2.
   [Initial/recheck evidence](rog-cpu-phase4.5-fusion-details.md) retains statistics
   and artifact hashes.
+- [ROG Phase 4.5 targeted fixes](rog-cpu-phase4.5-fix.md): no-bias linear fast
+  path, identity MatMul dispatch, and balanced allocation-order controls; the two
+  requested native gates pass. General fusion remains experimental.
+  [All intermediate and final processes](rog-cpu-phase4.5-fix-details.md) retain
+  p50/p95/mean, outliers and measured source/binary hashes.

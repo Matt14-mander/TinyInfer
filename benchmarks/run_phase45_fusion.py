@@ -64,7 +64,8 @@ def main():
     for name, options in cases:
         runs = []
         for run in range(1, args.runs + 1):
-            command = [str(exe), '--fusion-comparison', *options, '--warmup', str(args.warmup),
+            command = [str(exe), '--fusion-comparison', '--allocation-order', str((run - 1) % 3),
+                       *options, '--warmup', str(args.warmup),
                        '--samples', str(args.samples), '--repeats', str(args.repeats), '--format', 'json']
             result = json.loads(subprocess.check_output(command, cwd=root, text=True))
             if result['build_type'] != 'Release':

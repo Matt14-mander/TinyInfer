@@ -332,7 +332,12 @@ python3 benchmarks/run_phase45_fusion.py \
   --warmup 20 --samples 100 --repeats 10 --runs 3
 ```
 
-The suite has 26 cases, including an extra no-bias/None no-op control. Run native
+The suite has 26 cases, including an extra no-bias/None no-op control. The runner
+now cycles `--allocation-order 0|1|2` across processes so each mode occupies each
+independent plan/context allocation position once in the default three runs.
+Metrics/counter indices remain canonical and timing order still rotates per
+sample. CLI order 0 retains fixed-order construction for diagnostic comparison.
+This controls allocation-position bias, not a kernel speedup. Run native
 then portable sequentially after all builds/tests finish. Raw JSON, environment
 and source hashes are retained in the output directory. Ratios above one mean
 faster. Report process ranges and p95 alongside medians; inspect repeatable
@@ -354,9 +359,11 @@ Specialized as the production default. Fused is experimental: numerical gates
 passed, but its initial SIMD implementation has performance regressions, especially
 in Mac portable SSE2. [ROG testing](../docs/benchmarks/rog-cpu-phase4.5-fusion.md)
 is complete: 41/41 tests per build, 150 analysis processes, 156 three-mode
-processes and 18 independent control rechecks. Native specialization fails
-the repeated no-bias/ReLU 5% regression gate; native fused no-op also fails.
-Phase 4.5 remains open for performance remediation, not pending ROG execution.
+processes and 18 independent control rechecks. Those initial failed no-bias/ReLU
+and fused identity gates are historical. The [targeted fix report](../docs/benchmarks/rog-cpu-phase4.5-fix.md)
+retains all intermediate results and records 156 balanced comparisons plus 18
+independent rechecks. Both requested targets pass; specialization passes both
+ROG median/control gates. General fusion acceptance remains open.
 The MSVC native-OFF build reports explicit kernel width 1 (scalar fallback),
 not SSE2. Record actual `simd_width` rather than assuming OFF means width 4.
 The [ROG analysis](../docs/benchmarks/rog-cpu-phase4.5.md) retains component/copy

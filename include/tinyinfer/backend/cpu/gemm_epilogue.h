@@ -19,8 +19,13 @@ public:
     GemmEpilogue bind(const Tensor* bias) const;
     void validate(const Tensor& output) const;
     GemmBiasLayout bias_layout() const noexcept { return layout_; }
+    // No bias makes beta irrelevant. Preserve NaN/nonunit alpha as real work.
+    bool is_identity() const noexcept {
+        return layout_ == GemmBiasLayout::None && alpha_ == 1.0F && !relu_;
+    }
     bool supports_fusion() const noexcept {
-        return column_stride_ <= 1 && supports_specialization();
+        // An identity epilogue must not enter or be counted as register fusion.
+        return !is_identity() && column_stride_ <= 1 && supports_specialization();
     }
     bool supports_specialization() const noexcept {
         return layout_ == GemmBiasLayout::None || (alpha_ == 1.0F && beta_ == 1.0F);

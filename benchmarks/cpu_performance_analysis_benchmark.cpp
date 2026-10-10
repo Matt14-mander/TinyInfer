@@ -39,6 +39,7 @@ struct Options {
     std::string bias{"vector"};
     bool relu{true};
     bool fusion_comparison{false};
+    std::size_t allocation_order{0};
 };
 
 struct Statistics {
@@ -80,7 +81,7 @@ Options parse_options(int argc, char** argv) {
         if (argument == "--help") {
             std::cout << "Usage: " << argv[0]
                       << " [--m N] [--k N] [--n N] [--warmup N]"
-                         " [--samples N] [--repeats N] [--format json] [--trans-b 0|1] [--dynamic-b] [--model PATH] [--bias none|scalar|vector|row|column|full] [--activation none|relu] [--fusion-comparison]\n";
+                         " [--samples N] [--repeats N] [--format json] [--trans-b 0|1] [--dynamic-b] [--model PATH] [--bias none|scalar|vector|row|column|full] [--activation none|relu] [--fusion-comparison] [--allocation-order 0|1|2]\n";
             std::exit(0);
         } else if (argument == "--m") {
             options.m = positive_size(value("--m"), "--m");
@@ -102,6 +103,11 @@ Options parse_options(int argc, char** argv) {
             options.dynamic_b = true;
         } else if (argument == "--fusion-comparison") {
             options.fusion_comparison = true;
+        } else if (argument == "--allocation-order") {
+            const auto order = value("--allocation-order");
+            if (order != "0" && order != "1" && order != "2")
+                throw std::invalid_argument("--allocation-order must be 0, 1 or 2");
+            options.allocation_order = static_cast<std::size_t>(order.front() - '0');
         } else if (argument == "--bias") {
             options.bias = value("--bias");
             const std::vector<std::string> supported{"none", "scalar", "vector", "row", "column", "full"};
@@ -379,8 +385,12 @@ std::string escape(const std::string& source) {
 int run_fusion_comparison(const Options& options) {
     const auto model = make_model(options);
     const auto inputs = make_inputs(model);
-    const std::vector<CpuGemmEpilogueMode> modes{
+    std::vector<CpuGemmEpilogueMode> modes{
         CpuGemmEpilogueMode::Legacy, CpuGemmEpilogueMode::Specialized, CpuGemmEpilogueMode::Fused};
+    // Timing order already rotates per sample. Also balance which mode gets
+    // each separately allocated model/packed-weight/context position across
+    // processes: identical kernels can otherwise inherit fixed buffer bias.
+    std::rotate(modes.begin(), modes.begin() + options.allocation_order, modes.end());
     std::vector<CpuExecutionPlan> plans;
     std::vector<CpuExecutionContext> sessions;
     plans.reserve(3); sessions.reserve(3);
@@ -389,6 +399,9 @@ int run_fusion_comparison(const Options& options) {
         sessions.push_back(plans.back().create_context());
         bind(sessions.back(), inputs); sessions.back().run();
     }
+    // Restore canonical metric/counter indices without copying model payloads.
+    std::rotate(plans.begin(), plans.end() - options.allocation_order, plans.end());
+    std::rotate(sessions.begin(), sessions.end() - options.allocation_order, sessions.end());
     for (const auto& out : model.outputs()) for (std::size_t i=1;i<3;++i)
         expect_close(sessions[i].output(out.second), sessions[0].output(out.second));
     std::vector<Task> tasks;
@@ -431,6 +444,7 @@ int run_fusion_comparison(const Options& options) {
               << ",\n\"workload\": \"" << escape(options.model_path.empty()?"synthetic_gemm":options.model_path)
               << "\",\n\"samples\": " << options.samples << ",\n\"repeats\": " << options.repeats
               << ",\n\"warmup\": " << options.warmup << ",\n\"pack_count\": " << plans[0].pack_count()
+              << ",\n\"allocation_order\": " << options.allocation_order
               << ",\n\"activation_bytes\": " << plans[0].activation_bytes()
               << ",\n\"packed_weight_bytes\": " << plans[0].packed_weight_bytes();
     if (options.model_path.empty()) {
