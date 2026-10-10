@@ -8,6 +8,10 @@
   Register fusion remains experimental; general/default fusion acceptance is
   **not** claimed.
 
+Later 2026-10-10 update: [fusion selection closure](rog-cpu-phase4.5-selection.md)
+adds default conservative Auto and accepts a narrow MSVC AVX2 policy. The
+measurements below describe the preceding fix campaign and are unchanged.
+
 ## Specific problems and fixes
 
 ### No-bias/ReLU specialization

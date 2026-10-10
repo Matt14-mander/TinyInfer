@@ -122,7 +122,8 @@ quantization or GPU backend. See the [Phase 4.4 plan](../plans/phase4.4.md),
 
 `CpuExecutionPlanOptions{CpuGemmEpilogueMode::Legacy}` selects the existing
 TensorIterator epilogue. `Specialized` uses decoded broadcast strides and a
-separate direct traversal and is the default after local paired measurements.
+separate direct traversal. `Auto` is the default and resolves to a measured
+fusion candidate or Specialized during preparation.
 The explicit experimental `Fused` mode applies eligible affine/bias/ReLU
 operations to the accumulator on the final K block before its existing store.
 This is arithmetic kernel fusion; the earlier graph Gemm/ReLU rewrite alone
@@ -146,7 +147,8 @@ NaN and either signed zero produce positive zero. MatMul reduction order, tiling
 packed format, activation buffer and weight ownership are unchanged. NEON has an
 implementation but requires target execution before claiming ARM acceptance.
 
-Steps expose pointer-free epilogue prototypes and the requested mode. Bias-bearing
+Steps expose pointer-free epilogue prototypes and the resolved mode. Auto steps
+also expose `automatic_epilogue` and `epilogue_selection_reason`. Bias-bearing
 runs bind current bias storage and strides; runtime eligibility can differ from
 prototype shape eligibility. The low-level bound descriptor borrows its Tensor
 and storage until the kernel returns and must not alias output. Context counters
@@ -159,8 +161,23 @@ dispatch selection, not hardware instructions or eliminated memory traffic.
 
 The historical Phase 4.4 and Phase 4.5 analysis benchmarks explicitly select
 Legacy. Use `--fusion-comparison` for paired warm prepared execution with all
-three modes, identical graphs and buffer policy, and rotated measurement order.
+four modes (including Auto), identical graphs and buffer policy, and rotated
+measurement and allocation order. Four processes balance all allocation positions.
 
 The initial register fusion candidate passed local numerical gates but regressed
 on portable SSE2 and often trailed specialization on AVX2. It is not accepted as
 the default performance optimization. See the [fusion measurement report](../benchmarks/mac-cpu-phase4.5-fusion.md).
+
+### Conservative automatic selection
+
+Automatic fusion is limited to MSVC AVX2, constant packed FP32 RHS, no transA,
+contiguous runtime lhs, alpha=beta=1, K=N=128. With ReLU, M=16 accepts common
+scalar/row/column/full bias layouts; M=1/64 accepts row-vector bias only. Without
+activation, only M=16 row-vector bias is selected. Bound bias column stride must
+be zero or one; runtime strided bias falls back on each invocation. Other shapes,
+coefficients, identity/no-bias, scalar ISA, SSE2, NEON and other compilers retain
+Specialized or the existing dynamic-RHS kernel. This is a deliberately narrow
+measured selection policy, not autotuning or a universal optimum. Explicit Fused
+retains the broader experimental eligibility for further investigation.
+See the [ROG selection acceptance](../benchmarks/rog-cpu-phase4.5-selection.md)
+for exact measured shapes, small-batch limitations and process-level outliers.

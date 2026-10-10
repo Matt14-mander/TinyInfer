@@ -102,7 +102,7 @@ Tensor ordinary(const MatrixCase& fixture) {
     return context.output(fixture.model.output_id("y"));
 }
 
-void check_matrix(MatrixCase fixture, CpuGemmEpilogueMode mode = CpuGemmEpilogueMode::Specialized) {
+void check_matrix(MatrixCase fixture, CpuGemmEpilogueMode mode = CpuGemmEpilogueMode::Auto) {
     CpuExecutionPlan plan(fixture.model, {mode});
     require(plan.pack_count() == (fixture.dynamic_b ? 0U : 1U), "incorrect pack count");
     require(plan.packed_weight_bytes() == (fixture.dynamic_b ? 0U : fixture.b.size_bytes()),
@@ -258,8 +258,8 @@ void check_onnx(const char* name, const char* input_name, const char* output_nam
 }  // namespace
 
 int main() {
-    require(CpuExecutionPlanOptions{}.gemm_epilogue == CpuGemmEpilogueMode::Specialized,
-            "unaccepted register fusion became the default");
+    require(CpuExecutionPlanOptions{}.gemm_epilogue == CpuGemmEpilogueMode::Auto,
+            "measured automatic selection is not the default");
     for (auto op : {OpType::Gemm, OpType::FusedGemmActivation}) {
         for (bool ta : {false, true}) for (bool tb : {false, true}) {
             for (bool dynamic_b : {false, true}) {

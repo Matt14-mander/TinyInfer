@@ -5,6 +5,9 @@
   [targeted fix report](rog-cpu-phase4.5-fix.md) and its full intermediate/final
   evidence. The measurements and failed gates below are historical, not the
   current specialization acceptance status. General fusion remains experimental.
+- Selection closure (2026-10-10): [conservative Auto acceptance](rog-cpu-phase4.5-selection.md)
+  supersedes the default-mode status below within a narrow measured MSVC AVX2
+  policy; unrestricted Fused remains experimental. Historical data is unchanged.
 - Status at measurement: ROG correctness and benchmark campaign complete; **native specialization
   performance gate fails** on the no-bias/ReLU control. Register fusion is not
   accepted as the default. Phase 4.5 remains open for performance remediation.

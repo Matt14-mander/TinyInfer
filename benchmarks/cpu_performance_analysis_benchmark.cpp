@@ -81,7 +81,7 @@ Options parse_options(int argc, char** argv) {
         if (argument == "--help") {
             std::cout << "Usage: " << argv[0]
                       << " [--m N] [--k N] [--n N] [--warmup N]"
-                         " [--samples N] [--repeats N] [--format json] [--trans-b 0|1] [--dynamic-b] [--model PATH] [--bias none|scalar|vector|row|column|full] [--activation none|relu] [--fusion-comparison] [--allocation-order 0|1|2]\n";
+                         " [--samples N] [--repeats N] [--format json] [--trans-b 0|1] [--dynamic-b] [--model PATH] [--bias none|scalar|vector|row|column|full] [--activation none|relu] [--fusion-comparison] [--allocation-order 0|1|2|3]\n";
             std::exit(0);
         } else if (argument == "--m") {
             options.m = positive_size(value("--m"), "--m");
@@ -105,8 +105,8 @@ Options parse_options(int argc, char** argv) {
             options.fusion_comparison = true;
         } else if (argument == "--allocation-order") {
             const auto order = value("--allocation-order");
-            if (order != "0" && order != "1" && order != "2")
-                throw std::invalid_argument("--allocation-order must be 0, 1 or 2");
+            if (order != "0" && order != "1" && order != "2" && order != "3")
+                throw std::invalid_argument("--allocation-order must be 0, 1, 2 or 3");
             options.allocation_order = static_cast<std::size_t>(order.front() - '0');
         } else if (argument == "--bias") {
             options.bias = value("--bias");
@@ -386,14 +386,15 @@ int run_fusion_comparison(const Options& options) {
     const auto model = make_model(options);
     const auto inputs = make_inputs(model);
     std::vector<CpuGemmEpilogueMode> modes{
-        CpuGemmEpilogueMode::Legacy, CpuGemmEpilogueMode::Specialized, CpuGemmEpilogueMode::Fused};
+        CpuGemmEpilogueMode::Legacy, CpuGemmEpilogueMode::Specialized,
+        CpuGemmEpilogueMode::Fused, CpuGemmEpilogueMode::Auto};
     // Timing order already rotates per sample. Also balance which mode gets
     // each separately allocated model/packed-weight/context position across
     // processes: identical kernels can otherwise inherit fixed buffer bias.
     std::rotate(modes.begin(), modes.begin() + options.allocation_order, modes.end());
     std::vector<CpuExecutionPlan> plans;
     std::vector<CpuExecutionContext> sessions;
-    plans.reserve(3); sessions.reserve(3);
+    plans.reserve(4); sessions.reserve(4);
     for (auto mode : modes) {
         plans.emplace_back(model, CpuExecutionPlanOptions{mode});
         sessions.push_back(plans.back().create_context());
@@ -402,21 +403,22 @@ int run_fusion_comparison(const Options& options) {
     // Restore canonical metric/counter indices without copying model payloads.
     std::rotate(plans.begin(), plans.end() - options.allocation_order, plans.end());
     std::rotate(sessions.begin(), sessions.end() - options.allocation_order, sessions.end());
-    for (const auto& out : model.outputs()) for (std::size_t i=1;i<3;++i)
+    for (const auto& out : model.outputs()) for (std::size_t i=1;i<4;++i)
         expect_close(sessions[i].output(out.second), sessions[0].output(out.second));
     std::vector<Task> tasks;
-    const std::vector<std::string> names{"legacy", "specialized", "fused"};
-    for (std::size_t i=0;i<3;++i) tasks.push_back({names[i], []{}, [&,i]{sessions[i].run();}});
+    const std::vector<std::string> names{"legacy", "specialized", "fused", "auto"};
+    for (std::size_t i=0;i<4;++i) tasks.push_back({names[i], []{}, [&,i]{sessions[i].run();}});
     const auto metrics = measure(options, tasks);
-    std::vector<double> specialized, fused, incremental;
+    std::vector<double> specialized, fused, incremental, automatic;
     for (std::size_t i=0;i<options.samples;++i) {
         specialized.push_back(tasks[0].samples[i]/tasks[1].samples[i]);
         fused.push_back(tasks[0].samples[i]/tasks[2].samples[i]);
         incremental.push_back(tasks[1].samples[i]/tasks[2].samples[i]);
+        automatic.push_back(tasks[1].samples[i]/tasks[3].samples[i]);
     }
-    for (const auto& out : model.outputs()) for (std::size_t i=1;i<3;++i)
+    for (const auto& out : model.outputs()) for (std::size_t i=1;i<4;++i)
         expect_close(sessions[i].output(out.second), sessions[0].output(out.second));
-    for (std::size_t i=0;i<3;++i) {
+    for (std::size_t i=0;i<4;++i) {
         if (plans[i].activation_bytes()!=plans[0].activation_bytes() || plans[i].pack_count()!=plans[0].pack_count())
             throw std::runtime_error("comparison memory/packing policy changed");
         const auto dynamic = std::count_if(plans[i].steps().begin(),plans[i].steps().end(),[](const auto& step){
@@ -426,15 +428,22 @@ int run_fusion_comparison(const Options& options) {
             throw std::runtime_error("comparison runtime packing differs");
         // Benchmark inputs/constants are contiguous; strided runtime rebinding is
         // covered by the kernel integration tests rather than this timing suite.
-        std::size_t eligible = 0;
+        std::size_t eligible = 0, expected_fused = 0;
         if (i != 0) for (const auto& step : plans[i].steps()) {
             if (step.path == CpuExecutionPath::PackedConstantRhs && step.op != OpType::MatMul &&
-                (i == 2 ? step.epilogue.supports_fusion() : step.epilogue.supports_specialization()))
+                ((i == 2 || (i == 3 && step.epilogue_mode == CpuGemmEpilogueMode::Fused))
+                    ? step.epilogue.supports_fusion() : step.epilogue.supports_specialization()))
                 ++eligible;
+            if (step.path == CpuExecutionPath::PackedConstantRhs && step.op != OpType::MatMul &&
+                step.epilogue_mode == CpuGemmEpilogueMode::Fused && step.epilogue.supports_fusion())
+                ++expected_fused;
         }
-        const auto selected = i == 2 ? sessions[i].fused_gemm_count() : sessions[i].specialized_gemm_count();
+        const auto selected = i == 2 ? sessions[i].fused_gemm_count()
+            : sessions[i].specialized_gemm_count() + sessions[i].fused_gemm_count();
         if (selected != eligible * sessions[i].run_count())
             throw std::runtime_error("comparison epilogue dispatch differs");
+        if (sessions[i].fused_gemm_count() != expected_fused * sessions[i].run_count())
+            throw std::runtime_error("comparison selected fusion policy differs");
     }
     std::cout << std::fixed << std::setprecision(6)
               << "{\n\"build_type\": \"" << TINYINFER_BUILD_TYPE
@@ -456,6 +465,9 @@ int run_fusion_comparison(const Options& options) {
     std::cout << ",\n\"specialized_vs_legacy_paired_p50\": " << summarize(specialized).p50_us
               << ",\n\"fused_vs_legacy_paired_p50\": " << summarize(fused).p50_us
               << ",\n\"fused_vs_specialized_paired_p50\": " << summarize(incremental).p50_us
+              << ",\n\"auto_vs_specialized_paired_p50\": " << summarize(automatic).p50_us
+              << ",\n\"auto_fused_gemm_count\": " << sessions[3].fused_gemm_count()
+              << ",\n\"auto_specialized_gemm_count\": " << sessions[3].specialized_gemm_count()
               << ",\n\"fused_gemm_count\": " << sessions[2].fused_gemm_count()
               << ",\n\"specialized_gemm_count\": " << sessions[1].specialized_gemm_count()
               << ",\n\"runtime_pack_count\": " << sessions[2].runtime_pack_count()

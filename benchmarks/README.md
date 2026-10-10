@@ -317,24 +317,26 @@ copy payloads and are excluded from prepared-run latency.
 
 ## Phase 4.5 Gemm kernel fusion comparison
 
-Use the same Release executable with `--fusion-comparison`. This measures three
+Use the same Release executable with `--fusion-comparison`. This measures four
 reused prepared contexts: `Legacy`, direct broadcast `Specialized`, and final
-K-block register `Fused`. Order rotates every sample; each sample averages
+K-block register `Fused`, and conservative `Auto`. Order rotates every sample; each sample averages
 `repeats` runs. JSON reports each latency distribution and the median of paired
 sample speedups (baseline time / candidate time). Setup, input binding and output
-copy/checks are outside timers. All three plans retain the same graph, packing
+copy/checks are outside timers. All four plans retain the same graph, packing
 and activation buffer policy. Dynamic B remains a fallback control.
 
 ```bash
 python3 benchmarks/run_phase45_fusion.py \
   --executable build-bench/benchmarks/tinyinfer_cpu_performance_analysis_benchmark \
   --output benchmark-results/phase4.5-fusion/mac-native \
-  --warmup 20 --samples 100 --repeats 10 --runs 3
+  --warmup 20 --samples 100 --repeats 10 --runs 4
 ```
 
 The suite has 26 cases, including an extra no-bias/None no-op control. The runner
-now cycles `--allocation-order 0|1|2` across processes so each mode occupies each
-independent plan/context allocation position once in the default three runs.
+now cycles `--allocation-order 0|1|2|3` across processes so each mode occupies each
+independent plan/context allocation position once in the default four runs.
+`--runs` must be a multiple of four. `--controls-only` repeats the three fallback
+controls; `--recheck-only` repeats all 14 selected-target/control cases.
 Metrics/counter indices remain canonical and timing order still rotates per
 sample. CLI order 0 retains fixed-order construction for diagnostic comparison.
 This controls allocation-position bias, not a kernel speedup. Run native
@@ -346,16 +348,16 @@ regressions above 5% before making host acceptance claims.
 ROG PowerShell, after building/testing both configurations:
 
 ```powershell
-python benchmarks/run_phase45_fusion.py --executable build-phase45-native/benchmarks/tinyinfer_cpu_performance_analysis_benchmark.exe --output benchmark-results/phase4.5-fusion/rog-native --warmup 20 --samples 100 --repeats 10 --runs 3
-python benchmarks/run_phase45_fusion.py --executable build-phase45-portable/benchmarks/tinyinfer_cpu_performance_analysis_benchmark.exe --output benchmark-results/phase4.5-fusion/rog-portable --warmup 20 --samples 100 --repeats 10 --runs 3
+python benchmarks/run_phase45_fusion.py --executable build-phase45-selection-native/benchmarks/tinyinfer_cpu_performance_analysis_benchmark.exe --output benchmark-results/phase4.5-selection-final/rog-native --warmup 20 --samples 100 --repeats 10 --runs 4
+python benchmarks/run_phase45_fusion.py --executable build-phase45-selection-portable/benchmarks/tinyinfer_cpu_performance_analysis_benchmark.exe --output benchmark-results/phase4.5-selection-final/rog-portable --warmup 20 --samples 100 --repeats 10 --runs 4
 ```
 
 For Visual Studio generators use `benchmarks/Release` executables. Historical
 Phase 4.4 and Phase 4.5 component analysis select Legacy explicitly; the default
 production plan can therefore evolve without redefining those baselines.
 
-The [local fusion report](../docs/benchmarks/mac-cpu-phase4.5-fusion.md) selects
-Specialized as the production default. Fused is experimental: numerical gates
+The historical [local fusion report](../docs/benchmarks/mac-cpu-phase4.5-fusion.md) selected
+Specialized as the production default at that stage. Fused is experimental: numerical gates
 passed, but its initial SIMD implementation has performance regressions, especially
 in Mac portable SSE2. [ROG testing](../docs/benchmarks/rog-cpu-phase4.5-fusion.md)
 is complete: 41/41 tests per build, 150 analysis processes, 156 three-mode
@@ -364,6 +366,11 @@ and fused identity gates are historical. The [targeted fix report](../docs/bench
 retains all intermediate results and records 156 balanced comparisons plus 18
 independent rechecks. Both requested targets pass; specialization passes both
 ROG median/control gates. General fusion acceptance remains open.
+The [selection closure](../docs/benchmarks/rog-cpu-phase4.5-selection.md) now
+defaults to Auto with a conservative measured MSVC AVX2 policy; unaccepted
+fusion shapes/ISAs retain Specialized. It records 208 final comparison processes,
+112 independent rechecks and 12 additional native p95 checks. This is scoped
+selection acceptance, not unrestricted Fused acceptance.
 The MSVC native-OFF build reports explicit kernel width 1 (scalar fallback),
 not SSE2. Record actual `simd_width` rather than assuming OFF means width 4.
 The [ROG analysis](../docs/benchmarks/rog-cpu-phase4.5.md) retains component/copy

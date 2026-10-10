@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare legacy, specialized and fused prepared Gemm sequentially; retain raw JSON."""
+"""Compare legacy, specialized, fused and automatic Gemm; retain raw JSON."""
 import argparse
 import hashlib
 import json
@@ -17,10 +17,18 @@ def main():
     parser.add_argument('--samples', type=int, default=100)
     parser.add_argument('--repeats', type=int, default=10)
     parser.add_argument('--warmup', type=int, default=20)
-    parser.add_argument('--runs', type=int, default=3)
+    parser.add_argument('--runs', type=int, default=4)
+    parser.add_argument('--controls-only', action='store_true',
+                        help='independent no-bias, identity and dynamic-B rechecks')
+    parser.add_argument('--recheck-only', action='store_true',
+                        help='independent selected targets plus the three fallback controls')
     args = parser.parse_args()
     if min(args.samples, args.repeats, args.warmup, args.runs) < 1:
         parser.error('measurement counts must be positive')
+    if args.runs % 4:
+        parser.error('--runs must be a multiple of 4 to balance allocation positions')
+    if args.controls_only and args.recheck_only:
+        parser.error('choose either --controls-only or --recheck-only')
     root = Path(__file__).resolve().parents[1]
     exe = args.executable.resolve()
     args.output.mkdir(parents=True, exist_ok=True)
@@ -60,11 +68,18 @@ def main():
     cases.append(('m3_k128_n128_aligned_kn', ['--m', '3', '--k', '128', '--n', '128']))
     for fixture in ('phase3_mlp_gemm', 'rl_actor_mlp_tanh'):
         cases.append((fixture, ['--model', str(root / 'tests' / 'fixtures' / (fixture + '.onnx'))]))
+    if args.controls_only:
+        cases = [(name, options) for name, options in cases
+                 if name in ('m16_k128_n128_bias_none', 'm16_k128_n128_no_epilogue',
+                             'm16_k128_n128_dynamic')]
+    elif args.recheck_only:
+        cases = [(name, options) for name, options in cases
+                 if name.startswith(('m1_k128_n128_', 'm16_k128_n128_', 'm64_k128_n128_'))]
     results = {}
     for name, options in cases:
         runs = []
         for run in range(1, args.runs + 1):
-            command = [str(exe), '--fusion-comparison', '--allocation-order', str((run - 1) % 3),
+            command = [str(exe), '--fusion-comparison', '--allocation-order', str((run - 1) % 4),
                        *options, '--warmup', str(args.warmup),
                        '--samples', str(args.samples), '--repeats', str(args.repeats), '--format', 'json']
             result = json.loads(subprocess.check_output(command, cwd=root, text=True))
@@ -77,11 +92,11 @@ def main():
         p50 = [run['fused']['p50_us'] for run in runs]
         print(f'{name}: fused p50 {min(p50):.3f}–{max(p50):.3f} us', flush=True)
     (args.output / 'summary.json').write_text(json.dumps(results, indent=2) + '\n', encoding='utf-8')
-    fields = ('legacy', 'specialized', 'fused')
+    fields = ('legacy', 'specialized', 'fused', 'auto')
     ratios = ('specialized_vs_legacy_paired_p50', 'fused_vs_legacy_paired_p50',
-              'fused_vs_specialized_paired_p50')
-    lines = ['| Case | Legacy p50 us | Specialized p50 us | Fused p50 us | Specialized / legacy speedup | Fused / legacy speedup | Fused / specialized speedup |',
-             '| --- | ---: | ---: | ---: | ---: | ---: | ---: |']
+              'fused_vs_specialized_paired_p50', 'auto_vs_specialized_paired_p50')
+    lines = ['| Case | Legacy p50 us | Specialized p50 us | Fused p50 us | Auto p50 us | Specialized / legacy speedup | Fused / legacy speedup | Fused / specialized speedup | Auto / specialized speedup |',
+             '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |']
     for name, runs in results.items():
         values = [statistics.median(r[field]['p50_us'] for r in runs) for field in fields]
         values += [statistics.median(r[field] for r in runs) for field in ratios]

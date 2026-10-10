@@ -52,4 +52,8 @@ void matmul_packed_gemm(const Tensor& lhs, const PackedMatMulRhs& rhs,
 
 std::size_t matmul_simd_width() noexcept;
 
+// Conservative measured policy, not a claim that every supported fusion is faster.
+bool prefer_gemm_fusion(std::size_t rows, std::size_t inner,
+                        std::size_t columns, const GemmEpilogue& epilogue) noexcept;
+
 }  // namespace tinyinfer::cpu

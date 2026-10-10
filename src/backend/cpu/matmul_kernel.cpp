@@ -382,4 +382,19 @@ std::size_t matmul_simd_width() noexcept {
     return simd_width();
 }
 
+bool prefer_gemm_fusion(std::size_t rows, std::size_t inner,
+                        std::size_t columns, const GemmEpilogue& epilogue) noexcept {
+#if defined(_MSC_VER) && !defined(__clang__) && defined(__AVX2__)
+    const auto layout = epilogue.bias_layout();
+    const bool measured_rows = rows == 16 ||
+        ((rows == 1 || rows == 64) && layout == GemmBiasLayout::Row && epilogue.relu());
+    const bool measured_activation = epilogue.relu() || layout == GemmBiasLayout::Row;
+    return measured_rows && measured_activation && inner == 128 && columns == 128 &&
+           layout != GemmBiasLayout::None && epilogue.supports_fusion();
+#else
+    (void)rows; (void)inner; (void)columns; (void)epilogue;
+    return false;
+#endif
+}
+
 }  // namespace tinyinfer::cpu

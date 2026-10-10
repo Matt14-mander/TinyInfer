@@ -1,6 +1,6 @@
 # Phase 4.5 — Prepared CPU performance analysis and Gemm epilogue
 
-- Status: ROG no-bias/ReLU specialization and fused identity regressions fixed; balanced-order specialization gates passed; general register fusion remains experimental
+- Status: Complete for the measured FP32 CPU slice; default conservative Auto selection accepted on ROG; unrestricted/SSE2/NEON register fusion remains experimental/deferred
 - Start date: 2026-10-07 (Asia/Shanghai)
 - Source baseline: `f472304` (Phase 4.4 ROG acceptance)
 
@@ -215,3 +215,29 @@ See the [fix and code-generation analysis](../benchmarks/rog-cpu-phase4.5-fix.md
 and [all intermediate/final statistics](../benchmarks/rog-cpu-phase4.5-fix-details.md).
 General fusion remains experimental: the native fused no-bias/ReLU path can
 still trail Specialized, and Mac SSE2/ARM acceptance is not supplied by this run.
+
+## Scoped fusion and selection closure (2026-10-10)
+
+The final-K loop-split candidate passed numerical checks but regressed in a
+104-process native experiment and was withdrawn. The arithmetic kernel and
+packing format remain unchanged. Default Auto instead resolves a deliberately
+narrow measured MSVC AVX2 shape/layout policy at preparation, with runtime
+fallback for strided lhs/bias. Other compilers/ISAs, transA, no-bias/identity,
+nonunit coefficients, tails, zero K and unmeasured shapes retain Specialized or
+the existing dynamic-RHS kernel. Explicit Fused remains an experimental control.
+
+See the [selection report](../benchmarks/rog-cpu-phase4.5-selection.md) and
+[all process statistics](../benchmarks/rog-cpu-phase4.5-selection-details.md).
+Both final Release suites pass 41/41. The 208 full comparison processes and
+112 independent target/control rechecks pass numerical/counter checks and all
+Auto/Specialized case-median p50 gates. The selected native targets improve
+in both campaigns, although M=1/transB=1 has only about 0.7% median speedup
+in recheck and does not improve every process. Twelve extra native processes
+recheck p95 outliers; median p95 failures do not repeat. All outliers and
+superseded partial measurements are retained, not excluded from the record.
+
+Phase 4.5 closes at this measured support/selection boundary. Historical text
+above describing general fusion as open is not a claim that unrestricted fusion
+is now accepted: broader SSE2/NEON/compiler/shape tuning remains deferred. ARM
+execution and Mac reruns are not supplied by ROG. Multi-row tiling, threading,
+Tensor copy optimizations and quantization remain separate follow-up work.

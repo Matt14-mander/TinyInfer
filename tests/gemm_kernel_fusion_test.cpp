@@ -156,7 +156,93 @@ void no_bias_fast_paths() {
     require(session.specialized_gemm_count()==1,"identity fallback dispatch not recorded");
     require(session.runtime_pack_count()==0,"identity fast path repacked constant RHS");
 }
+void automatic_selection() {
+    const Shape output_shape{16,128}, bias_shape{128};
+    auto bias=values(bias_shape,3);
+    const auto epi=cpu::GemmEpilogue(output_shape,&bias_shape,1,1,true).bind(&bias);
+#if defined(_MSC_VER) && !defined(__clang__)
+    require(cpu::prefer_gemm_fusion(16,128,128,epi)==(cpu::matmul_simd_width()==8),
+            "MSVC measured policy unexpectedly disabled/enabled");
+#else
+    require(!cpu::prefer_gemm_fusion(16,128,128,epi),"unvalidated compiler entered auto fusion");
+#endif
+    require(!cpu::prefer_gemm_fusion(16,512,512,epi),"large K entered auto fusion");
+    require(!cpu::prefer_gemm_fusion(3,127,131,epi),"unmeasured tails entered auto fusion");
+    require(!cpu::prefer_gemm_fusion(2,128,128,epi),"unmeasured rows entered auto fusion");
+    const auto no_bias=cpu::GemmEpilogue(output_shape,nullptr,1,1,true).bind(nullptr);
+    require(!cpu::prefer_gemm_fusion(16,128,128,no_bias),"no-bias entered auto fusion");
+    const auto nonunit=cpu::GemmEpilogue(output_shape,&bias_shape,2,1,true).bind(&bias);
+    require(!cpu::prefer_gemm_fusion(16,128,128,nonunit),"unsupported coefficients entered auto fusion");
+    const Shape scalar_shape{};
+    const auto scalar=values(scalar_shape,1);
+    const auto scalar_epi=cpu::GemmEpilogue(output_shape,&scalar_shape,1,1,true).bind(&scalar);
+    require(!cpu::prefer_gemm_fusion(1,128,128,scalar_epi),"unmeasured small scalar bias entered auto fusion");
+    const auto no_activation=cpu::GemmEpilogue(output_shape,&scalar_shape,1,1,false).bind(&scalar);
+    require(!cpu::prefer_gemm_fusion(16,128,128,no_activation),"unmeasured scalar without activation entered auto fusion");
+    {
+        Graph graph;
+        const auto x=graph.add_input("x",{{128,16},DataType::Float32});
+        const auto w=graph.add_constant("w",values({128,128},2));
+        const auto c=graph.add_constant("c",bias);
+        const auto node=graph.add_node("transpose",OpType::Gemm,{x,w,c},{{"transA",std::int64_t{1}}});
+        const auto out=graph.node(node).outputs[0];graph.mark_output(out);
+        Model model(std::move(graph),{{"x",x}},{{"y",out}});
+        const CpuExecutionPlan plan(model);
+        require(plan.steps().at(0).epilogue_mode==CpuGemmEpilogueMode::Specialized,
+                "unmeasured transposed lhs entered auto fusion");
+    }
+    for (bool dynamic_rhs : {false,true}) {
+        Graph graph;
+        const auto x=graph.add_input("x",{{16,128},DataType::Float32});
+        const auto w=dynamic_rhs ? graph.add_input("w",{{128,128},DataType::Float32})
+                                : graph.add_constant("w",values({128,128},2));
+        const auto c=graph.add_input("c",{bias_shape,DataType::Float32});
+        const auto node=graph.add_node("g",OpType::FusedGemmActivation,{x,w,c},
+                                      {{"activation",std::string("relu")}});
+        const auto out=graph.node(node).outputs[0];graph.mark_output(out);
+        std::vector<Model::NamedValue> inputs{{"x",x},{"c",c}};
+        if(dynamic_rhs) inputs.emplace_back("w",w);
+        Model model(std::move(graph),inputs,{{"y",out}});
+        CpuExecutionPlan plan(model,{CpuGemmEpilogueMode::Auto}),
+                         legacy(model,{CpuGemmEpilogueMode::Legacy});
+        const CpuExecutionPlan default_plan(model);
+        const auto& step=plan.steps().at(0);
+        require(step.epilogue_mode!=CpuGemmEpilogueMode::Auto,"auto not resolved at preparation");
+        require(!step.epilogue_selection_reason.empty(),"selection is not inspectable");
+        require(default_plan.steps().at(0).epilogue_mode==step.epilogue_mode,
+                "default plan does not use automatic selection");
+        require((step.epilogue_mode==CpuGemmEpilogueMode::Fused)==
+                (!dynamic_rhs&&cpu::prefer_gemm_fusion(16,128,128,epi)),"plan selection differs");
+        auto session=plan.create_context(), reference=legacy.create_context();
+        for(int run=0;run<4;++run) {
+            auto input=values({16,128},run+1);
+            auto backing=values({256},run+3);
+            auto view=backing.slice(0,0,256,2);
+            // Move preserves strided layout; copy on odd runs makes it contiguous.
+            Tensor current=run%2 ? Tensor(view) : std::move(view);
+            reference.bind_input("x",input); session.bind_input("x",input);
+            reference.bind_input("c",current); session.bind_input("c",std::move(current));
+            if(dynamic_rhs) {
+                auto weight=values({128,128},run+2);
+                reference.bind_input("w",weight); session.bind_input("w",weight);
+            }
+            reference.run();session.run();close(session.output("y"),reference.output("y"));
+        }
+        const auto expected_fused=step.epilogue_mode==CpuGemmEpilogueMode::Fused ? 2U : 0U;
+        require(session.fused_gemm_count()==expected_fused,"auto cached dynamic bias strides");
+        require(session.specialized_gemm_count()==(dynamic_rhs?0U:4U-expected_fused),"auto fallback count differs");
+        require(session.runtime_pack_count()==(dynamic_rhs?4U:0U),"auto changed runtime packing");
+        // A runtime strided lhs has not been performance-accepted for Auto.
+        auto storage=values({16,256},5);
+        auto strided=storage.slice(1,0,256,2);
+        reference.bind_input("x",strided); session.bind_input("x",std::move(strided));
+        reference.bind_input("c",bias); session.bind_input("c",bias);
+        const auto previous_fused=session.fused_gemm_count();
+        reference.run();session.run();close(session.output("y"),reference.output("y"));
+        require(session.fused_gemm_count()==previous_fused,"auto fused unmeasured lhs strides");
+    }
+}
 int main(){
-    try { shapes(); specials(); strides_and_rebinding(); invalid(); no_bias_fast_paths(); }
+    try { shapes(); specials(); strides_and_rebinding(); invalid(); no_bias_fast_paths(); automatic_selection(); }
     catch(const std::exception& error) { std::cerr << error.what() << '\n'; return 1; }
 }

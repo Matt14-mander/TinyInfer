@@ -150,15 +150,15 @@ plan to reuse execution steps and constant matrix packing.
 Phase 4.4 is accepted on Mac and ROG; the
 [ROG report](docs/benchmarks/rog-cpu-phase4.4.md) includes portable/native tests,
 24 scenarios per configuration, preparation costs and persistent memory.
-Phase 4.5 adds a default specialized Gemm epilogue and an explicit experimental
-register-fusion mode. The [local comparison](docs/benchmarks/mac-cpu-phase4.5-fusion.md)
-accepts specialization locally. [ROG testing](docs/benchmarks/rog-cpu-phase4.5-fusion.md)
-is complete. The [targeted ROG fixes](docs/benchmarks/rog-cpu-phase4.5-fix.md)
-resolve no-bias specialization and identity-fusion regressions (41/41 tests per
-build, 156 balanced comparison processes plus 18 control rechecks). Specialization
-passes the ROG median/control gates; general fusion acceptance remains open. MSVC portable
-currently selects the scalar fallback, not the Mac SSE2 path.
-The next work is final-K SIMD loop tuning, shape-aware kernel selection,
-optional threading, and a measured Int8 path. Every
+Phase 4.5 now defaults to conservative `Auto` Gemm epilogue selection: measured
+MSVC AVX2 biased K=N=128 shapes can fuse, while other shapes/ISAs keep Specialized
+or the existing dynamic-RHS path. The [ROG selection acceptance](docs/benchmarks/rog-cpu-phase4.5-selection.md)
+records 41/41 tests per build, 208 full comparison processes, 112 independent
+target/control rechecks and 12 extra p95 rechecks. This closes the measured FP32
+CPU slice, not unrestricted register fusion. Explicit Fused remains experimental;
+SSE2/NEON fusion performance is not claimed. MSVC portable selects scalar width 1.
+The [earlier fixes](docs/benchmarks/rog-cpu-phase4.5-fix.md) and failed loop-split
+experiment remain documented. Next work is broader shape/ISA tuning, multi-row
+tiling, optional threading, and a measured Int8 path. Every
 optimization must preserve the v0.3 correctness contract and be justified by
 reproducible before-and-after benchmarks.

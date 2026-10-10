@@ -34,7 +34,8 @@ struct CpuExecutionPlanState {
         : model(source), memory_plan(model.graph()) {
         if (options.gemm_epilogue != CpuGemmEpilogueMode::Legacy &&
             options.gemm_epilogue != CpuGemmEpilogueMode::Specialized &&
-            options.gemm_epilogue != CpuGemmEpilogueMode::Fused)
+            options.gemm_epilogue != CpuGemmEpilogueMode::Fused &&
+            options.gemm_epilogue != CpuGemmEpilogueMode::Auto)
             throw std::invalid_argument("invalid prepared Gemm epilogue mode");
         const auto& graph = model.graph();
         std::map<std::pair<ValueId, bool>, std::size_t> packing;
@@ -81,6 +82,20 @@ struct CpuExecutionPlanState {
                     }
                     step.path = CpuExecutionPath::PackedConstantRhs;
                     step.fallback_reason.clear();
+                }
+                if (gemm && options.gemm_epilogue == CpuGemmEpilogueMode::Auto) {
+                    step.automatic_epilogue = true;
+                    const auto& shape = graph.value(node.outputs[0]).spec.shape;
+                    const bool selected = !step.transpose_a &&
+                        step.path == CpuExecutionPath::PackedConstantRhs &&
+                        cpu::prefer_gemm_fusion(static_cast<std::size_t>(shape[0]),
+                            weights.at(step.packed_weight_index).inner(),
+                            static_cast<std::size_t>(shape[1]), step.epilogue);
+                    step.epilogue_mode = selected ? CpuGemmEpilogueMode::Fused
+                                                 : CpuGemmEpilogueMode::Specialized;
+                    step.epilogue_selection_reason = selected
+                        ? "measured MSVC AVX2 biased 128x128 shape; runtime strides checked"
+                        : "outside measured fusion policy; retain specialized/existing kernel";
                 }
             }
             steps.push_back(std::move(step));
@@ -200,7 +215,8 @@ void CpuExecutionContext::run() {
                     if (step.epilogue_mode != CpuGemmEpilogueMode::Legacy) ++specialized_gemms_;
                 } else {
                     const auto epilogue = step.epilogue.bind(bias);
-                    if (step.epilogue_mode == CpuGemmEpilogueMode::Fused) {
+                    if (step.epilogue_mode == CpuGemmEpilogueMode::Fused &&
+                        (!step.automatic_epilogue || operand.is_contiguous())) {
                         cpu::matmul_packed_gemm(operand, state_->weights.at(step.packed_weight_index), output, epilogue);
                         if (epilogue.supports_fusion()) ++fused_gemms_;
                         else if (epilogue.supports_specialization()) ++specialized_gemms_;

@@ -11,7 +11,7 @@ design rationale.
 | [Architecture](architecture/README.md) | Describes how the current system is structured and behaves. | [System architecture](architecture/architecture.md) |
 | [Tutorials](tutorials/README.md) | Builds runtime concepts step by step with code, tests, and experiments. | [Tutorial plan](tutorials/README.md) |
 | [Design decisions](decisions/README.md) | Records why important architectural choices were made and their tradeoffs. | [ADR-0001](decisions/0001-separate-buffer-storage-and-tensor-layout.md) |
-| [Benchmarks](benchmarks/README.md) | Records reviewed, reproducible performance baselines and their limitations. | [Mac CPU v0.3](benchmarks/mac-cpu-v0.3.md), [ROG CPU v0.3](benchmarks/rog-cpu-v0.3.md), [ROG Phase 4.3](benchmarks/rog-cpu-phase4.3.md), [ROG Phase 4.4](benchmarks/rog-cpu-phase4.4.md), [ROG Phase 4.5 fixes](benchmarks/rog-cpu-phase4.5-fix.md) |
+| [Benchmarks](benchmarks/README.md) | Records reviewed, reproducible performance baselines and their limitations. | [Mac CPU v0.3](benchmarks/mac-cpu-v0.3.md), [ROG CPU v0.3](benchmarks/rog-cpu-v0.3.md), [ROG Phase 4.3](benchmarks/rog-cpu-phase4.3.md), [ROG Phase 4.4](benchmarks/rog-cpu-phase4.4.md), [ROG Phase 4.5 selection](benchmarks/rog-cpu-phase4.5-selection.md) |
 
 The phased development status remains in the
 [roadmap](architecture/roadmap.md). It lives with the architecture documents

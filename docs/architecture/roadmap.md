@@ -75,8 +75,9 @@ end-to-end NoOpPass. GraphRewriter, cascading Constant Folding, and
 output-driven Dead Code Elimination are also implemented. Static memory
 planning and runtime buffer reuse are implemented. Gemm + ReLU graph fusion
 and its combined CPU epilogue are implemented. Prepared CPU execution now
-reuses cached steps, MemoryPlan and constant matrix packing. In-register MatMul epilogues,
-threading, and quantization remain open.
+reuses cached steps, MemoryPlan and constant matrix packing. Conservative
+register-epilogue selection is accepted for measured MSVC AVX2 shapes; broader
+fusion tuning, threading, and quantization remain future work.
 
 - Graph reconstruction, Constant Folding, and Dead Code Elimination. (Complete)
 - Lifetime analysis and buffer reuse. (Complete)
@@ -129,6 +130,15 @@ and 18 independent control rechecks. Specialization passes the ROG median/contro
 gates; broader register fusion remains experimental. MSVC portable selects scalar width 1,
 not the Mac SSE2 path; see the
 [Phase 4.5 plan](../plans/phase4.5.md).
+
+The [2026-10-10 selection closure](../benchmarks/rog-cpu-phase4.5-selection.md)
+adds default Auto with a narrow measured MSVC AVX2 shape/layout policy and
+runtime stride fallbacks. Both Release suites pass 41/41; 208 full comparison,
+112 independent target/control and 12 additional p95 recheck processes pass
+numerical/counter checks and the documented case-median gates. A final-K loop
+split that regressed was withdrawn, with evidence retained. Phase 4.5 is complete
+for this measured FP32 CPU slice; unrestricted Fused, SSE2/NEON tuning and broader
+shape coverage are deferred extensions, not accepted performance claims.
 
 ## Phase 5 — Hardware Backends
 

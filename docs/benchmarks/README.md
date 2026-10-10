@@ -49,3 +49,8 @@ benchmark arguments.
   requested native gates pass. General fusion remains experimental.
   [All intermediate and final processes](rog-cpu-phase4.5-fix-details.md) retain
   p50/p95/mean, outliers and measured source/binary hashes.
+- [ROG Phase 4.5 fusion selection closure](rog-cpu-phase4.5-selection.md):
+  default conservative Auto, 208 final processes, 112 target/control rechecks,
+  12 extra p95 checks; scoped MSVC AVX2 acceptance with explicit fallbacks.
+  [All 583 completed diagnostic/final processes](rog-cpu-phase4.5-selection-details.md)
+  retain distributions, counters, payload memory and final provenance.

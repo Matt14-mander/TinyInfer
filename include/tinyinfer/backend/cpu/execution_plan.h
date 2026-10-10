@@ -15,9 +15,9 @@ class ExecutionContext;
 namespace detail { struct CpuExecutionPlanState; }
 
 // Explicit alternatives support semantic/performance comparisons on the same plan.
-enum class CpuGemmEpilogueMode { Legacy, Specialized, Fused };
+enum class CpuGemmEpilogueMode { Legacy, Specialized, Fused, Auto };
 struct CpuExecutionPlanOptions {
-    CpuGemmEpilogueMode gemm_epilogue{CpuGemmEpilogueMode::Specialized};
+    CpuGemmEpilogueMode gemm_epilogue{CpuGemmEpilogueMode::Auto};
 };
 
 enum class CpuExecutionPath { PackedConstantRhs, ExistingKernel };
@@ -34,6 +34,9 @@ struct CpuExecutionStep {
     float beta{1.0F};
     cpu::GemmEpilogue epilogue;
     CpuGemmEpilogueMode epilogue_mode{CpuGemmEpilogueMode::Legacy};
+    bool automatic_epilogue{false};
+    // Auto is resolved at preparation; runtime bias strides may still fall back.
+    std::string epilogue_selection_reason;
 };
 
 // Owns a model snapshot, order, memory plan, and immutable packed CPU weights.
