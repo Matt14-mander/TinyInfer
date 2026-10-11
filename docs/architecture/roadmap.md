@@ -146,12 +146,15 @@ Stabilize capability and buffer interfaces, then add Metal and CUDA with explici
 
 The [Phase 5 plan](../plans/phase5.md), defined on 2026-10-11, targets the same
 static FP32 Model on CPU and GPU with explicit device memory, completion and
-fallback contracts. First deliver one prepared GPU backend and measured host-to-host
-inference; then validate the second backend against the same contract. CUDA is
-the proposed first target if ROG GPU/toolchain discovery confirms support;
-otherwise start with an available Metal device. Implementation has not started.
-CPU threading, quantization and broader CPU fusion tuning remain separate
-extensions. GPU submission latency alone is not a performance acceptance result.
+fallback contracts. [Phase 5.0 acceptance](../acceptance/phase5.0.md) implements
+these contracts and CPU adapters while retaining existing host APIs. Current
+Mac inventory verifies Intel Iris Plus Graphics 645, a Metal queue and runtime
+shader library compilation, so Metal is the first backend; CUDA follows after
+ROG GPU/toolchain verification. GPU kernels and model execution have not started.
+First deliver one prepared GPU backend and measured host-to-host inference;
+then validate the second backend against the same contract. CPU threading,
+quantization and broader CPU fusion tuning remain separate extensions. GPU
+submission latency alone is not a performance acceptance result.
 
 ## Phase 6 — Transformer and compiler direction
 

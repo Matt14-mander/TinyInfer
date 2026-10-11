@@ -1,0 +1,96 @@
+{
+  "collected_utc": "2026-10-11T12:00:45.240887+00:00",
+  "platform": "Darwin-24.6.0-x86_64-i386-64bit",
+  "machine": "x86_64",
+  "cuda_driver_inventory": {
+    "status": "not_found",
+    "command": [
+      "nvidia-smi"
+    ]
+  },
+  "cuda_toolkit": {
+    "status": "not_found",
+    "command": [
+      "nvcc",
+      "--version"
+    ]
+  },
+  "cmake": {
+    "status": "ok",
+    "command": [
+      "cmake",
+      "--version"
+    ],
+    "returncode": 0,
+    "stdout": "cmake version 4.4.3\n\nCMake suite maintained and supported by Kitware (kitware.com/cmake).\n",
+    "stderr": ""
+  },
+  "compiler": {
+    "status": "ok",
+    "command": [
+      "clang",
+      "--version"
+    ],
+    "returncode": 0,
+    "stdout": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: x86_64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin\n",
+    "stderr": ""
+  },
+  "scope": "Hardware/toolchain inventory only; no TinyInfer GPU kernel acceptance.",
+  "macos": {
+    "status": "ok",
+    "command": [
+      "sw_vers"
+    ],
+    "returncode": 0,
+    "stdout": "ProductName:\t\tmacOS\nProductVersion:\t\t15.8.1\nBuildVersion:\t\t24H32\n",
+    "stderr": ""
+  },
+  "developer_directory": {
+    "status": "ok",
+    "command": [
+      "xcode-select",
+      "-p"
+    ],
+    "returncode": 0,
+    "stdout": "/Library/Developer/CommandLineTools\n",
+    "stderr": ""
+  },
+  "macos_sdk": {
+    "status": "ok",
+    "command": [
+      "xcrun",
+      "--sdk",
+      "macosx",
+      "--show-sdk-path"
+    ],
+    "returncode": 0,
+    "stdout": "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk\n",
+    "stderr": ""
+  },
+  "metal_offline_compiler": {
+    "status": "failed",
+    "command": [
+      "xcrun",
+      "--find",
+      "metal"
+    ],
+    "returncode": 72,
+    "stdout": "",
+    "stderr": "xcrun: error: unable to find utility \"metal\", not a developer tool or in PATH\n"
+  },
+  "metal_runtime": {
+    "status": "available",
+    "devices": [
+      {
+        "shader_compilation_error": "",
+        "runtime_shader_compilation": 1,
+        "name": "Intel(R) Iris(TM) Plus Graphics 645",
+        "low_power": true,
+        "queue_available": 1
+      }
+    ]
+  },
+  "execution_scope": "Unsandboxed host inventory; Metal library compiled, no GPU kernel submitted.",
+  "source_revision": "692bf0c",
+  "inventory_script_sha256": "7f3319563ff0d7f7b953c8733ec6278e79751d01eac0ea88a503f2aa37be0b32"
+}

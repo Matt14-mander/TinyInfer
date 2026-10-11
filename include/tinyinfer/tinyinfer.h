@@ -1,5 +1,6 @@
 #pragma once
 #include "tinyinfer/backend/backend.h"
+#include "tinyinfer/runtime/device/device_runtime.h"
 #include "tinyinfer/backend/cpu_backend.h"
 #include "tinyinfer/backend/cpu/execution_plan.h"
 #include "tinyinfer/backend/cpu/matmul_kernel.h"

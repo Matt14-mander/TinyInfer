@@ -48,6 +48,7 @@ What becomes easier, harder, or deliberately deferred?
 - [ADR-0005: Fuse eligible Gemm + ReLU](0005-fuse-gemm-relu.md)
 
 - [ADR-0006: Own prepared CPU state](0006-own-prepared-cpu-state.md)
+- [ADR-0007: Separate device resources and completion](0007-separate-device-resources-and-completion.md)
 
 ## Initial decision backlog
 

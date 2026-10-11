@@ -1,0 +1,42 @@
+{
+  "baseline": "692bf0c",
+  "date": "2026-10-11",
+  "source_sha256": {
+    "CMakeLists.txt": "30c68fdf2933ea9b4dddb164b7e89ea11ea9f191e01e9412fc13f7251a96171f",
+    "include/tinyinfer/backend/backend.h": "d4c10064e4251e0a7fb5233a4d8455692070aafccd534d4158e6b0e25a8704e5",
+    "include/tinyinfer/backend/cpu_backend.h": "377ee0a882161985a83558ea68aed8659da4d57a3820e2d2fc0d6e42aecec431",
+    "include/tinyinfer/backend/capability.h": "3b7d23c9c62eca92aa9c12c43bac9808022527e60a3b8bee2023cc0555ab3115",
+    "include/tinyinfer/runtime/device/device.h": "6d13b54efaecfcc3992ef808452bd56a61708bf1d21f91949bf1db68934b5f06",
+    "include/tinyinfer/runtime/device/device_runtime.h": "a117ece29aad3842c634f063e9e5c37e13a8fac5448f20dc50c07550542a6ed7",
+    "src/runtime/device/device_runtime.cpp": "35e3ffba8ee28ec2bdd990486a69b18fc7c737d52a2c11060d0f3b817d0410ad",
+    "src/backend/capability.cpp": "5ba768bb106b2d6317f35c7d7a391c953145cb0dd1ec2db571affe81172ac608",
+    "tests/CMakeLists.txt": "fd51f7cb70b3ff57d22fafd3d52799913013be151f49e8392ce75fb11b62d48f",
+    "tests/device_runtime_test.cpp": "e02fa12550f5caabc55748bcc41215b65bd1a3f386ef6167bbc33427c4312ac5",
+    "tests/backend_capability_test.cpp": "a9e0b943c12b6f5022c282fd440d274cf395e5673441ca4a66d608f0f126bbb0",
+    "include/tinyinfer/tinyinfer.h": "bf3de7b98df9d33643873de5d82b61a89789fc610d17ebc28fde4c3257c3887b"
+  },
+  "portable": {
+    "tests": "43/43",
+    "seconds": 26.05,
+    "tested_new_binary_sha256": {
+      "tinyinfer_device_runtime_tests": "0807545cd646f1a174556f8f95b4a5e66cef4d57d11f70ed66b923a232f88862",
+      "tinyinfer_backend_capability_tests": "71d3c56bbf5b38b45b80d9a47df5d4327273ec67219e6fd592cbcfce99a08834"
+    }
+  },
+  "native": {
+    "tests": "43/43",
+    "seconds": 25.9,
+    "tested_new_binary_sha256": {
+      "tinyinfer_device_runtime_tests": "0521044d78ae12c54b0cb5e67b45181a89ed715b07f487bcdc7520b675973109",
+      "tinyinfer_backend_capability_tests": "12ade9f1f796b22685f9d907a1433bd62b6053b86de4ccf8906437a5a5d667c9"
+    }
+  },
+  "asan_ubsan": {
+    "tests": "2/2",
+    "seconds": 2.36,
+    "tested_new_binary_sha256": {
+      "tinyinfer_device_runtime_tests": "37f7cf00fa4477b3955cf865b2dda67ba497a4d9d720fafae3a40689724128cd",
+      "tinyinfer_backend_capability_tests": "c1fa1e700c0fe70b33f0ad07615ab818f32956fbdcbb4ccdc6cf88428187b3fd"
+    }
+  }
+}

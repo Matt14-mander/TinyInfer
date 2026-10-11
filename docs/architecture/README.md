@@ -19,6 +19,8 @@ limitations. These documents should change when the code changes.
   slots, planned execution, and current memory-accounting boundaries.
 - [Prepared CPU execution](cpu_execution_plan.md): stable snapshot, stored steps,
   one-time constant packing, per-context storage, and public API boundaries.
+- [Device runtime contracts](device_runtime.md): node capabilities, separate device
+  resources, completion ownership, copy diagnostics and whole-model fallback.
 - [Development roadmap](roadmap.md): phase status, boundaries, and exit
   criteria.
 

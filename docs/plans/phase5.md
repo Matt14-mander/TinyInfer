@@ -1,7 +1,7 @@
 # Phase 5 — Hardware Backends
 
 - 规划日期：2026-10-11（Asia/Shanghai）。
-- 状态：开发目标已规划，尚未开始实现。
+- 状态：Phase 5.0 设备契约与 Mac 本地验收完成；Phase 5.1 GPU 算子尚未开始。
 - 基线：`924a7e2`，Phase 4.5 静态 FP32 CPU 优化收口。
 
 ## 核心目标
@@ -11,7 +11,7 @@
 沿用现有 ONNX 导入、Graph 优化和 CPU 参考路径。
 
 Phase 4.5 已完成其测量支持边界内的验收；其 Auto 白名单不是 GPU 选择规则。
-当前 Backend 只按 OpType 判断支持，ExecutionContext 使用可被 CPU 直接访问的
+Phase 4.5 基线的 Backend 只按 OpType 判断支持，ExecutionContext 使用可被 CPU 直接访问的
 Tensor/Buffer，Executor 按主机步骤释放中间值。CUDA/Metal 目前只有占位说明。
 因此首个工作项是补齐设备运行时契约，随后完成一个后端的模型执行闭环。
 
@@ -25,9 +25,10 @@ Tensor/Buffer，Executor 按主机步骤释放中间值。CUDA/Metal 目前只�
 | 5.3 性能验收 | GPU 执行与真实应用端到端测量，CPU 对照、交叉点分析 | 冷/热启动、传输、同步、内存和 p50/p95 报告；达到预先固定的目标工作负载门槛 |
 | 5.4 第二 GPU 后端 | 用同一契约接入 Metal 或 CUDA 的另一方 | 同一组模型/语义/生命周期测试跨后端通过，独立实机性能报告 |
 
-建议首先验证 ROG 是否具备可用 NVIDIA GPU/CUDA 工具链；具备条件时先做 CUDA，
-随后 Metal。现有 CPU 报告没有提供 GPU 型号，不能据此宣称 CUDA 已可用。
-若 CUDA 条件不满足而 Mac Metal 设备可用，先交付 Metal，保持契约和验收目标相同。
+2026-10-11 的 [Phase 5.0 验收](../acceptance/phase5.0.md)确认当前 Mac 的
+Intel Iris Plus Graphics 645、Metal 命令队列及运行时 shader 编译可用。
+首个后端改为 **Metal**，继续在 Mac 开发；CUDA 作为第二后端，在 ROG 硬件/工具链
+采集后接入。ROG GPU 条件尚未核实，不阻塞 Mac 的 Phase 5.0 收口。
 两个 GPU 后端顺序实现。5.0–5.3 是首个交付里程碑；Phase 5 完整收口包含 5.4。
 
 ## 5.0 必须明确的运行时契约
@@ -98,3 +99,23 @@ Phase 4 的这些延期能力保持在路线图中，不阻塞本次静态 FP32 
 - [cuBLAS](https://developer.nvidia.com/cublas)：首版 CUDA 矩阵库路径。
 - [Metal 资源](https://developer.apple.com/documentation/metal/resource-fundamentals)：设备资源与存储边界。
 - [Metal 命令结构](https://developer.apple.com/documentation/metal/setting-up-a-command-structure)：提交与完成语义。
+
+
+## Phase 5.0 收口（2026-10-11）
+
+已实现设备身份、节点能力查询、模型预检/整模型 CPU 回退、独立设备资源、
+完成状态/资源保活、CPU 分配复制与请求计数。现有 Tensor 和 CPU 执行入口保留。
+详情与测试见 [验收记录](../acceptance/phase5.0.md) 和
+[ADR-0007](../decisions/0007-separate-device-resources-and-completion.md)。
+
+首个 Metal 性能目标冻结为静态 FP32 `Gemm + vector bias + ReLU`：
+M=128，K=N=1024，alpha=beta=1，transA=transB=0；新增 M=64、K=N=512
+控制及现有两个 ONNX fixture。目标工作负载两轮独立测量、每轮至少三个进程，
+warm 端到端 p50 加速比中位数须 >=1.2；p95 延迟中位数不得比 CPU 基线增加超过 5%。
+CPU 回退控制沿用 5% 中位数回退门槛。比较同输入、输出所有权、FP32 策略，
+记录每个进程及离群点；目标未通过时不更换目标掩盖失败。
+该门槛是 Phase 5.3 验收目标，不是本阶段已取得的 GPU 性能结果。
+
+下一步 Phase 5.1：可选 Objective-C++ Metal 模块、设备分配/传输/完成适配，
+先完成真机复制与逐元素 kernel，再推进矩阵及必要算子。
+shader/pipeline 在准备阶段创建，编译成本单独报告，不能混入 steady-state timer。

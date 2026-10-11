@@ -37,6 +37,8 @@ add_library(tinyinfer
     src/runtime/memory_plan.cpp
     src/runtime/execution_context.cpp
     src/runtime/executor.cpp
+    src/runtime/device/device_runtime.cpp
+    src/backend/capability.cpp
     src/backend/cpu/cpu_backend.cpp
     src/backend/cpu/execution_plan.cpp
     src/backend/cpu/gemm_epilogue.cpp
