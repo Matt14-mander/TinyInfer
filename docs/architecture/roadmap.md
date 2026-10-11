@@ -144,6 +144,15 @@ shape coverage are deferred extensions, not accepted performance claims.
 
 Stabilize capability and buffer interfaces, then add Metal and CUDA with explicit fallback behavior and cross-backend tests.
 
+The [Phase 5 plan](../plans/phase5.md), defined on 2026-10-11, targets the same
+static FP32 Model on CPU and GPU with explicit device memory, completion and
+fallback contracts. First deliver one prepared GPU backend and measured host-to-host
+inference; then validate the second backend against the same contract. CUDA is
+the proposed first target if ROG GPU/toolchain discovery confirms support;
+otherwise start with an available Metal device. Implementation has not started.
+CPU threading, quantization and broader CPU fusion tuning remain separate
+extensions. GPU submission latency alone is not a performance acceptance result.
+
 ## Phase 6 — Transformer and compiler direction
 
 Add Conv and the primitives needed for attention, KV cache management, a small
