@@ -1,7 +1,7 @@
 # Phase 5 — Hardware Backends
 
 - 规划日期：2026-10-11（Asia/Shanghai）。
-- 状态：Phase 5.0 设备契约与 Mac 本地验收完成；Phase 5.1 GPU 算子尚未开始。
+- 状态：Phase 5.0/5.1 初始 Metal 范围在 Mac 验收完成；Phase 5.2 Prepared GPU 尚未开始。
 - 基线：`924a7e2`，Phase 4.5 静态 FP32 CPU 优化收口。
 
 ## 核心目标
@@ -119,3 +119,18 @@ CPU 回退控制沿用 5% 中位数回退门槛。比较同输入、输出所有
 下一步 Phase 5.1：可选 Objective-C++ Metal 模块、设备分配/传输/完成适配，
 先完成真机复制与逐元素 kernel，再推进矩阵及必要算子。
 shader/pipeline 在准备阶段创建，编译成本单独报告，不能混入 steady-state timer。
+
+
+## Phase 5.1 收口（2026-10-12）
+
+按用户确认优先完成 Mac Metal。可选 Objective-C++ target、private buffer/staging
+复制、完成与错误保活、实际布局检查，以及 Add/ReLU/Tanh/MatMul/Gemm/
+FusedGemmActivation/Softmax 的初始 FP32 device kernel 已实现。
+Metal 开启实机全套 45/45、CPU-only 43/43、native CPU 参考 GPU 定向 2/2、
+宿主 ASan/UBSan GPU 定向 2/2 通过，启用 API Validation，无 GPU skip。
+248 个数值/边界用例包含两个 ONNX fixture 的三个独立参考输入。
+见 [Phase 5.1 验收](../acceptance/phase5.1.md) 与 [架构](../architecture/metal_backend.md)。
+
+当前提供显式设备算子接口，尚未提供正式 GPU Model/context API。初始矩阵/Softmax
+kernel 是正确性实现，性能不在本轮验收范围。下一步按 5.2 建立设备权重/步骤准备、
+每 context 激活、重复输入绑定、独立主机输出与完整模型回退；5.3 再测端到端收益。

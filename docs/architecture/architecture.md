@@ -29,7 +29,8 @@ Tensor storage + memory management
 - **Runtime** coordinates execution, kernel selection, value binding, memory planning, and scheduling. `MemoryPlan` analyzes intermediate lifetimes and assigns non-overlapping Values to aligned slots in one shared Buffer. A planned `ExecutionContext` materializes outputs directly in those slots and releases dead Tensor handles after their final consumer; the default unplanned context remains available. Constants are loaded at construction and inputs are bound by the caller.
 - **Backend** is the hardware abstraction boundary. `CpuBackend` delegates node execution to a CPU `OperatorRegistry`, which maps each `OpType` to a callable kernel without coupling `Executor` to operator implementations. The internal `FusedGemmActivation` path shares Gemm semantics while combining scaling, optional bias, and ReLU in one CPU epilogue. Phase 5.0 adds node-level capability queries, whole-model placement metadata,
   separate device resources and completion contracts; CPU allocation/copy adapters
-  are implemented. Metal/CUDA kernels remain subsequent work. See
+  are implemented. Phase 5.1 adds optional [Metal device operators](metal_backend.md)
+  and actual-device copies/completion. GPU model preparation and CUDA remain subsequent work. See
   [device runtime contracts](device_runtime.md).
 - **Compiler** is reserved for a future low-level IR, fusion, code generation, and kernel selection.
 

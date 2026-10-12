@@ -21,6 +21,8 @@ limitations. These documents should change when the code changes.
   one-time constant packing, per-context storage, and public API boundaries.
 - [Device runtime contracts](device_runtime.md): node capabilities, separate device
   resources, completion ownership, copy diagnostics and whole-model fallback.
+- [Metal device operators](metal_backend.md): optional GPU build, explicit device
+  views, initial FP32 kernels, staging copies and actual-device support scope.
 - [Development roadmap](roadmap.md): phase status, boundaries, and exit
   criteria.
 

@@ -2,7 +2,7 @@
 
 TinyInfer is a lightweight AI inference runtime built for learning and experimentation. Its long-term scope spans tensors, computation graphs, execution, kernel optimization, quantization, and hardware backends.
 
-TinyInfer has completed **Phase 3 — Model Runtime** and has entered **Phase 4 — Optimization Engine**. It can execute the Phase 0 two-layer MLP through both the eager Tensor API and the Graph Runtime, and it can load and execute a documented restricted ONNX model through its format-independent `ModelLoader` and named `Model` interface.
+TinyInfer has completed the static FP32 CPU optimization slice and is developing **Phase 5 — Hardware Backends**. It can execute the Phase 0 two-layer MLP through both the eager Tensor API and the Graph Runtime, and it can load and execute a documented restricted ONNX model through its format-independent `ModelLoader` and named `Model` interface.
 
 ## Current development stage
 
@@ -11,8 +11,8 @@ Phase 0  Learning Prototype       Complete
 Phase 1  Tensor Runtime           Complete (v0.1 scope)
 Phase 2  Graph Execution Engine   Complete (v0.2 MVP scope)
 Phase 3  Model Runtime            Complete (v0.3 restricted ONNX scope)
-Phase 4  Optimization Engine      In progress (graph + memory optimization)
-Phase 5  Hardware Backend         Not started
+Phase 4  Optimization Engine      Complete (measured static FP32 CPU slice)
+Phase 5  Hardware Backend         In progress (Metal device operators; GPU plans next)
 Phase 6  ML Compiler Direction    Not started
 ```
 
@@ -162,3 +162,14 @@ experiment remain documented. Next work is broader shape/ISA tuning, multi-row
 tiling, optional threading, and a measured Int8 path. Every
 optimization must preserve the v0.3 correctness contract and be justified by
 reproducible before-and-after benchmarks.
+
+
+## Optional Metal device operators (Phase 5.1)
+
+macOS can build `TinyInfer::metal` with `-DTINYINFER_ENABLE_METAL=ON` (default OFF).
+The device runtime supports initial FP32 Add/ReLU/Tanh/MatMul/Gemm/ReLU epilogues
+and Softmax, with explicit device views, owned transfers and completion. The
+[Metal example](examples/metal_ops.cpp) runs a checked GPU Gemm → ReLU chain.
+[Actual-device acceptance](docs/acceptance/phase5.1.md) records the support scope
+and all verification. Prepared GPU Model/context APIs and end-to-end performance
+acceptance remain Phase 5.2/5.3; this is not general GPU ONNX execution support.
