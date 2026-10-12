@@ -12,7 +12,7 @@ Phase 1  Tensor Runtime           Complete (v0.1 scope)
 Phase 2  Graph Execution Engine   Complete (v0.2 MVP scope)
 Phase 3  Model Runtime            Complete (v0.3 restricted ONNX scope)
 Phase 4  Optimization Engine      In progress (graph + memory optimization)
-Phase 5  Hardware Backend         Not started
+Phase 5  Hardware Backend         In progress (5.0 contracts accepted on Mac)
 Phase 6  ML Compiler Direction    Not started
 ```
 
@@ -43,10 +43,18 @@ validation.
 | v0.2 Graph Runtime | Complete (MVP): graph model, validation, execution context, CPU dispatch, Graph MLP |
 | v0.3 Model Runtime | Complete: protobuf parser, real Gemm MLP fixture, restricted ONNX import, diagnostics, compatibility profile, and Mac/ROG CPU baselines |
 | v0.4 Optimization Engine | In progress: graph simplification, lifetime planning, buffer reuse, CPU SIMD MatMul, Gemm + ReLU fusion, and prepared CPU execution; threading and quantization remain planned |
+| v0.5 Hardware Backends | In progress: Phase 5.0 device/capability/completion contracts accepted on Mac; Metal is the first Phase 5.1 backend, GPU operators and model execution pending |
 
 See the [documentation index](docs/README.md) for an overview. The current
 system design lives under `docs/architecture`, learning-oriented walkthroughs
 under `docs/tutorials`, and design rationale under `docs/decisions`.
+
+The [Phase 5.0 Mac acceptance](docs/acceptance/phase5.0.md) records 43/43 tests
+in both Release configurations and 2/2 targeted sanitizer tests. Device discovery,
+queue creation and runtime shader compilation are verified, not GPU arithmetic.
+Continue [Phase 5.1](docs/plans/phase5.md) on Mac with optional Metal allocation,
+transfers/completion and operator kernels; real Metal execution is required for
+acceptance. CUDA remains the later backend rather than replacing the Mac slice.
 
 ## Repository layout
 
