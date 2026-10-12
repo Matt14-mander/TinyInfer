@@ -180,7 +180,7 @@ target_compile_definitions(tinyinfer_backend_capability_tests PRIVATE
 add_test(NAME tinyinfer_backend_capability_tests COMMAND tinyinfer_backend_capability_tests)
 
 if(TINYINFER_ENABLE_METAL)
-    foreach(kind runtime kernel)
+    foreach(kind runtime kernel execution_plan)
         add_executable(tinyinfer_metal_${kind}_tests metal_${kind}_test.cpp)
         target_link_libraries(tinyinfer_metal_${kind}_tests PRIVATE TinyInfer::metal)
         target_compile_definitions(tinyinfer_metal_${kind}_tests PRIVATE

@@ -153,8 +153,9 @@ shader library compilation, so Metal is the first backend; CUDA follows after
 ROG GPU/toolchain verification. [Phase 5.1 acceptance](../acceptance/phase5.1.md)
 on 2026-10-12 implements initial Metal FP32 device operators/copies/completion.
 The actual-device Release suite passes 45/45, CPU-only 43/43; targeted native
-CPU reference and host sanitizer checks pass. Prepared GPU model APIs and
-performance acceptance remain Phase 5.2/5.3 work.
+CPU reference and host sanitizer checks pass. Prepared GPU model APIs are accepted in [Phase 5.2](../acceptance/phase5.2.md):
+shared constants, independent contexts, completion-safe arena reuse and explicit
+whole-model CPU fallback. End-to-end performance acceptance remains Phase 5.3.
 First deliver one prepared GPU backend and measured host-to-host inference;
 then validate the second backend against the same contract. CPU threading,
 quantization and broader CPU fusion tuning remain separate extensions. GPU

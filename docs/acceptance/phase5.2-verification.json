@@ -1,0 +1,69 @@
+{
+  "phase": "5.2",
+  "date": "2026-10-12",
+  "status": "accepted",
+  "hardware": {
+    "device": "Intel Iris Plus Graphics 645",
+    "os": "macOS 15.8.1",
+    "architecture": "x86_64",
+    "compiler": "AppleClang 17"
+  },
+  "checks": [
+    {
+      "configuration": "Release Metal, portable CPU reference, required actual GPU",
+      "command": "MTL_DEBUG_LAYER=1 ctest --test-dir build-phase51-metal --output-on-failure",
+      "passed": 46,
+      "total": 46,
+      "skipped": 0
+    },
+    {
+      "configuration": "Release CPU-only",
+      "command": "ctest --test-dir build-coverage-release --output-on-failure",
+      "passed": 43,
+      "total": 43,
+      "skipped": 0
+    },
+    {
+      "configuration": "Debug Metal ASan/UBSan host instrumentation, required actual GPU",
+      "command": "MTL_DEBUG_LAYER=1 ctest --test-dir build-phase51-metal-asan -R metal --output-on-failure",
+      "passed": 3,
+      "total": 3,
+      "skipped": 0
+    },
+    {
+      "configuration": "Release Metal, native CPU Auto reference, required actual GPU",
+      "command": "MTL_DEBUG_LAYER=1 ctest --test-dir build-bench -R metal_execution_plan --output-on-failure",
+      "passed": 1,
+      "total": 1,
+      "skipped": 0
+    }
+  ],
+  "examples": [
+    {
+      "fixture": "phase3_mlp_gemm.onnx",
+      "constant_uploads": 4,
+      "constant_bytes": 68,
+      "activation_bytes": 28,
+      "gpu_runs": 3
+    },
+    {
+      "fixture": "rl_actor_mlp_tanh.onnx",
+      "constant_uploads": 4,
+      "constant_bytes": 148,
+      "activation_bytes": 52,
+      "gpu_runs": 3
+    }
+  ],
+  "limitations": [
+    "Static FP32 rank <= 4 and initial Metal operator subset only",
+    "Shared plan contexts require external serialization",
+    "Reuse waits are conservative; no speedup acceptance",
+    "ASan/UBSan cover host code, not shader addresses",
+    "Explicit fallback eagerly prepares additional CPU snapshot/packing",
+    "Host staging allocations remain per bind/output; device statistics exclude staging"
+  ],
+  "resolved_development_failures": [
+    "Initial new test compile used unqualified OnnxImporter; fixed to onnx::OnnxImporter",
+    "Existing native build required CMake regeneration before the new test target could be built"
+  ]
+}

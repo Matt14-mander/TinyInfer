@@ -1,7 +1,7 @@
 # Phase 5 — Hardware Backends
 
 - 规划日期：2026-10-11（Asia/Shanghai）。
-- 状态：Phase 5.0/5.1 初始 Metal 范围在 Mac 验收完成；Phase 5.2 Prepared GPU 尚未开始。
+- 状态：Phase 5.0/5.1/5.2 初始 Metal 范围在 Mac 验收完成；下一步 Phase 5.3 端到端性能分析。
 - 基线：`924a7e2`，Phase 4.5 静态 FP32 CPU 优化收口。
 
 ## 核心目标
@@ -134,3 +134,7 @@ Metal 开启实机全套 45/45、CPU-only 43/43、native CPU 参考 GPU 定向 2
 当前提供显式设备算子接口，尚未提供正式 GPU Model/context API。初始矩阵/Softmax
 kernel 是正确性实现，性能不在本轮验收范围。下一步按 5.2 建立设备权重/步骤准备、
 每 context 激活、重复输入绑定、独立主机输出与完整模型回退；5.3 再测端到端收益。
+
+## Phase 5.2 完成记录（2026-10-12）
+
+Prepared Metal Model/context、常量一次上传、独立设备激活 arena、完成后复用、整图 CPU Auto 回退已实现。两个 ONNX fixture 实机结果通过 CPU/golden 对照；详见 [验收记录](../acceptance/phase5.2.md)。下一阶段拆分准备、输入上传、设备运行、输出下载和端到端耗时，尚未声明 GPU 加速收益。

@@ -96,3 +96,26 @@ tests to return skip code 77. Skips are never GPU acceptance evidence. Enabling
 Metal on a non-macOS system fails configuration; default Metal OFF needs no GPU SDK.
 See [the acceptance record](../acceptance/phase5.1.md) for this workspace's SDK
 include workaround, hardware, sanitizer boundary and retained failed checks.
+
+## Prepared model execution (Phase 5.2)
+
+`MetalExecutionPlan` snapshots a Model, prepares its order and MemoryPlan, and
+uploads needed constants once. `create_context()` allocates independent input
+buffers and an activation arena. Device values persist between operations.
+Before slot reuse the executor waits all completions through the old value's
+last consumer; every run ends with terminal completion checks. This conservative
+wait policy prioritizes correctness; queue batching and reduced waits require
+separate performance work.
+
+`bind_input()` and `output()` perform synchronous owned copies; `run()` returns
+only after completion. Returned outputs are independent host Tensors. Constants,
+graph and device storage remain private. A context retains its plan; sharing a
+plan across threads requires external serialization. Binding a Tensor lvalue
+materializes a contiguous snapshot; moving a strided view retains its layout.
+
+Strict is the default. WholeModelCpu prepares an additional CPU Auto plan and
+falls back for unsupported static capability or a moved noncontiguous input.
+Fallback is whole-model, with a reported placement reason; GPU execution failures
+propagate. A later contiguous rebind can restore GPU execution. The contract also
+applies to input-only/constant-only graph outputs. See the
+[Phase 5.2 acceptance](../acceptance/phase5.2.md).

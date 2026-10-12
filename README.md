@@ -12,7 +12,7 @@ Phase 1  Tensor Runtime           Complete (v0.1 scope)
 Phase 2  Graph Execution Engine   Complete (v0.2 MVP scope)
 Phase 3  Model Runtime            Complete (v0.3 restricted ONNX scope)
 Phase 4  Optimization Engine      Complete (measured static FP32 CPU slice)
-Phase 5  Hardware Backend         In progress (Metal device operators; GPU plans next)
+Phase 5  Hardware Backend         In progress (Prepared Metal models; performance acceptance next)
 Phase 6  ML Compiler Direction    Not started
 ```
 
@@ -164,12 +164,15 @@ optimization must preserve the v0.3 correctness contract and be justified by
 reproducible before-and-after benchmarks.
 
 
-## Optional Metal device operators (Phase 5.1)
+## Optional Prepared Metal models (Phase 5.1/5.2)
 
 macOS can build `TinyInfer::metal` with `-DTINYINFER_ENABLE_METAL=ON` (default OFF).
 The device runtime supports initial FP32 Add/ReLU/Tanh/MatMul/Gemm/ReLU epilogues
 and Softmax, with explicit device views, owned transfers and completion. The
 [Metal example](examples/metal_ops.cpp) runs a checked GPU Gemm → ReLU chain.
 [Actual-device acceptance](docs/acceptance/phase5.1.md) records the support scope
-and all verification. Prepared GPU Model/context APIs and end-to-end performance
-acceptance remain Phase 5.2/5.3; this is not general GPU ONNX execution support.
+and all verification. `MetalExecutionPlan` uploads constants once and creates
+independent contexts with reusable device activations and explicit whole-model
+CPU fallback. The [model example](examples/metal_model.cpp) loads an ONNX fixture;
+[Phase 5.2 acceptance](docs/acceptance/phase5.2.md) defines the supported scope.
+End-to-end performance acceptance remains Phase 5.3.
