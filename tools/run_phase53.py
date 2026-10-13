@@ -45,7 +45,7 @@ def main():
     metadata={'date':'2026-10-13 Asia/Shanghai','started_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
               'host':platform.platform(),'samples':a.samples,'warmup':a.warmup,'rounds':2,'processes_per_round':3,
               'target':{'M':128,'K':1024,'N':1024,'operation':'Gemm vector bias ReLU','p50_speedup_min':1.2,'p95_ratio_max':1.05,'fallback_ratio_max':1.05},
-              'commands':[command(args) for args in (["git","rev-parse","HEAD"],["git","status","--short"],["git","diff"],["sw_vers"],["system_profiler","SPDisplaysDataType"],["xcrun","--show-sdk-version"],["c++","--version"],["cmake","--version"]) ]}
+              'commands':[command(args) for args in (["git","rev-parse","HEAD"],["git","status","--short"],["git","diff"],["sw_vers"],["system_profiler","SPDisplaysDataType"],["xcrun","--show-sdk-version"],["c++","--version"],["cmake","--version"],["uptime"],["pmset","-g","batt"],["sysctl","machdep.cpu.brand_string"]) ]}
     metadata['binary_sha256']=hashlib.sha256(pathlib.Path(a.binary).read_bytes()).hexdigest()
     metadata['source_sha256']={str(f):hashlib.sha256(f.read_bytes()).hexdigest() for f in
         [pathlib.Path('benchmarks/metal_model_benchmark.cpp'),pathlib.Path('tools/run_phase53.py'),pathlib.Path('src/backend/metal/execution_plan.cpp'),pathlib.Path('src/backend/metal/metal_runtime.mm')]}
@@ -59,12 +59,25 @@ def main():
             args=[str(pathlib.Path(a.binary).resolve()),'--samples',str(a.samples),'--warmup',str(a.warmup)]
             if (round_id+process)%2:args.append('--gpu-first')
             print(f'round {round_id}, process {process}',flush=True)
+            process_started=datetime.datetime.now(datetime.timezone.utc).isoformat()
             result=subprocess.run(args,capture_output=True,text=True,env=env)
             stem=output/f'round{round_id}-process{process}'
+            stem.with_suffix('.environment.json').write_text(json.dumps({'started_at_utc':process_started,
+                'finished_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                'commands':[command(["uptime"]),command(["pmset","-g","batt"])]},indent=2)+'\n')
             stem.with_suffix('.stderr.log').write_text(result.stderr)
             stem.with_suffix('.json').write_text(result.stdout)
             if result.returncode:raise RuntimeError(f'{stem}: benchmark failed ({result.returncode}): {result.stderr}')
             report=json.loads(result.stdout)
+            if report.get('profiling',False):raise RuntimeError('profiled runs cannot count as acceptance')
+            if report['samples']!=a.samples or report['warmup']!=a.warmup or len(report['cases'])!=5:
+                raise RuntimeError('unexpected benchmark protocol')
+            for case in report['cases']:
+                if not case['correctness']:raise RuntimeError('correctness gate failed')
+                for result in case['results']:
+                    values=result['timings']['warm_e2e_us']
+                    if len(values)!=a.samples or not all(math.isfinite(v) and v>0 for v in values):
+                        raise RuntimeError('invalid end-to-end samples')
             reports.append({'round':round_id,'process':process,'report':report})
     summary=analyze(reports)
     (output/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')

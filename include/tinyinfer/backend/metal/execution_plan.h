@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include "tinyinfer/backend/metal/metal_runtime.h"
 #include "tinyinfer/backend/capability.h"
 #include "tinyinfer/runtime/device/device_runtime.h"
 #include "tinyinfer/model/model.h"
@@ -33,6 +34,9 @@ public:
     const ModelPlacement& placement() const;
     MetalPlanStatistics statistics() const;
     DeviceRuntimeStatistics device_statistics() const;
+    MetalTransferStatistics transfer_statistics() const;
+    void enable_profiling(bool);
+    MetalCommandProfile command_profile() const;
 private:
     std::shared_ptr<const detail::MetalPlanState> state_;
 };

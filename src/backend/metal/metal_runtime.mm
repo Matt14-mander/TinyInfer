@@ -4,6 +4,7 @@
 #include "tinyinfer/backend/cpu_backend.h"
 #include "tinyinfer/ops/operator_schema.h"
 #include "kernels.h"
+#include <chrono>
 #include <algorithm>
 #include <array>
 #include <cstring>
@@ -21,8 +22,9 @@ std::string message(NSError* error) {
 class MetalOperation final : public CompletionState {
 public:
     MetalOperation(id<MTLCommandBuffer> command, id<MTLDevice> device,
-                   id<MTLCommandQueue> queue, std::function<void()> finish = {})
-        : command_(command), device_(device), queue_(queue), finish_(std::move(finish)) {}
+                   id<MTLCommandQueue> queue, std::function<void()> finish = {},
+                   std::shared_ptr<MetalCommandProfile> profile = {})
+        : command_(command), device_(device), queue_(queue), finish_(std::move(finish)), profile_(std::move(profile)) {}
     bool ready() const noexcept override {
         if (done_) return true;
         const auto status = command_.status;
@@ -33,7 +35,19 @@ public:
     }
     void wait() override {
         if (!done_) {
+            auto wait_start = profile_ ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
             [command_ waitUntilCompleted];
+            if (profile_) {
+                ++profile_->commands;
+                profile_->host_wait_us += std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now()-wait_start).count();
+                if (@available(macOS 10.15, *)) {
+                    const auto start = command_.GPUStartTime, end = command_.GPUEndTime;
+                    if (start > 0 && end >= start) {
+                        ++profile_->timestamped_commands;
+                        profile_->gpu_us += (end-start)*1e6;
+                    }
+                }
+            }
             done_ = true;
             try {
                 if (command_.status == MTLCommandBufferStatusError)
@@ -51,6 +65,7 @@ private:
     [[maybe_unused]] id<MTLDevice> device_;
     [[maybe_unused]] id<MTLCommandQueue> queue_;
     std::function<void()> finish_;
+    std::shared_ptr<MetalCommandProfile> profile_;
     bool done_{false};
     std::exception_ptr failure_;
 };
@@ -73,6 +88,16 @@ template<class T> T attr(const NodeAttributes& attrs, const char* name, T fallba
 }
 } // namespace
 namespace detail {
+struct MetalStage {
+    id<MTLBuffer> native;
+    std::size_t capacity{};
+    bool leased{false};
+};
+struct StageLease {
+    std::shared_ptr<MetalStage> stage;
+    explicit StageLease(std::shared_ptr<MetalStage> s) : stage(std::move(s)) { stage->leased = true; }
+    ~StageLease() { stage->leased = false; }
+};
 struct MetalRuntimeState {
     DeviceId identity;
     id<MTLDevice> native_device;
@@ -83,6 +108,27 @@ struct MetalRuntimeState {
     std::vector<std::shared_ptr<MetalOperation>> pending;
     DeviceRuntimeStatistics statistics;
     MetalKernelStatistics kernels;
+    std::vector<std::shared_ptr<MetalStage>> stages;
+    MetalTransferStatistics transfers;
+    std::shared_ptr<MetalCommandProfile> profile;
+    std::shared_ptr<StageLease> acquire_stage(std::size_t bytes) {
+        for (const auto& stage : stages) if (!stage->leased && stage->capacity >= bytes) {
+            ++transfers.staging_reuses;
+            return std::make_shared<StageLease>(stage);
+        }
+        auto stage = std::make_shared<MetalStage>();
+        stage->capacity = bytes;
+        stage->native = [native_device newBufferWithLength:bytes options:MTLResourceStorageModeShared];
+        if (!stage->native) throw std::runtime_error("Metal transfer staging allocation failed");
+        auto lease = std::make_shared<StageLease>(stage);
+        // Two cached buffers per queue. Busy stages are never overwritten; extra
+        // asynchronous requests get ephemeral stages retained to completion.
+        auto free = std::find_if(stages.begin(), stages.end(), [](const auto& s) { return !s->leased; });
+        if (free != stages.end()) *free = stage;
+        else if (stages.size() < 2) stages.push_back(stage);
+        ++transfers.staging_allocations;
+        return lease;
+    }
     std::exception_ptr failure;
     void drain(bool wait_all) {
         for (auto it = pending.begin(); it != pending.end();) {
@@ -128,7 +174,7 @@ id<MTLCommandBuffer> command(const std::shared_ptr<detail::MetalRuntimeState>& s
 }
 Completion submit(const std::shared_ptr<detail::MetalRuntimeState>& state, id<MTLCommandBuffer> cb,
                   std::vector<std::shared_ptr<const void>> retained, std::function<void()> finish = {}) {
-    auto operation = std::make_shared<MetalOperation>(cb, state->native_device, state->queue, std::move(finish));
+    auto operation = std::make_shared<MetalOperation>(cb, state->native_device, state->queue, std::move(finish), state->profile);
     // Allocate all C++ bookkeeping before commit; exceptions cannot leave unowned work.
     state->pending.push_back(operation);
     Completion completion(operation, std::move(retained));
@@ -202,6 +248,18 @@ DeviceId MetalDeviceRuntime::device() const noexcept { return state_->identity; 
 DeviceInfo MetalDeviceRuntime::device_info() const { return {device(), state_->native_device.name.UTF8String, true, {}}; }
 DeviceRuntimeStatistics MetalDeviceRuntime::statistics() const noexcept { return state_->statistics; }
 MetalKernelStatistics MetalDeviceRuntime::kernel_statistics() const noexcept { return state_->kernels; }
+MetalTransferStatistics MetalDeviceRuntime::transfer_statistics() const noexcept {
+    auto result = state_->transfers;
+    for (const auto& stage : state_->stages) result.cached_bytes += stage->capacity;
+    return result;
+}
+void MetalDeviceRuntime::enable_profiling(bool enabled) {
+    state_->drain(true);
+    state_->profile = enabled ? std::make_shared<MetalCommandProfile>() : nullptr;
+}
+MetalCommandProfile MetalDeviceRuntime::command_profile() const noexcept {
+    return state_->profile ? *state_->profile : MetalCommandProfile{};
+}
 void MetalDeviceRuntime::synchronize() { state_->drain(true); }
 std::shared_ptr<DeviceBuffer> MetalDeviceRuntime::allocate(std::size_t bytes, std::size_t alignment) {
     @autoreleasepool {
@@ -222,11 +280,11 @@ Completion MetalDeviceRuntime::upload(DeviceSpan destination, std::shared_ptr<co
         range(source->size_bytes(), source_offset, destination.bytes);
         state_->drain(false);
         if (!destination.bytes) { ++state_->statistics.uploads; return {}; }
-        auto staging = [state_->native_device newBufferWithBytes:static_cast<const unsigned char*>(source->data()) + source_offset
-                                                        length:destination.bytes options:MTLResourceStorageModeShared];
-        if (!staging) throw std::runtime_error("Metal upload staging allocation failed");
+        auto lease = state_->acquire_stage(destination.bytes);
+        auto staging = lease->stage->native;
+        std::memcpy(staging.contents, static_cast<const unsigned char*>(source->data()) + source_offset, destination.bytes);
         auto cb = command(state_); blit(cb, dst->native, destination.offset, staging, 0, destination.bytes);
-        auto completion = submit(state_, cb, {dst, source});
+        auto completion = submit(state_, cb, {dst, source}, [lease] { (void)lease; });
         ++state_->statistics.uploads; state_->statistics.uploaded_bytes += destination.bytes;
         return completion;
     }
@@ -239,10 +297,11 @@ Completion MetalDeviceRuntime::download(std::shared_ptr<Buffer> destination, Dev
         range(destination->size_bytes(), destination_offset, source.bytes);
         state_->drain(false);
         if (!source.bytes) { ++state_->statistics.downloads; return {}; }
-        auto staging = [state_->native_device newBufferWithLength:source.bytes options:MTLResourceStorageModeShared];
-        if (!staging) throw std::runtime_error("Metal download staging allocation failed");
+        auto lease = state_->acquire_stage(source.bytes);
+        auto staging = lease->stage->native;
         auto cb = command(state_); blit(cb, staging, 0, src->native, source.offset, source.bytes);
-        auto finish = [destination, destination_offset, staging, bytes = source.bytes] {
+        auto finish = [destination, destination_offset, staging, lease, bytes = source.bytes] {
+            (void)lease;
             std::memcpy(static_cast<unsigned char*>(destination->data()) + destination_offset, staging.contents, bytes);
         };
         auto completion = submit(state_, cb, {src, destination}, std::move(finish));

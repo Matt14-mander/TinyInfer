@@ -16,6 +16,13 @@ struct MetalKernelStatistics {
     std::size_t dispatches{0};
     std::size_t pipeline_creations{0};
 };
+struct MetalTransferStatistics {
+    std::size_t staging_allocations{0}, staging_reuses{0}, cached_bytes{0};
+};
+struct MetalCommandProfile {
+    std::size_t commands{0}, timestamped_commands{0};
+    double gpu_us{0}, host_wait_us{0};
+};
 namespace detail { struct MetalRuntimeState; }
 class MetalDeviceRuntime final : public DeviceRuntime {
 public:
@@ -32,6 +39,10 @@ public:
     void synchronize() override;
     DeviceRuntimeStatistics statistics() const noexcept override;
     MetalKernelStatistics kernel_statistics() const noexcept;
+    MetalTransferStatistics transfer_statistics() const noexcept;
+    // Optional diagnostics; leave disabled for acceptance timing.
+    void enable_profiling(bool);
+    MetalCommandProfile command_profile() const noexcept;
     NodeCapability query_capability(const CapabilityQuery&) const;
     // A single device operation, not a model executor. No host fallback on failure.
     Completion execute(OpType, const std::vector<MetalTensorView>& inputs,

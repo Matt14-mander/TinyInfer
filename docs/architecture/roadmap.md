@@ -158,7 +158,10 @@ shared constants, independent contexts, completion-safe arena reuse and explicit
 whole-model CPU fallback. [Phase 5.3 measurements](../benchmarks/mac-metal-phase5.3.md) on 2026-10-13
 deliver end-to-end/stage/resident timing and fix duplicate CPU fallback input
 copying. The frozen target p50/p95 performance gates remain unmet; Phase 5.3
-is open for transfer overhead and tail-latency work.
+is open for transfer overhead and tail-latency work. A
+[transfer follow-up](../benchmarks/mac-metal-phase5.3-transfer.md) removes host
+Buffer copies and caches staging; the six-process recheck still fails the target
+gate, with device/wait/scheduling variability recorded.
 First deliver one prepared GPU backend and measured host-to-host inference;
 then validate the second backend against the same contract. CPU threading,
 quantization and broader CPU fusion tuning remain separate extensions. GPU

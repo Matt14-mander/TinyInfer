@@ -3,7 +3,6 @@
 #include "tinyinfer/backend/cpu/execution_plan.h"
 #include "tinyinfer/runtime/memory_plan.h"
 #include <algorithm>
-#include <cstring>
 #include <optional>
 #include <stdexcept>
 
@@ -20,11 +19,7 @@ public:
     void execute(const Node&, ExecutionContext&) override { throw std::logic_error("unavailable Metal"); }
 private: std::uint32_t ordinal_; std::string reason_;
 };
-std::shared_ptr<Buffer> staging(const Tensor& t) {
-    auto b = std::make_shared<Buffer>(t.size_bytes());
-    if (t.size_bytes()) std::memcpy(b->data(), t.data(), t.size_bytes());
-    return b;
-}
+
 }
 namespace detail {
 struct MetalPlanState {
@@ -70,7 +65,7 @@ struct MetalPlanState {
             const auto& t = model.graph().constant(v.id);
             auto buffer = runtime->allocate(t.size_bytes());
             constants[v.id].emplace(v.spec, DeviceSpan{buffer, 0, t.size_bytes()});
-            runtime->upload(constants[v.id]->storage, staging(t)).wait();
+            runtime->upload(constants[v.id]->storage, t.storage().buffer(), t.storage().byte_offset()).wait();
             ++statistics.constant_uploads; statistics.constant_bytes += t.size_bytes();
         }
         runtime->synchronize();
@@ -122,6 +117,13 @@ MetalPlanStatistics MetalExecutionPlan::statistics() const { return state_->stat
 DeviceRuntimeStatistics MetalExecutionPlan::device_statistics() const {
     return state_->runtime ? state_->runtime->statistics() : DeviceRuntimeStatistics{};
 }
+MetalTransferStatistics MetalExecutionPlan::transfer_statistics() const {
+    return state_->runtime ? state_->runtime->transfer_statistics() : MetalTransferStatistics{};
+}
+void MetalExecutionPlan::enable_profiling(bool enabled) { if (state_->runtime) state_->runtime->enable_profiling(enabled); }
+MetalCommandProfile MetalExecutionPlan::command_profile() const {
+    return state_->runtime ? state_->runtime->command_profile() : MetalCommandProfile{};
+}
 MetalExecutionContext::MetalExecutionContext(std::shared_ptr<const detail::MetalPlanState> p)
     : state_(std::make_unique<detail::MetalContextState>(std::move(p))) {}
 MetalExecutionContext::~MetalExecutionContext() = default;
@@ -140,7 +142,7 @@ void MetalExecutionContext::bind_input(ValueId id, Tensor t) {
         throw std::invalid_argument("Metal input must be contiguous; whole-model CPU fallback is disabled");
     s.has_output = false;
     if (s.plan->runtime && t.is_contiguous()) {
-        s.plan->runtime->upload(s.views[id]->storage, staging(t)).wait();
+        s.plan->runtime->upload(s.views[id]->storage, t.storage().buffer(), t.storage().byte_offset()).wait();
         ++s.statistics.input_uploads; s.statistics.input_bytes += t.size_bytes();
     }
     const bool contiguous = t.is_contiguous();
@@ -196,9 +198,8 @@ Tensor MetalExecutionContext::output(ValueId id) const {
     if (!s.has_output) throw std::logic_error("no successful run since last input binding");
     if (s.placement.effective.kind == DeviceKind::Cpu) return s.cpu->output(id);
     const auto& view = s.views.at(id).value();
-    Tensor t(view.spec.shape, view.spec.dtype); auto host = std::make_shared<Buffer>(t.size_bytes());
-    s.plan->runtime->download(host, view.storage).wait();
-    if (t.size_bytes()) std::memcpy(t.data(), host->data(), t.size_bytes());
+    Tensor t(view.spec.shape, view.spec.dtype);
+    s.plan->runtime->download(t.storage().buffer(), view.storage, t.storage().byte_offset()).wait();
     ++s.statistics.output_downloads; s.statistics.output_bytes += t.size_bytes();
     return t;
 }

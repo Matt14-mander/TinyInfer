@@ -40,6 +40,34 @@ void run() {
     auto publish = runtime->download(output, {b, 6, 18});
     while (!publish.ready()) {} // Small transfer; wait() would be preferred in an application.
     publish.wait();
+    // Completed stages are reused while still-live Completion wrappers retain no lease.
+    auto stable = runtime->transfer_statistics();
+    for (int i=0;i<8;++i) {
+        runtime->upload({a,0,18}, output).wait();
+        runtime->download(output,{a,0,18}).wait();
+    }
+    require(runtime->transfer_statistics().staging_allocations == stable.staging_allocations,
+            "completed transfer stages were not reused");
+    require(runtime->transfer_statistics().staging_reuses >= stable.staging_reuses+16, "staging reuse counter");
+    // Multiple pending downloads may complete in any host wait order. Their
+    // publication must precede stage reuse, including synchronize/ready/destruction.
+    std::vector<Completion> transfers;
+    std::vector<std::shared_ptr<Buffer>> hosts;
+    for (int i=0;i<12;++i) {
+        auto source=std::make_shared<Buffer>(32); std::memset(source->data(),i,32);
+        transfers.push_back(runtime->upload({a,0,32},source));
+        auto host=std::make_shared<Buffer>(32); hosts.push_back(host);
+        transfers.push_back(runtime->download(host,{a,0,32}));
+    }
+    for (auto it=transfers.rbegin();it!=transfers.rend();++it) it->wait();
+    for (int i=0;i<12;++i) for (int j=0;j<32;++j)
+        require(static_cast<unsigned char*>(hosts[i]->data())[j]==i,"busy stage was overwritten");
+    runtime->synchronize();
+    require(runtime->transfer_statistics().cached_bytes <= 64,"unbounded staging cache");
+    runtime->enable_profiling(true);
+    runtime->upload({a,0,32},hosts[0]).wait();
+    require(runtime->command_profile().commands==1,"profile did not observe completion");
+    runtime->enable_profiling(false);
     auto empty = runtime->allocate(0);
     runtime->upload({empty, 0, 0}, std::make_shared<Buffer>(0)).wait();
     runtime->download(std::make_shared<Buffer>(0), {empty, 0, 0}).wait();

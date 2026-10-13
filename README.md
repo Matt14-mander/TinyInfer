@@ -178,3 +178,5 @@ CPU fallback. The [model example](examples/metal_model.cpp) loads an ONNX fixtur
 [Phase 5.3 measurements](docs/benchmarks/mac-metal-phase5.3.md) report completed
 end-to-end analysis and a resolved fallback-copy regression. The frozen target
 performance gates remain unmet; Phase 5.3 is not yet accepted.
+[Transfer follow-up](docs/benchmarks/mac-metal-phase5.3-transfer.md) reduces
+Buffer copies and reuses staging, with retained p95 diagnostics and failed gates.

@@ -1,0 +1,36 @@
+{
+  "captured_at_utc": "2026-10-13T04:07:19.773222+00:00",
+  "records": [
+    {
+      "command": [
+        "sysctl",
+        "hw.physicalcpu",
+        "hw.logicalcpu"
+      ],
+      "returncode": 0,
+      "stdout": "hw.physicalcpu: 4\nhw.logicalcpu: 8\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "pmset",
+        "-g",
+        "therm"
+      ],
+      "returncode": 0,
+      "stdout": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\n2026-10-13 12:07:19 +0800 CPU Power notify\n\tCPU_Scheduler_Limit \t= 100\n\tCPU_Available_CPUs \t= 8\n\tCPU_Speed_Limit \t= 100\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "ps",
+        "-A",
+        "-o",
+        "pcpu=,comm="
+      ],
+      "returncode": 0,
+      "stdout": "[[22.2, \"/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU\"], [16.5, \"/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/155.0.8059.40/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)\"], [15.1, \"/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer\"], [12.3, \"/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent\"], [9.5, \"/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex\"], [8.0, \"/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/155.0.8059.40/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)\"], [5.5, \"/System/Library/PrivateFrameworks/MediaConversionService.framework/Versions/A/XPCServices/com.apple.photos.VideoConversionService.xpc/Contents/MacOS/com.apple.photos.VideoConversionService\"], [4.6, \"/Applications/TAG.app/Contents/MacOS/tagtunnel\"], [3.7, \"/System/Library/Frameworks/CoreServices.framework/Frameworks/Metadata.framework/Versions/A/Support/mds_stores\"], [3.1, \"/System/Library/Frameworks/VideoToolbox.framework/Versions/A/XPCServices/VTEncoderXPCService.xpc/Contents/MacOS/VTEncoderXPCService\"]]",
+      "stderr": ""
+    }
+  ]
+}

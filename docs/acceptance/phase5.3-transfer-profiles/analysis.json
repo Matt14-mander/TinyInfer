@@ -1,0 +1,125 @@
+{
+  "purpose": "diagnostic_only_not_acceptance",
+  "date": "2026-10-13",
+  "binary_sha256": "231f064ce7cb2e84b4d88a96c3ac6a0fddda32089ceff98d02a6316ab8c147ec",
+  "commands": [
+    "tinyinfer_metal_model_benchmark --workload target --profile --samples 31 --warmup 5",
+    "tinyinfer_metal_model_benchmark --workload target --profile --gpu-first --samples 31 --warmup 5"
+  ],
+  "rows": [
+    {
+      "file": "cpu-first.json",
+      "backend": "cpu_auto",
+      "medians": {
+        "trace_involuntary_switches": 297.0,
+        "trace_process_cpu_us": 69795.0,
+        "warm_e2e_us": 76052.782
+      },
+      "p95_e2e_us": 117987.954,
+      "tail_samples": [
+        {
+          "index": 1,
+          "trace_involuntary_switches": 402.0,
+          "trace_process_cpu_us": 82193.0,
+          "warm_e2e_us": 117987.954
+        },
+        {
+          "index": 6,
+          "trace_involuntary_switches": 413.0,
+          "trace_process_cpu_us": 82829.0,
+          "warm_e2e_us": 147348.144
+        }
+      ]
+    },
+    {
+      "file": "cpu-first.json",
+      "backend": "metal",
+      "medians": {
+        "trace_gpu_commands_us": 36691.583984,
+        "trace_host_wait_us": 49677.691,
+        "trace_involuntary_switches": 50.0,
+        "trace_process_cpu_us": 7397.0,
+        "trace_timestamped_commands": 3.0,
+        "warm_e2e_us": 56557.723
+      },
+      "p95_e2e_us": 89873.327,
+      "tail_samples": [
+        {
+          "index": 3,
+          "trace_gpu_commands_us": 56657.083012,
+          "trace_host_wait_us": 82915.487,
+          "trace_involuntary_switches": 76.0,
+          "trace_process_cpu_us": 7800.0,
+          "trace_timestamped_commands": 3.0,
+          "warm_e2e_us": 89873.327
+        },
+        {
+          "index": 19,
+          "trace_gpu_commands_us": 53051.416995,
+          "trace_host_wait_us": 86347.863,
+          "trace_involuntary_switches": 51.0,
+          "trace_process_cpu_us": 7593.0,
+          "trace_timestamped_commands": 3.0,
+          "warm_e2e_us": 92977.622
+        }
+      ]
+    },
+    {
+      "file": "gpu-first.json",
+      "backend": "cpu_auto",
+      "medians": {
+        "trace_involuntary_switches": 251.0,
+        "trace_process_cpu_us": 70322.0,
+        "warm_e2e_us": 76290.05
+      },
+      "p95_e2e_us": 103966.598,
+      "tail_samples": [
+        {
+          "index": 10,
+          "trace_involuntary_switches": 424.0,
+          "trace_process_cpu_us": 81598.0,
+          "warm_e2e_us": 103966.598
+        },
+        {
+          "index": 2,
+          "trace_involuntary_switches": 240.0,
+          "trace_process_cpu_us": 79884.0,
+          "warm_e2e_us": 109810.011
+        }
+      ]
+    },
+    {
+      "file": "gpu-first.json",
+      "backend": "metal",
+      "medians": {
+        "trace_gpu_commands_us": 52358.083019,
+        "trace_host_wait_us": 68336.723,
+        "trace_involuntary_switches": 48.0,
+        "trace_process_cpu_us": 7336.0,
+        "trace_timestamped_commands": 3.0,
+        "warm_e2e_us": 74839.358
+      },
+      "p95_e2e_us": 105353.385,
+      "tail_samples": [
+        {
+          "index": 19,
+          "trace_gpu_commands_us": 68595.998979,
+          "trace_host_wait_us": 99160.722,
+          "trace_involuntary_switches": 54.0,
+          "trace_process_cpu_us": 6765.0,
+          "trace_timestamped_commands": 3.0,
+          "warm_e2e_us": 105353.385
+        },
+        {
+          "index": 18,
+          "trace_gpu_commands_us": 69496.917044,
+          "trace_host_wait_us": 100802.05,
+          "trace_involuntary_switches": 51.0,
+          "trace_process_cpu_us": 6724.0,
+          "trace_timestamped_commands": 3.0,
+          "warm_e2e_us": 106961.891
+        }
+      ]
+    }
+  ]
+}

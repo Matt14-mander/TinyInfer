@@ -148,3 +148,12 @@ Prepared Metal Model/context、常量一次上传、独立设备激活 arena、�
 Phase 5.3 保持未验收状态；下一步调查输入/输出传输成本及 p95 波动，随后按相同门槛复测。
 详见 [开发与测量协议](phase5.3.md)、[Mac 性能报告](../benchmarks/mac-metal-phase5.3.md)
 及 [验收状态](../acceptance/phase5.3-verification.json)。本轮不宣称 GPU 端到端加速达标。
+
+### Phase 5.3 传输优化复测（2026-10-13）
+
+直接从 Tensor Buffer 上传、直接下载到独立 Tensor、命令完成后复用 native staging 已实现。
+Release 实机 46/46、Metal ASan/UBSan 3/3 通过；同门槛六进程复测通过数值与资源检查。
+目标 p50 加速比 0.995/1.073，第一轮 p95 比 1.127，仍未达到验收门槛；CPU 回退门槛通过。
+p95 单独诊断发现设备命令和主机等待均有波动，且记录到较高系统负载；尚不能归因于单一原因。
+资源成本降低已验证，但不宣称端到端性能稳定提升。下一步应在空闲 Mac 条件复测原门槛。
+详见 [传输优化与 p95 报告](../benchmarks/mac-metal-phase5.3-transfer.md)。

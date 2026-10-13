@@ -53,7 +53,7 @@ void emit(const char* backend,const Times& times,std::size_t weights,std::size_t
              <<",\"upload_requests\":"<<uploads<<",\"download_requests\":"<<downloads<<",\"process_peak_rss_bytes\":"<<rss<<",\"timings\":{";
     bool comma=false;for(const auto& entry:times){if(comma)std::cout<<',';comma=true;std::cout<<'"'<<entry.first<<"\":";array(entry.second);}std::cout<<"}}";
 }
-void benchmark(const std::string& name,int samples,int warmup,bool gpu_first) {
+void benchmark(const std::string& name,int samples,int warmup,bool gpu_first, bool profile) {
     std::unique_ptr<Model> model;
     auto load=timed([&]{
         if(name=="target") model=std::make_unique<Model>(mlp(128,1024,1024));
@@ -68,6 +68,7 @@ void benchmark(const std::string& name,int samples,int warmup,bool gpu_first) {
     std::unique_ptr<CpuExecutionContext> cc;std::unique_ptr<MetalExecutionContext> gc;
     ct["context_create_us"].push_back(timed([&]{cc=std::make_unique<CpuExecutionContext>(cpu->create_context());}));
     gt["context_create_us"].push_back(timed([&]{gc=std::make_unique<MetalExecutionContext>(gpu->create_context());}));
+    if(profile) gpu->enable_profiling(true);
     auto in=model->inputs()[0].second,out=model->outputs()[0].second;
     auto x=values(model->graph().value(in).spec.shape,7), alternate=values(x.shape(),11);
     auto first_cpu=[&]{ct["first_inference_us"].push_back(timed([&]{inference(*cc,in,out,x);}));};
@@ -76,10 +77,31 @@ void benchmark(const std::string& name,int samples,int warmup,bool gpu_first) {
     check(gc->output(out),cc->output(out));
     for(int i=0;i<warmup;++i) { if((i%2)==gpu_first){inference(*gc,in,out,x);inference(*cc,in,out,x);}else{inference(*cc,in,out,x);inference(*gc,in,out,x);} }
     const auto before=gpu->device_statistics();
+    const auto stage_before=gpu->transfer_statistics();
     for(int i=0;i<samples;++i) {
         const auto& input=i%2?alternate:x;
-        auto c=[&]{ct["warm_e2e_us"].push_back(timed([&]{inference(*cc,in,out,input);}));};
-        auto g=[&]{gt["warm_e2e_us"].push_back(timed([&]{inference(*gc,in,out,input);}));};
+        auto c=[&]{
+            rusage before{},after{}; if(profile)getrusage(RUSAGE_SELF,&before);
+            ct["warm_e2e_us"].push_back(timed([&]{inference(*cc,in,out,input);}));
+            if(profile) {
+                getrusage(RUSAGE_SELF,&after);
+                ct["trace_process_cpu_us"].push_back((after.ru_utime.tv_sec-before.ru_utime.tv_sec+after.ru_stime.tv_sec-before.ru_stime.tv_sec)*1e6+after.ru_utime.tv_usec-before.ru_utime.tv_usec+after.ru_stime.tv_usec-before.ru_stime.tv_usec);
+                ct["trace_involuntary_switches"].push_back(after.ru_nivcsw-before.ru_nivcsw);
+            }
+        };
+        auto g=[&]{
+            auto before=profile?gpu->command_profile():MetalCommandProfile{};rusage usage_before{},usage_after{};
+            if(profile)getrusage(RUSAGE_SELF,&usage_before);
+            gt["warm_e2e_us"].push_back(timed([&]{inference(*gc,in,out,input);}));
+            if(profile) {
+                auto after=gpu->command_profile();getrusage(RUSAGE_SELF,&usage_after);
+                gt["trace_gpu_commands_us"].push_back(after.gpu_us-before.gpu_us);
+                gt["trace_host_wait_us"].push_back(after.host_wait_us-before.host_wait_us);
+                gt["trace_timestamped_commands"].push_back(after.timestamped_commands-before.timestamped_commands);
+                gt["trace_process_cpu_us"].push_back((usage_after.ru_utime.tv_sec-usage_before.ru_utime.tv_sec+usage_after.ru_stime.tv_sec-usage_before.ru_stime.tv_sec)*1e6+usage_after.ru_utime.tv_usec-usage_before.ru_utime.tv_usec+usage_after.ru_stime.tv_usec-usage_before.ru_stime.tv_usec);
+                gt["trace_involuntary_switches"].push_back(usage_after.ru_nivcsw-usage_before.ru_nivcsw);
+            }
+        };
         if((i%2)==gpu_first){g();c();}else{c();g();}
         check(gc->output(out),cc->output(out));
     }
@@ -101,19 +123,24 @@ void benchmark(const std::string& name,int samples,int warmup,bool gpu_first) {
     check(gc->output(out),cc->output(out));
     const bool actual_gpu=gc->placement().effective.kind==DeviceKind::Metal;
     if(actual_gpu!=(name!="fallback")) throw std::runtime_error("unexpected execution placement");
+    if(gpu->transfer_statistics().staging_allocations!=stage_before.staging_allocations)
+        throw std::runtime_error("warm transfer allocated another native staging buffer");
     auto stats=gpu->statistics(); if(actual_gpu && stats.pipeline_creations!=5)throw std::runtime_error("pipelines not prepared");
     rusage usage{};getrusage(RUSAGE_SELF,&usage);
     std::cout<<"{\"workload\":\""<<name<<"\",\"model_load_or_construct_us\":"<<load<<",\"correctness\":true,\"results\":[";
     emit("cpu_auto",ct,cpu->packed_weight_bytes(),cpu->activation_bytes(),0,0,0,usage.ru_maxrss,false);std::cout<<',';
     emit("metal",gt,stats.constant_bytes,stats.activation_bytes,after.allocated_bytes,after.uploads,after.downloads,usage.ru_maxrss,actual_gpu);
-    std::cout<<"]}";
+    auto transfer=gpu->transfer_statistics();
+    std::cout<<"],\"staging_allocations\":"<<transfer.staging_allocations<<",\"staging_reuses\":"<<transfer.staging_reuses<<",\"staging_cached_bytes\":"<<transfer.cached_bytes<<"}";
 }
 }
 int main(int argc,char** argv) {
     try {
-        int samples=31,warmup=5;bool gpu_first=false;
+        int samples=31,warmup=5;bool gpu_first=false,profile=false;std::string workload;
         for(int i=1;i<argc;++i) {
             std::string key=argv[i]; if(key=="--gpu-first")gpu_first=true;
+            else if(key=="--profile")profile=true;
+            else if(key=="--workload" && i+1<argc)workload=argv[++i];
             else if((key=="--samples" || key=="--warmup") && i+1<argc) {
                 std::string text=argv[++i];std::size_t end=0;int value=std::stoi(text,&end);
                 if(end!=text.size() || value<1 || value>10000)throw std::invalid_argument("invalid count");
@@ -123,10 +150,14 @@ int main(int argc,char** argv) {
         auto devices=MetalDeviceRuntime::enumerate_devices();if(devices.empty())throw std::runtime_error("actual Metal GPU required");
         if(std::string(TINYINFER_BUILD_TYPE)!="Release" || !TINYINFER_NATIVE_ARCH)throw std::runtime_error("Release native CPU baseline required");
         std::cout<<std::fixed<<std::setprecision(6)<<"{\"schema\":1,\"samples\":"<<samples<<",\"warmup\":"<<warmup
-                 <<",\"gpu_first\":"<<(gpu_first?"true":"false")<<",\"cases\":[";
+                 <<",\"profiling\":"<<(profile?"true":"false")<<",\"gpu_first\":"<<(gpu_first?"true":"false")<<",\"cases\":[";
         std::vector<std::string> cases{"phase3_mlp_gemm","rl_actor_mlp_tanh","control","target","fallback"};
+        if(!workload.empty()) {
+            if(std::find(cases.begin(),cases.end(),workload)==cases.end())throw std::invalid_argument("unknown workload");
+            cases={workload};
+        }
         if(gpu_first)std::reverse(cases.begin(),cases.end());
-        for(std::size_t i=0;i<cases.size();++i){if(i)std::cout<<',';benchmark(cases[i],samples,warmup,gpu_first);}
+        for(std::size_t i=0;i<cases.size();++i){if(i)std::cout<<',';benchmark(cases[i],samples,warmup,gpu_first,profile);}
         std::cout<<"]}\n";
     }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}
 }

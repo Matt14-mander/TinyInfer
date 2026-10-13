@@ -1,0 +1,11 @@
+Test project /Users/zhengyuanhao/Desktop/Project/TinyInfer/build-phase51-metal-asan
+    Start 44: tinyinfer_metal_runtime_tests
+1/3 Test #44: tinyinfer_metal_runtime_tests ..........   Passed    6.01 sec
+    Start 45: tinyinfer_metal_kernel_tests
+2/3 Test #45: tinyinfer_metal_kernel_tests ...........   Passed    9.90 sec
+    Start 46: tinyinfer_metal_execution_plan_tests
+3/3 Test #46: tinyinfer_metal_execution_plan_tests ...   Passed    4.69 sec
+
+100% tests passed out of 3
+
+Total Test time (real) =  20.62 sec

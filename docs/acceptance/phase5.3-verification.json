@@ -32,5 +32,7 @@
     "target p50 >=1.2 speedup in both rounds",
     "target p95 ratio <=1.05 in both rounds"
   ],
-  "report": "../benchmarks/mac-metal-phase5.3.md"
+  "report": "../benchmarks/mac-metal-phase5.3.md",
+  "transfer_follow_up": "phase5.3-transfer-verification.json",
+  "latest_performance_acceptance": "not_passed"
 }

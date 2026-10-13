@@ -1,0 +1,48 @@
+{
+  "phase": "5.3",
+  "date": "2026-10-13",
+  "follow_up": "transfer optimization and p95 investigation",
+  "status": "implemented and remeasured; performance not accepted",
+  "acceptance_processes": 6,
+  "excluded_profile_processes": 2,
+  "samples": 31,
+  "warmup": 5,
+  "thresholds_unchanged": true,
+  "correctness": {
+    "release_actual_gpu": {
+      "passed": 46,
+      "total": 46
+    },
+    "asan_ubsan_metal_actual_gpu": {
+      "passed": 3,
+      "total": 3
+    }
+  },
+  "transfer_changes": [
+    "direct Tensor buffer upload at storage offset",
+    "direct owned Tensor buffer download",
+    "at most two cached native staging buffers with completion leases"
+  ],
+  "target_staging": {
+    "allocations": 1,
+    "reuses": 171,
+    "cached_bytes": 4194304
+  },
+  "gates": {
+    "target_p50": false,
+    "target_p95": false,
+    "fallback_p50": true
+  },
+  "report": "../benchmarks/mac-metal-phase5.3-transfer.md",
+  "p95_findings": [
+    "GPU completed-command duration and host-wait variability coexist",
+    "CPU tail wall time substantially exceeds process CPU time",
+    "High end-of-process load averages; no isolated single cause established"
+  ],
+  "limitations": [
+    "No stable E2E improvement established",
+    "Profiling excluded from acceptance",
+    "Cache retains shared staging capacity until runtime destruction",
+    "Post-run thermal/process snapshot cannot establish per-sample conditions"
+  ]
+}

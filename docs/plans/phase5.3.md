@@ -88,3 +88,18 @@ Two versions, twelve actual-device processes, all numerical/resource checks pass
 The redundant fallback input copy was fixed and the fallback gate now passes.
 Target p50/p95 gates remain unmet. See [the full report](../benchmarks/mac-metal-phase5.3.md).
 Phase 5.3 remains open; do not label the first Metal performance milestone accepted.
+
+## Transfer-cost follow-up
+
+The follow-up retains the same gate and sampling protocol. Prepared input uploads
+use the owned Tensor Buffer and byte offset directly; host outputs receive downloads
+directly in independent Tensor storage. A bounded two-entry native staging cache
+uses terminal-completion leases and reports allocations/reuse/cached capacity.
+Normal gate measurements leave command profiling disabled. Separate target-only
+CPU-first and GPU-first diagnostic processes record completed GPU command durations,
+CPU process time, host waits and involuntary context-switch counts per E2E sample.
+These diagnostic processes are excluded from all acceptance ratios. Command GPU
+intervals include blits and compute, and cannot isolate scheduling, thermal or other
+GPU-client causes. CPU time/context switches describe the benchmark process, not
+whole-system load. The normal runner records load averages and power source before
+and between processes; these snapshots do not prove within-sample causes.

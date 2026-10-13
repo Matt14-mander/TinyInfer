@@ -81,3 +81,11 @@ Next work: profile and reduce H2D/D2H staging/allocation/copy overhead, investig
 - [ASan/UBSan log](../acceptance/phase5.3-asan.log)
 - [Benchmark source](../../benchmarks/metal_model_benchmark.cpp)
 - [Sequential runner and gate evaluator](../../tools/run_phase53.py)
+
+## Transfer follow-up
+
+The [transfer optimization and p95 investigation](mac-metal-phase5.3-transfer.md)
+removes two intermediate host Buffer copies and caches native staging with completion
+leases. A further six-process same-gate run still fails the target performance gate;
+profiling and environment data expose device/wait/scheduling variability. Reduced
+allocation counts are established; stable E2E speedup is not.

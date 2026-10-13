@@ -130,3 +130,25 @@ can release host input storage after upload completion. This preserves lvalue
 isolation and moved-view layouts, while removing the duplicate CPU fallback copy.
 A counting-allocator regression test checks exactly one lvalue copy and zero
 additional allocations for a moved fallback input.
+
+### Transfer reuse and optional command profiling
+
+Prepared uploads read the owned Tensor buffer at its storage byte offset; owned
+outputs download directly into the new Tensor buffer. The intermediate C++
+Buffer allocation/copy at both boundaries is removed. The native Metal shared
+staging buffer remains necessary for private device resources.
+
+Each ordered runtime caches at most two native staging buffers. A lease remains
+held until command terminal completion and, for downloads, host publication.
+Busy cached stages are never overwritten; additional in-flight requests use
+uncached buffers. Free cached stages can grow for larger transfers. Warm fixed-size
+model inference reuses staging allocations. `transfer_statistics()` reports
+native staging allocations, reuse and cached capacity separately from logical
+DeviceRuntimeStatistics. Cached capacity is retained until runtime destruction.
+
+Optional profiling records completed command GPU timestamp durations (when the
+device provides them) and host wait durations. Profiling is disabled by default
+and excluded from acceptance runs. GPU durations include each submitted compute
+or blit command, not a pure kernel-only hardware duration. Host waiting includes
+completion scheduling; its difference from GPU time is not an exact queue-delay
+measurement. Profiling/reset and all cache access require external serialization.
