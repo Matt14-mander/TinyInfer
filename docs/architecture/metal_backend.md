@@ -119,3 +119,14 @@ Fallback is whole-model, with a reported placement reason; GPU execution failure
 propagate. A later contiguous rebind can restore GPU execution. The contract also
 applies to input-only/constant-only graph outputs. See the
 [Phase 5.2 acceptance](../acceptance/phase5.2.md).
+
+### Input ownership refinement in Phase 5.3
+
+Performance analysis found an extra deep Tensor copy when binding the CPU backup.
+The by-value binding parameter already owns the required lvalue snapshot; after
+any synchronous upload it is moved into the CPU context. Metal contexts retain
+bound/layout flags rather than another host input Tensor. Strict GPU contexts
+can release host input storage after upload completion. This preserves lvalue
+isolation and moved-view layouts, while removing the duplicate CPU fallback copy.
+A counting-allocator regression test checks exactly one lvalue copy and zero
+additional allocations for a moved fallback input.

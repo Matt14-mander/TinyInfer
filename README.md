@@ -12,7 +12,7 @@ Phase 1  Tensor Runtime           Complete (v0.1 scope)
 Phase 2  Graph Execution Engine   Complete (v0.2 MVP scope)
 Phase 3  Model Runtime            Complete (v0.3 restricted ONNX scope)
 Phase 4  Optimization Engine      Complete (measured static FP32 CPU slice)
-Phase 5  Hardware Backend         In progress (Prepared Metal models; performance acceptance next)
+Phase 5  Hardware Backend         In progress (Prepared Metal models; performance gates pending)
 Phase 6  ML Compiler Direction    Not started
 ```
 
@@ -175,4 +175,6 @@ and all verification. `MetalExecutionPlan` uploads constants once and creates
 independent contexts with reusable device activations and explicit whole-model
 CPU fallback. The [model example](examples/metal_model.cpp) loads an ONNX fixture;
 [Phase 5.2 acceptance](docs/acceptance/phase5.2.md) defines the supported scope.
-End-to-end performance acceptance remains Phase 5.3.
+[Phase 5.3 measurements](docs/benchmarks/mac-metal-phase5.3.md) report completed
+end-to-end analysis and a resolved fallback-copy regression. The frozen target
+performance gates remain unmet; Phase 5.3 is not yet accepted.

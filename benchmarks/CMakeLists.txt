@@ -33,3 +33,12 @@ target_compile_definitions(tinyinfer_cpu_performance_analysis_benchmark PRIVATE
     TINYINFER_BUILD_TYPE="$<CONFIG>"
     TINYINFER_NATIVE_ARCH=$<BOOL:${TINYINFER_ENABLE_NATIVE_ARCH}>
     TINYINFER_COMPILER_VERSION="${CMAKE_CXX_COMPILER_VERSION}")
+
+if(TINYINFER_ENABLE_METAL)
+    add_executable(tinyinfer_metal_model_benchmark metal_model_benchmark.cpp)
+    target_link_libraries(tinyinfer_metal_model_benchmark PRIVATE TinyInfer::metal)
+    target_compile_definitions(tinyinfer_metal_model_benchmark PRIVATE
+        TINYINFER_PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
+        TINYINFER_BUILD_TYPE="$<CONFIG>"
+        TINYINFER_NATIVE_ARCH=$<BOOL:${TINYINFER_ENABLE_NATIVE_ARCH}>)
+endif()

@@ -82,14 +82,14 @@ struct MetalPlanState {
 };
 struct MetalContextState {
     std::shared_ptr<const MetalPlanState> plan;
-    std::vector<std::optional<Tensor>> inputs;
+    std::vector<bool> bound, contiguous;
     std::vector<std::optional<MetalTensorView>> views;
     std::optional<CpuExecutionContext> cpu;
     MetalContextStatistics statistics;
     ModelPlacement placement;
     bool has_output{false};
     explicit MetalContextState(std::shared_ptr<const MetalPlanState> p)
-        : plan(std::move(p)), inputs(plan->model.graph().value_count()), views(plan->constants), placement(plan->placement) {
+        : plan(std::move(p)), bound(plan->model.graph().value_count(), false), contiguous(plan->model.graph().value_count(), false), views(plan->constants), placement(plan->placement) {
         if (plan->cpu) cpu.emplace(plan->cpu->create_context());
         if (!plan->runtime) return;
         auto arena = plan->runtime->allocate(plan->memory.buffer_size_bytes());
@@ -139,19 +139,23 @@ void MetalExecutionContext::bind_input(ValueId id, Tensor t) {
     if (s.plan->runtime && !t.is_contiguous() && s.plan->options.fallback == FallbackPolicy::Strict)
         throw std::invalid_argument("Metal input must be contiguous; whole-model CPU fallback is disabled");
     s.has_output = false;
-    if (s.cpu) s.cpu->bind_input(id, t);
     if (s.plan->runtime && t.is_contiguous()) {
         s.plan->runtime->upload(s.views[id]->storage, staging(t)).wait();
         ++s.statistics.input_uploads; s.statistics.input_bytes += t.size_bytes();
     }
-    s.inputs[id] = std::move(t);
+    const bool contiguous = t.is_contiguous();
+    // The CPU context takes ownership of this already-owned parameter. Copying
+    // it again doubles the public input snapshot cost on whole-model fallback.
+    if (s.cpu) s.cpu->bind_input(id, std::move(t));
+    s.contiguous[id] = contiguous;
+    s.bound[id] = true;
 }
 void MetalExecutionContext::run() {
     auto& s = live(); s.has_output = false;
     s.placement = s.plan->placement;
     for (auto id : s.plan->model.graph().inputs()) {
-        if (!s.inputs[id]) throw std::logic_error("model input is not bound");
-        if (s.plan->runtime && !s.inputs[id]->is_contiguous()) {
+        if (!s.bound[id]) throw std::logic_error("model input is not bound");
+        if (s.plan->runtime && !s.contiguous[id]) {
             s.placement.effective = {DeviceKind::Cpu, 0}; s.placement.used_fallback = true;
             s.placement.reason = "runtime input " + s.plan->model.graph().value(id).name + " is noncontiguous; whole model uses Prepared CPU Auto";
         }

@@ -48,6 +48,40 @@ void fixtures() {
         close(out,Tensor::from_vector(out.shape(),rl?std::vector<float>{0.58088166F,-0.47540686F}:std::vector<float>{0.26894143F,0.73105860F}));
     }
 }
+class CountingAllocator final : public Allocator {
+public:
+    std::size_t allocations{0};
+    std::string_view name() const noexcept override { return "counting"; }
+    void* allocate(std::size_t bytes, std::size_t alignment) override {
+        ++allocations; return backing.allocate(bytes, alignment);
+    }
+    void deallocate(void* p, std::size_t bytes, std::size_t alignment) noexcept override {
+        backing.deallocate(p, bytes, alignment);
+    }
+private: CpuAllocator backing;
+};
+void fallback_input_ownership() {
+    auto model = chain(OpType::GELU);
+    MetalExecutionPlan plan(model, {0, FallbackPolicy::WholeModelCpu});
+    auto context = plan.create_context();
+    CpuExecutionPlan reference(model); auto cpu = reference.create_context();
+    auto allocator = std::make_shared<CountingAllocator>();
+    Tensor input({2,2}, DataType::Float32, allocator);
+    for (std::size_t i=0;i<input.numel();++i) input.at(i)=float(i)-1;
+    cpu.bind_input("x", input); cpu.run(); auto expected=cpu.output("y");
+    auto before=allocator->allocations;
+    context.bind_input("x", input);
+    require(allocator->allocations==before+1, "fallback duplicated owned input snapshot");
+    input.at(0)=100;
+    context.run(); close(context.output("y"),expected);
+    before=allocator->allocations;
+    input.transpose(0,1);
+    cpu.bind_input("x", input); cpu.run(); expected=cpu.output("y");
+    before=allocator->allocations;
+    context.bind_input("x", std::move(input));
+    require(allocator->allocations==before, "moved fallback input copied");
+    context.run(); close(context.output("y"),expected);
+}
 void contracts() {
     auto m=chain(); MetalExecutionPlan p(m); auto c=p.create_context();
     rejects([&]{c.run();}); rejects([&]{c.output("y");}); rejects([&]{c.bind_input("bad",Tensor({2,2}));});
@@ -118,6 +152,6 @@ void endpoints() {
 }
 int main(int argc,char**) {
     if(MetalDeviceRuntime::enumerate_devices().empty()) { std::cerr<<"No Metal device\n"; return argc>1?1:77; }
-    try { fixtures(); contracts(); endpoints(); std::cout<<"Prepared Metal fixtures, reuse, lifetime, fallback and endpoint tests passed\n"; }
+    try { fixtures(); contracts(); endpoints(); fallback_input_ownership(); std::cout<<"Prepared Metal fixtures, reuse, lifetime, fallback and endpoint tests passed\n"; }
     catch(const std::exception& e) { std::cerr<<e.what()<<'\n'; return 1; }
 }
