@@ -1,0 +1,53 @@
+{
+  "phase": "5.4",
+  "date": "2026-10-13",
+  "scope": "Mac portable preparation only, native CUDA deferred by user to ROG",
+  "status": "Mac slice verified; Phase 5.4 native backend not complete",
+  "baseline": "d01126a",
+  "matrix_interpretation_cases": 773,
+  "checks": [
+    {
+      "configuration": "CPU-only Release portable",
+      "command": "ctest --test-dir build-coverage-release --output-on-failure",
+      "passed": 44,
+      "total": 44
+    },
+    {
+      "configuration": "Release native CPU, SDK-free CUDA contract",
+      "command": "ctest --test-dir build-bench -R cuda_contract --no-tests=error --output-on-failure",
+      "passed": 1,
+      "total": 1
+    },
+    {
+      "configuration": "Debug host ASan/UBSan, SDK-free CUDA contract",
+      "command": "ctest --test-dir build-phase51-metal-asan -R cuda_contract --no-tests=error --output-on-failure",
+      "passed": 1,
+      "total": 1
+    }
+  ],
+  "cuda_toolkit": "not_found",
+  "cuda_driver_inventory": "not_found",
+  "native_cuda_compilation": false,
+  "native_cuda_execution": false,
+  "fixture_contracts": [
+    "phase3_mlp_gemm.onnx",
+    "rl_actor_mlp_tanh.onnx"
+  ],
+  "limitations": [
+    "No CUDA executable Backend or placement",
+    "No CUDA allocation/stream/event/kernel or actual cuBLAS execution",
+    "CPU interpreter proves metadata mapping only",
+    "GPU precision, special-value, lifecycle and performance remain ROG gates",
+    "Metal Phase 5.3 performance gates remain unmet"
+  ],
+  "resolved_development_failures": [
+    "New explicit CMake targets required configuration regeneration; example builds required enabling TINYINFER_BUILD_EXAMPLES",
+    "Added invalid Softmax axis test revealed out_of_range escaping CPU schema validation; CUDA contract now converts it to an unsupported diagnostic"
+  ],
+  "source_sha256": {
+    "src/backend/cuda/operator_contract.cpp": "db874dbc2baafe371977e063461765956955c06a926a6963b15ec19f5fc5bfdb",
+    "include/tinyinfer/backend/cuda/operator_contract.h": "8c57e77cd9a4002170e276d2449d42cb43c5ea8fcb6ef33d969aa333a4d8e573",
+    "tests/cuda_contract_test.cpp": "c760725c910d1a3879ad540f4e6f08368472389a7b2d308cc29e39c3ed8dbebd",
+    "tools/inspect_gpu_environment.py": "5bd9c48dace6f76305927ad529ea22f23f0d77c0bdce0fbf7bd68358f78d95f5"
+  }
+}

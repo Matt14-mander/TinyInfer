@@ -1,0 +1,7 @@
+Test project /Users/zhengyuanhao/Desktop/Project/TinyInfer/build-phase51-metal-asan
+    Start 44: tinyinfer_cuda_contract_tests
+1/1 Test #44: tinyinfer_cuda_contract_tests ....   Passed    1.88 sec
+
+100% tests passed out of 1
+
+Total Test time (real) =   1.89 sec

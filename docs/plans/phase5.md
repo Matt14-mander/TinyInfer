@@ -157,3 +157,12 @@ Release 实机 46/46、Metal ASan/UBSan 3/3 通过；同门槛六进程复测通
 p95 单独诊断发现设备命令和主机等待均有波动，且记录到较高系统负载；尚不能归因于单一原因。
 资源成本降低已验证，但不宣称端到端性能稳定提升。下一步应在空闲 Mac 条件复测原门槛。
 详见 [传输优化与 p95 报告](../benchmarks/mac-metal-phase5.3-transfer.md)。
+
+## Phase 5.4 启动（2026-10-13）
+
+用户确认先完成 Mac 可开发验证部分，之后转到 ROG 本机推进 CUDA。
+本轮交付 SDK-free CUDA 算子准备契约、cuBLAS 矩阵映射描述、773 个 CPU 解释对照用例、
+两个 fixture 静态检查与 ROG 环境采集/实施计划。此模块不是可执行 CUDA 后端。
+详见 [Phase 5.4 计划](phase5.4.md) 与 [Mac 准备层交付](../acceptance/phase5.4-mac-preparation.md)。
+CUDA stream/event、真实算子、Prepared context 及性能验收保留到 ROG；
+Phase 5.3 Metal 性能门槛未通过的状态保持不变。

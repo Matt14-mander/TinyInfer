@@ -162,6 +162,10 @@ is open for transfer overhead and tail-latency work. A
 [transfer follow-up](../benchmarks/mac-metal-phase5.3-transfer.md) removes host
 Buffer copies and caches staging; the six-process recheck still fails the target
 gate, with device/wait/scheduling variability recorded.
+[Phase 5.4 Mac preparation](../acceptance/phase5.4-mac-preparation.md) begins
+on 2026-10-13 with SDK-free operator contracts and cuBLAS mapping metadata tested
+by CPU interpretation. It is not CUDA execution; native development/acceptance
+is deferred to the ROG by the user. Phase 5.3 performance acceptance stays open.
 First deliver one prepared GPU backend and measured host-to-host inference;
 then validate the second backend against the same contract. CPU threading,
 quantization and broader CPU fusion tuning remain separate extensions. GPU

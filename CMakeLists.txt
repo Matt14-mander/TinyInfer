@@ -66,6 +66,12 @@ if(TINYINFER_ENABLE_NATIVE_ARCH)
     endif()
 endif()
 
+# SDK-free preparation metadata; this is not an executable CUDA backend.
+add_library(tinyinfer_cuda_contract src/backend/cuda/operator_contract.cpp)
+add_library(TinyInfer::cuda_contract ALIAS tinyinfer_cuda_contract)
+target_link_libraries(tinyinfer_cuda_contract PUBLIC TinyInfer::tinyinfer)
+target_compile_features(tinyinfer_cuda_contract PUBLIC cxx_std_17)
+
 if(TINYINFER_ENABLE_METAL)
     if(NOT APPLE OR NOT CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         message(FATAL_ERROR "TINYINFER_ENABLE_METAL requires macOS")

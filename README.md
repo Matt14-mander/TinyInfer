@@ -180,3 +180,19 @@ end-to-end analysis and a resolved fallback-copy regression. The frozen target
 performance gates remain unmet; Phase 5.3 is not yet accepted.
 [Transfer follow-up](docs/benchmarks/mac-metal-phase5.3-transfer.md) reduces
 Buffer copies and reuses staging, with retained p95 diagnostics and failed gates.
+
+## CUDA preparation contracts (Phase 5.4, Mac slice)
+
+`TinyInfer::cuda_contract` is an SDK-free C++ preparation library for the prospective
+CUDA operator subset and cuBLAS matrix mapping. It does not provide an executable
+CUDA backend or prove GPU availability. The CPU interpretation tests cover 773
+matrix/bias/epilogue cases; both ONNX fixtures have static contract coverage.
+
+```bash
+./build-bench/examples/tinyinfer_cuda_contract_inspect tests/fixtures/phase3_mlp_gemm.onnx
+```
+
+[Mac preparation delivery](docs/acceptance/phase5.4-mac-preparation.md) and the
+[Phase 5.4 plan](docs/plans/phase5.4.md) define the boundary. Native CUDA runtime,
+operators, Prepared models and GPU performance will be developed on ROG after
+collecting its hardware/toolchain inventory. Metal Phase 5.3 remains unaccepted.

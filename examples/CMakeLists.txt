@@ -13,3 +13,6 @@ if(TINYINFER_ENABLE_METAL)
     add_executable(tinyinfer_metal_ops metal_ops.cpp)
     target_link_libraries(tinyinfer_metal_ops PRIVATE TinyInfer::metal)
 endif()
+
+add_executable(tinyinfer_cuda_contract_inspect cuda_contract.cpp)
+target_link_libraries(tinyinfer_cuda_contract_inspect PRIVATE TinyInfer::cuda_contract)

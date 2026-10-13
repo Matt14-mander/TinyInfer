@@ -179,6 +179,11 @@ target_compile_definitions(tinyinfer_backend_capability_tests PRIVATE
     TINYINFER_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 add_test(NAME tinyinfer_backend_capability_tests COMMAND tinyinfer_backend_capability_tests)
 
+add_executable(tinyinfer_cuda_contract_tests cuda_contract_test.cpp)
+target_link_libraries(tinyinfer_cuda_contract_tests PRIVATE TinyInfer::cuda_contract)
+target_compile_definitions(tinyinfer_cuda_contract_tests PRIVATE TINYINFER_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+add_test(NAME tinyinfer_cuda_contract_tests COMMAND tinyinfer_cuda_contract_tests)
+
 if(TINYINFER_ENABLE_METAL)
     foreach(kind runtime kernel execution_plan)
         add_executable(tinyinfer_metal_${kind}_tests metal_${kind}_test.cpp)
