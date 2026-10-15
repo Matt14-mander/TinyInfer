@@ -196,3 +196,12 @@ matrix/bias/epilogue cases; both ONNX fixtures have static contract coverage.
 [Phase 5.4 plan](docs/plans/phase5.4.md) define the boundary. Native CUDA runtime,
 operators, Prepared models and GPU performance will be developed on ROG after
 collecting its hardware/toolchain inventory. Metal Phase 5.3 remains unaccepted.
+
+## Serving scheduler learning example
+
+[Serving scheduler](examples/serving_scheduler/README.md) implements Static and
+Continuous Batching using a deterministic Python backend and virtual clock.
+It includes FIFO admission, iteration-boundary refill, request traces, output
+consistency tests and explicitly simulated TTFT/TPOT/throughput/P95 metrics.
+KV capacity/rejection, chunked prefill and real-backend serving are later stages.
+This example does not add LLM serving support to the C++ Runtime.
