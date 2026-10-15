@@ -1,0 +1,624 @@
+{
+  "stage": 2,
+  "backend": "deterministic_simulation",
+  "real_backend": false,
+  "same_output_sequences": true,
+  "same_completed_request_ids": true,
+  "reference_verified_requests": 3,
+  "cost_model": {
+    "overhead_ms": 1.0,
+    "prefill_ms_per_token": 0.1,
+    "decode_ms_per_request": 0.2
+  },
+  "reports": [
+    {
+      "mode": "static",
+      "clock": "simulated_ms",
+      "requests": [
+        {
+          "request_id": "long",
+          "arrival_ms": 0,
+          "admitted_ms": 0.0,
+          "finished_ms": 7.4,
+          "queue_ms": 0.0,
+          "ttft_ms": 1.4,
+          "tpot_ms": 1.2,
+          "latency_ms": 7.4,
+          "tokens": [
+            1141,
+            1172,
+            1203,
+            1234,
+            1265,
+            1296
+          ],
+          "token_times_ms": [
+            1.4,
+            2.5999999999999996,
+            3.8,
+            5.0,
+            6.2,
+            7.4
+          ]
+        },
+        {
+          "request_id": "peer",
+          "arrival_ms": 0,
+          "admitted_ms": 7.4,
+          "finished_ms": 10.1,
+          "queue_ms": 7.4,
+          "ttft_ms": 8.9,
+          "tpot_ms": 1.1999999999999993,
+          "latency_ms": 10.1,
+          "tokens": [
+            1142,
+            1173
+          ],
+          "token_times_ms": [
+            8.9,
+            10.1
+          ]
+        },
+        {
+          "request_id": "small",
+          "arrival_ms": 0,
+          "admitted_ms": 7.4,
+          "finished_ms": 8.9,
+          "queue_ms": 7.4,
+          "ttft_ms": 8.9,
+          "tpot_ms": null,
+          "latency_ms": 8.9,
+          "tokens": [
+            1614
+          ],
+          "token_times_ms": [
+            8.9
+          ]
+        }
+      ],
+      "submitted_requests": 4,
+      "completed_requests": 3,
+      "rejected_requests": 1,
+      "rejection_rate": 0.25,
+      "rejections": [
+        {
+          "request_id": "oversized",
+          "arrival_ms": 0.5,
+          "decided_ms": 1.4,
+          "rejection_delay_ms": 0.8999999999999999,
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 11
+        }
+      ],
+      "rejections_by_reason": {
+        "request_exceeds_kv_capacity": 1
+      },
+      "rejection_delay_p95_ms": 0.8999999999999999,
+      "kv_policy": "wait",
+      "kv": {
+        "capacity_blocks": 4,
+        "block_size_tokens": 4,
+        "capacity_tokens": 16,
+        "peak_reserved_blocks": 3,
+        "final_reserved_blocks": 0,
+        "final_reservations": 0
+      },
+      "kv_waited_requests": 1,
+      "steps": 8,
+      "measurement_window_ms": 10.1,
+      "generated_tokens": 9,
+      "output_tokens_per_second": 891.0891089108911,
+      "requests_per_second": 297.029702970297,
+      "ttft_p50_ms": 8.9,
+      "ttft_p95_ms": 8.9,
+      "tpot_mean_ms": 1.1999999999999997,
+      "request_latency_p95_ms": 10.1,
+      "slot_utilization": 0.38283828382838286,
+      "service_slot_utilization": 0.38283828382838286,
+      "trace": [
+        {
+          "start_ms": 0.0,
+          "end_ms": 1.4,
+          "kv_reserved_blocks": 3,
+          "batch": [
+            {
+              "request_id": "long",
+              "phase": "prefill",
+              "token_index": 0
+            }
+          ]
+        },
+        {
+          "start_ms": 1.4,
+          "end_ms": 2.5999999999999996,
+          "kv_reserved_blocks": 3,
+          "batch": [
+            {
+              "request_id": "long",
+              "phase": "decode",
+              "token_index": 1
+            }
+          ]
+        },
+        {
+          "start_ms": 2.5999999999999996,
+          "end_ms": 3.8,
+          "kv_reserved_blocks": 3,
+          "batch": [
+            {
+              "request_id": "long",
+              "phase": "decode",
+              "token_index": 2
+            }
+          ]
+        },
+        {
+          "start_ms": 3.8,
+          "end_ms": 5.0,
+          "kv_reserved_blocks": 3,
+          "batch": [
+            {
+              "request_id": "long",
+              "phase": "decode",
+              "token_index": 3
+            }
+          ]
+        },
+        {
+          "start_ms": 5.0,
+          "end_ms": 6.2,
+          "kv_reserved_blocks": 3,
+          "batch": [
+            {
+              "request_id": "long",
+              "phase": "decode",
+              "token_index": 4
+            }
+          ]
+        },
+        {
+          "start_ms": 6.2,
+          "end_ms": 7.4,
+          "kv_reserved_blocks": 3,
+          "batch": [
+            {
+              "request_id": "long",
+              "phase": "decode",
+              "token_index": 5
+            }
+          ]
+        },
+        {
+          "start_ms": 7.4,
+          "end_ms": 8.9,
+          "kv_reserved_blocks": 3,
+          "batch": [
+            {
+              "request_id": "peer",
+              "phase": "prefill",
+              "token_index": 0
+            },
+            {
+              "request_id": "small",
+              "phase": "prefill",
+              "token_index": 0
+            }
+          ]
+        },
+        {
+          "start_ms": 8.9,
+          "end_ms": 10.1,
+          "kv_reserved_blocks": 2,
+          "batch": [
+            {
+              "request_id": "peer",
+              "phase": "decode",
+              "token_index": 1
+            }
+          ]
+        }
+      ],
+      "kv_events": [
+        {
+          "time_ms": 0.0,
+          "event": "reserve",
+          "request_id": "long",
+          "token_budget": 10,
+          "blocks": 3,
+          "used_blocks": 3,
+          "available_blocks": 1,
+          "reason": null
+        },
+        {
+          "time_ms": 7.4,
+          "event": "release",
+          "request_id": "long",
+          "token_budget": 10,
+          "blocks": 3,
+          "used_blocks": 0,
+          "available_blocks": 4,
+          "reason": "completed"
+        },
+        {
+          "time_ms": 7.4,
+          "event": "reserve",
+          "request_id": "peer",
+          "token_budget": 6,
+          "blocks": 2,
+          "used_blocks": 2,
+          "available_blocks": 2,
+          "reason": null
+        },
+        {
+          "time_ms": 7.4,
+          "event": "reserve",
+          "request_id": "small",
+          "token_budget": 2,
+          "blocks": 1,
+          "used_blocks": 3,
+          "available_blocks": 1,
+          "reason": null
+        },
+        {
+          "time_ms": 8.9,
+          "event": "release",
+          "request_id": "small",
+          "token_budget": 2,
+          "blocks": 1,
+          "used_blocks": 2,
+          "available_blocks": 2,
+          "reason": "completed"
+        },
+        {
+          "time_ms": 10.1,
+          "event": "release",
+          "request_id": "peer",
+          "token_budget": 6,
+          "blocks": 2,
+          "used_blocks": 0,
+          "available_blocks": 4,
+          "reason": "completed"
+        }
+      ],
+      "admission_events": [
+        {
+          "time_ms": 0.0,
+          "event": "kv_wait",
+          "request_id": "peer",
+          "required_blocks": 2,
+          "available_blocks": 1
+        },
+        {
+          "time_ms": 1.4,
+          "event": "reject",
+          "request_id": "oversized",
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 11,
+          "available_blocks": 1
+        }
+      ]
+    },
+    {
+      "mode": "continuous",
+      "clock": "simulated_ms",
+      "requests": [
+        {
+          "request_id": "long",
+          "arrival_ms": 0,
+          "admitted_ms": 0.0,
+          "finished_ms": 7.4,
+          "queue_ms": 0.0,
+          "ttft_ms": 1.4,
+          "tpot_ms": 1.2,
+          "latency_ms": 7.4,
+          "tokens": [
+            1141,
+            1172,
+            1203,
+            1234,
+            1265,
+            1296
+          ],
+          "token_times_ms": [
+            1.4,
+            2.5999999999999996,
+            3.8,
+            5.0,
+            6.2,
+            7.4
+          ]
+        },
+        {
+          "request_id": "peer",
+          "arrival_ms": 0,
+          "admitted_ms": 7.4,
+          "finished_ms": 10.1,
+          "queue_ms": 7.4,
+          "ttft_ms": 8.9,
+          "tpot_ms": 1.1999999999999993,
+          "latency_ms": 10.1,
+          "tokens": [
+            1142,
+            1173
+          ],
+          "token_times_ms": [
+            8.9,
+            10.1
+          ]
+        },
+        {
+          "request_id": "small",
+          "arrival_ms": 0,
+          "admitted_ms": 7.4,
+          "finished_ms": 8.9,
+          "queue_ms": 7.4,
+          "ttft_ms": 8.9,
+          "tpot_ms": null,
+          "latency_ms": 8.9,
+          "tokens": [
+            1614
+          ],
+          "token_times_ms": [
+            8.9
+          ]
+        }
+      ],
+      "submitted_requests": 4,
+      "completed_requests": 3,
+      "rejected_requests": 1,
+      "rejection_rate": 0.25,
+      "rejections": [
+        {
+          "request_id": "oversized",
+          "arrival_ms": 0.5,
+          "decided_ms": 1.4,
+          "rejection_delay_ms": 0.8999999999999999,
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 11
+        }
+      ],
+      "rejections_by_reason": {
+        "request_exceeds_kv_capacity": 1
+      },
+      "rejection_delay_p95_ms": 0.8999999999999999,
+      "kv_policy": "wait",
+      "kv": {
+        "capacity_blocks": 4,
+        "block_size_tokens": 4,
+        "capacity_tokens": 16,
+        "peak_reserved_blocks": 3,
+        "final_reserved_blocks": 0,
+        "final_reservations": 0
+      },
+      "kv_waited_requests": 1,
+      "steps": 8,
+      "measurement_window_ms": 10.1,
+      "generated_tokens": 9,
+      "output_tokens_per_second": 891.0891089108911,
+      "requests_per_second": 297.029702970297,
+      "ttft_p50_ms": 8.9,
+      "ttft_p95_ms": 8.9,
+      "tpot_mean_ms": 1.1999999999999997,
+      "request_latency_p95_ms": 10.1,
+      "slot_utilization": 0.38283828382838286,
+      "service_slot_utilization": 0.38283828382838286,
+      "trace": [
+        {
+          "start_ms": 0.0,
+          "end_ms": 1.4,
+          "kv_reserved_blocks": 3,
+          "batch": [
+            {
+              "request_id": "long",
+              "phase": "prefill",
+              "token_index": 0
+            }
+          ]
+        },
+        {
+          "start_ms": 1.4,
+          "end_ms": 2.5999999999999996,
+          "kv_reserved_blocks": 3,
+          "batch": [
+            {
+              "request_id": "long",
+              "phase": "decode",
+              "token_index": 1
+            }
+          ]
+        },
+        {
+          "start_ms": 2.5999999999999996,
+          "end_ms": 3.8,
+          "kv_reserved_blocks": 3,
+          "batch": [
+            {
+              "request_id": "long",
+              "phase": "decode",
+              "token_index": 2
+            }
+          ]
+        },
+        {
+          "start_ms": 3.8,
+          "end_ms": 5.0,
+          "kv_reserved_blocks": 3,
+          "batch": [
+            {
+              "request_id": "long",
+              "phase": "decode",
+              "token_index": 3
+            }
+          ]
+        },
+        {
+          "start_ms": 5.0,
+          "end_ms": 6.2,
+          "kv_reserved_blocks": 3,
+          "batch": [
+            {
+              "request_id": "long",
+              "phase": "decode",
+              "token_index": 4
+            }
+          ]
+        },
+        {
+          "start_ms": 6.2,
+          "end_ms": 7.4,
+          "kv_reserved_blocks": 3,
+          "batch": [
+            {
+              "request_id": "long",
+              "phase": "decode",
+              "token_index": 5
+            }
+          ]
+        },
+        {
+          "start_ms": 7.4,
+          "end_ms": 8.9,
+          "kv_reserved_blocks": 3,
+          "batch": [
+            {
+              "request_id": "peer",
+              "phase": "prefill",
+              "token_index": 0
+            },
+            {
+              "request_id": "small",
+              "phase": "prefill",
+              "token_index": 0
+            }
+          ]
+        },
+        {
+          "start_ms": 8.9,
+          "end_ms": 10.1,
+          "kv_reserved_blocks": 2,
+          "batch": [
+            {
+              "request_id": "peer",
+              "phase": "decode",
+              "token_index": 1
+            }
+          ]
+        }
+      ],
+      "kv_events": [
+        {
+          "time_ms": 0.0,
+          "event": "reserve",
+          "request_id": "long",
+          "token_budget": 10,
+          "blocks": 3,
+          "used_blocks": 3,
+          "available_blocks": 1,
+          "reason": null
+        },
+        {
+          "time_ms": 7.4,
+          "event": "release",
+          "request_id": "long",
+          "token_budget": 10,
+          "blocks": 3,
+          "used_blocks": 0,
+          "available_blocks": 4,
+          "reason": "completed"
+        },
+        {
+          "time_ms": 7.4,
+          "event": "reserve",
+          "request_id": "peer",
+          "token_budget": 6,
+          "blocks": 2,
+          "used_blocks": 2,
+          "available_blocks": 2,
+          "reason": null
+        },
+        {
+          "time_ms": 7.4,
+          "event": "reserve",
+          "request_id": "small",
+          "token_budget": 2,
+          "blocks": 1,
+          "used_blocks": 3,
+          "available_blocks": 1,
+          "reason": null
+        },
+        {
+          "time_ms": 8.9,
+          "event": "release",
+          "request_id": "small",
+          "token_budget": 2,
+          "blocks": 1,
+          "used_blocks": 2,
+          "available_blocks": 2,
+          "reason": "completed"
+        },
+        {
+          "time_ms": 10.1,
+          "event": "release",
+          "request_id": "peer",
+          "token_budget": 6,
+          "blocks": 2,
+          "used_blocks": 0,
+          "available_blocks": 4,
+          "reason": "completed"
+        }
+      ],
+      "admission_events": [
+        {
+          "time_ms": 0.0,
+          "event": "kv_wait",
+          "request_id": "peer",
+          "required_blocks": 2,
+          "available_blocks": 1
+        },
+        {
+          "time_ms": 1.4,
+          "event": "reject",
+          "request_id": "oversized",
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 11,
+          "available_blocks": 1
+        },
+        {
+          "time_ms": 1.4,
+          "event": "kv_wait",
+          "request_id": "peer",
+          "required_blocks": 2,
+          "available_blocks": 1
+        },
+        {
+          "time_ms": 2.5999999999999996,
+          "event": "kv_wait",
+          "request_id": "peer",
+          "required_blocks": 2,
+          "available_blocks": 1
+        },
+        {
+          "time_ms": 3.8,
+          "event": "kv_wait",
+          "request_id": "peer",
+          "required_blocks": 2,
+          "available_blocks": 1
+        },
+        {
+          "time_ms": 5.0,
+          "event": "kv_wait",
+          "request_id": "peer",
+          "required_blocks": 2,
+          "available_blocks": 1
+        },
+        {
+          "time_ms": 6.2,
+          "event": "kv_wait",
+          "request_id": "peer",
+          "required_blocks": 2,
+          "available_blocks": 1
+        }
+      ]
+    }
+  ]
+}

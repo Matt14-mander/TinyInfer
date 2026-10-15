@@ -1,0 +1,411 @@
+{
+  "stage": 2,
+  "backend": "deterministic_simulation",
+  "real_backend": false,
+  "same_output_sequences": true,
+  "same_completed_request_ids": true,
+  "reference_verified_requests": 8,
+  "cost_model": {
+    "overhead_ms": 1.0,
+    "prefill_ms_per_token": 0.1,
+    "decode_ms_per_request": 0.2
+  },
+  "reports": [
+    {
+      "mode": "static",
+      "clock": "simulated_ms",
+      "requests": [
+        {
+          "request_id": "long",
+          "arrival_ms": 0,
+          "admitted_ms": 0.0,
+          "finished_ms": 15.599999999999996,
+          "queue_ms": 0.0,
+          "ttft_ms": 2.2,
+          "tpot_ms": 1.2181818181818178,
+          "latency_ms": 15.599999999999996,
+          "tokens": [
+            1209,
+            1240,
+            1271,
+            1302,
+            1333,
+            1364,
+            1395,
+            1426,
+            1457,
+            1488,
+            1519,
+            1550
+          ],
+          "token_times_ms": [
+            2.2,
+            3.6,
+            4.8,
+            6.0,
+            7.2,
+            8.4,
+            9.6,
+            10.799999999999999,
+            11.999999999999998,
+            13.199999999999998,
+            14.399999999999997,
+            15.599999999999996
+          ]
+        },
+        {
+          "request_id": "short0",
+          "arrival_ms": 0,
+          "admitted_ms": 0.0,
+          "finished_ms": 3.6,
+          "queue_ms": 0.0,
+          "ttft_ms": 2.2,
+          "tpot_ms": 1.4,
+          "latency_ms": 3.6,
+          "tokens": [
+            2049,
+            2080
+          ],
+          "token_times_ms": [
+            2.2,
+            3.6
+          ]
+        },
+        {
+          "request_id": "short1",
+          "arrival_ms": 0,
+          "admitted_ms": 15.599999999999996,
+          "finished_ms": 18.799999999999994,
+          "queue_ms": 15.599999999999996,
+          "ttft_ms": 17.399999999999995,
+          "tpot_ms": 1.3999999999999986,
+          "latency_ms": 18.799999999999994,
+          "tokens": [
+            2055,
+            2086
+          ],
+          "token_times_ms": [
+            17.399999999999995,
+            18.799999999999994
+          ]
+        },
+        {
+          "request_id": "short2",
+          "arrival_ms": 0,
+          "admitted_ms": 15.599999999999996,
+          "finished_ms": 18.799999999999994,
+          "queue_ms": 15.599999999999996,
+          "ttft_ms": 17.399999999999995,
+          "tpot_ms": 1.3999999999999986,
+          "latency_ms": 18.799999999999994,
+          "tokens": [
+            2061,
+            2092
+          ],
+          "token_times_ms": [
+            17.399999999999995,
+            18.799999999999994
+          ]
+        },
+        {
+          "request_id": "short3",
+          "arrival_ms": 0,
+          "admitted_ms": 18.799999999999994,
+          "finished_ms": 21.999999999999993,
+          "queue_ms": 18.799999999999994,
+          "ttft_ms": 20.599999999999994,
+          "tpot_ms": 1.3999999999999986,
+          "latency_ms": 21.999999999999993,
+          "tokens": [
+            2067,
+            2098
+          ],
+          "token_times_ms": [
+            20.599999999999994,
+            21.999999999999993
+          ]
+        },
+        {
+          "request_id": "short4",
+          "arrival_ms": 0,
+          "admitted_ms": 18.799999999999994,
+          "finished_ms": 21.999999999999993,
+          "queue_ms": 18.799999999999994,
+          "ttft_ms": 20.599999999999994,
+          "tpot_ms": 1.3999999999999986,
+          "latency_ms": 21.999999999999993,
+          "tokens": [
+            2073,
+            2104
+          ],
+          "token_times_ms": [
+            20.599999999999994,
+            21.999999999999993
+          ]
+        },
+        {
+          "request_id": "short5",
+          "arrival_ms": 0,
+          "admitted_ms": 21.999999999999993,
+          "finished_ms": 25.199999999999992,
+          "queue_ms": 21.999999999999993,
+          "ttft_ms": 23.799999999999994,
+          "tpot_ms": 1.3999999999999986,
+          "latency_ms": 25.199999999999992,
+          "tokens": [
+            2079,
+            2110
+          ],
+          "token_times_ms": [
+            23.799999999999994,
+            25.199999999999992
+          ]
+        },
+        {
+          "request_id": "short6",
+          "arrival_ms": 0,
+          "admitted_ms": 21.999999999999993,
+          "finished_ms": 25.199999999999992,
+          "queue_ms": 21.999999999999993,
+          "ttft_ms": 23.799999999999994,
+          "tpot_ms": 1.3999999999999986,
+          "latency_ms": 25.199999999999992,
+          "tokens": [
+            2085,
+            2116
+          ],
+          "token_times_ms": [
+            23.799999999999994,
+            25.199999999999992
+          ]
+        }
+      ],
+      "submitted_requests": 8,
+      "completed_requests": 8,
+      "rejected_requests": 0,
+      "rejection_rate": 0.0,
+      "rejections": [],
+      "rejections_by_reason": {},
+      "rejection_delay_p95_ms": null,
+      "kv_policy": "wait",
+      "kv": {
+        "capacity_blocks": null,
+        "block_size_tokens": 1,
+        "capacity_tokens": null,
+        "peak_reserved_blocks": 26,
+        "final_reserved_blocks": 0,
+        "final_reservations": 0
+      },
+      "kv_waited_requests": 0,
+      "steps": 18,
+      "measurement_window_ms": 25.199999999999992,
+      "generated_tokens": 26,
+      "output_tokens_per_second": 1031.746031746032,
+      "requests_per_second": 317.4603174603176,
+      "ttft_p50_ms": 17.399999999999995,
+      "ttft_p95_ms": 23.799999999999994,
+      "tpot_mean_ms": 1.377272727272726,
+      "request_latency_p95_ms": 25.199999999999992,
+      "slot_utilization": 0.761904761904762,
+      "service_slot_utilization": 0.761904761904762
+    },
+    {
+      "mode": "continuous",
+      "clock": "simulated_ms",
+      "requests": [
+        {
+          "request_id": "long",
+          "arrival_ms": 0,
+          "admitted_ms": 0.0,
+          "finished_ms": 18.599999999999998,
+          "queue_ms": 0.0,
+          "ttft_ms": 2.2,
+          "tpot_ms": 1.4909090909090907,
+          "latency_ms": 18.599999999999998,
+          "tokens": [
+            1209,
+            1240,
+            1271,
+            1302,
+            1333,
+            1364,
+            1395,
+            1426,
+            1457,
+            1488,
+            1519,
+            1550
+          ],
+          "token_times_ms": [
+            2.2,
+            3.6,
+            5.2,
+            6.6,
+            8.2,
+            9.6,
+            11.2,
+            12.6,
+            14.2,
+            15.6,
+            17.2,
+            18.599999999999998
+          ]
+        },
+        {
+          "request_id": "short0",
+          "arrival_ms": 0,
+          "admitted_ms": 0.0,
+          "finished_ms": 3.6,
+          "queue_ms": 0.0,
+          "ttft_ms": 2.2,
+          "tpot_ms": 1.4,
+          "latency_ms": 3.6,
+          "tokens": [
+            2049,
+            2080
+          ],
+          "token_times_ms": [
+            2.2,
+            3.6
+          ]
+        },
+        {
+          "request_id": "short1",
+          "arrival_ms": 0,
+          "admitted_ms": 3.6,
+          "finished_ms": 6.6,
+          "queue_ms": 3.6,
+          "ttft_ms": 5.2,
+          "tpot_ms": 1.3999999999999995,
+          "latency_ms": 6.6,
+          "tokens": [
+            2055,
+            2086
+          ],
+          "token_times_ms": [
+            5.2,
+            6.6
+          ]
+        },
+        {
+          "request_id": "short2",
+          "arrival_ms": 0,
+          "admitted_ms": 6.6,
+          "finished_ms": 9.6,
+          "queue_ms": 6.6,
+          "ttft_ms": 8.2,
+          "tpot_ms": 1.4000000000000004,
+          "latency_ms": 9.6,
+          "tokens": [
+            2061,
+            2092
+          ],
+          "token_times_ms": [
+            8.2,
+            9.6
+          ]
+        },
+        {
+          "request_id": "short3",
+          "arrival_ms": 0,
+          "admitted_ms": 9.6,
+          "finished_ms": 12.6,
+          "queue_ms": 9.6,
+          "ttft_ms": 11.2,
+          "tpot_ms": 1.4000000000000004,
+          "latency_ms": 12.6,
+          "tokens": [
+            2067,
+            2098
+          ],
+          "token_times_ms": [
+            11.2,
+            12.6
+          ]
+        },
+        {
+          "request_id": "short4",
+          "arrival_ms": 0,
+          "admitted_ms": 12.6,
+          "finished_ms": 15.6,
+          "queue_ms": 12.6,
+          "ttft_ms": 14.2,
+          "tpot_ms": 1.4000000000000004,
+          "latency_ms": 15.6,
+          "tokens": [
+            2073,
+            2104
+          ],
+          "token_times_ms": [
+            14.2,
+            15.6
+          ]
+        },
+        {
+          "request_id": "short5",
+          "arrival_ms": 0,
+          "admitted_ms": 15.6,
+          "finished_ms": 18.599999999999998,
+          "queue_ms": 15.6,
+          "ttft_ms": 17.2,
+          "tpot_ms": 1.3999999999999986,
+          "latency_ms": 18.599999999999998,
+          "tokens": [
+            2079,
+            2110
+          ],
+          "token_times_ms": [
+            17.2,
+            18.599999999999998
+          ]
+        },
+        {
+          "request_id": "short6",
+          "arrival_ms": 0,
+          "admitted_ms": 18.599999999999998,
+          "finished_ms": 21.199999999999996,
+          "queue_ms": 18.599999999999998,
+          "ttft_ms": 19.999999999999996,
+          "tpot_ms": 1.1999999999999993,
+          "latency_ms": 21.199999999999996,
+          "tokens": [
+            2085,
+            2116
+          ],
+          "token_times_ms": [
+            19.999999999999996,
+            21.199999999999996
+          ]
+        }
+      ],
+      "submitted_requests": 8,
+      "completed_requests": 8,
+      "rejected_requests": 0,
+      "rejection_rate": 0.0,
+      "rejections": [],
+      "rejections_by_reason": {},
+      "rejection_delay_p95_ms": null,
+      "kv_policy": "wait",
+      "kv": {
+        "capacity_blocks": null,
+        "block_size_tokens": 1,
+        "capacity_tokens": null,
+        "peak_reserved_blocks": 26,
+        "final_reserved_blocks": 0,
+        "final_reservations": 0
+      },
+      "kv_waited_requests": 0,
+      "steps": 14,
+      "measurement_window_ms": 21.199999999999996,
+      "generated_tokens": 26,
+      "output_tokens_per_second": 1226.4150943396228,
+      "requests_per_second": 377.3584905660378,
+      "ttft_p50_ms": 8.2,
+      "ttft_p95_ms": 19.999999999999996,
+      "tpot_mean_ms": 1.3863636363636362,
+      "request_latency_p95_ms": 21.199999999999996,
+      "slot_utilization": 0.9386792452830189,
+      "service_slot_utilization": 0.9386792452830189
+    }
+  ]
+}

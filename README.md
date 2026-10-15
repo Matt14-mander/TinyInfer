@@ -203,5 +203,7 @@ collecting its hardware/toolchain inventory. Metal Phase 5.3 remains unaccepted.
 Continuous Batching using a deterministic Python backend and virtual clock.
 It includes FIFO admission, iteration-boundary refill, request traces, output
 consistency tests and explicitly simulated TTFT/TPOT/throughput/P95 metrics.
-KV capacity/rejection, chunked prefill and real-backend serving are later stages.
+Block-based KV budget reservation, FIFO capacity waiting, explicit rejection
+policies and completion/error cleanup are implemented in stage two. Chunked
+prefill and real-backend serving remain later stages.
 This example does not add LLM serving support to the C++ Runtime.
