@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 import math
 from abc import ABC, abstractmethod
-from typing import Sequence
+from typing import Optional, Sequence
 
 
 def _finite_nonnegative(value):
@@ -35,22 +35,34 @@ class Request:
 class WorkItem:
     request: Request
     generated: int
+    prefill_start: int = 0
+    prefill_tokens: Optional[int] = None
 
     @property
     def is_prefill(self):
         return self.generated == 0
 
+    @property
+    def input_tokens(self):
+        if not self.is_prefill:
+            return 1
+        return self.request.prompt_tokens - self.prefill_start if self.prefill_tokens is None else self.prefill_tokens
+
+    @property
+    def emits_token(self):
+        return not self.is_prefill or self.prefill_start + self.input_tokens == self.request.prompt_tokens
+
 
 @dataclass(frozen=True)
 class StepResult:
     duration_ms: float
-    tokens: Sequence[int]
+    tokens: Sequence[Optional[int]]
 
 
 class Backend(ABC):
     @abstractmethod
     def step(self, batch: Sequence[WorkItem]) -> StepResult:
-        """Each item produces one token; prefill produces its first token."""
+        """One result per item; unfinished prefill returns None, otherwise one token."""
         ...
 
 
@@ -73,10 +85,17 @@ class SimulatedBackend(Backend):
         duration = self.overhead_ms
         tokens = []
         for item in batch:
-            if not 0 <= item.generated < item.request.output_tokens:
+            if type(item.generated) is not int or not 0 <= item.generated < item.request.output_tokens:
                 raise ValueError("invalid generation position")
-            duration += (item.request.prompt_tokens * self.prefill_ms_per_token
+            if item.is_prefill and (type(item.prefill_start) is not int or item.prefill_start < 0
+                                    or type(item.input_tokens) is not int or item.input_tokens < 1
+                                    or item.prefill_start + item.input_tokens > item.request.prompt_tokens):
+                raise ValueError("invalid prefill range")
+            duration += (item.input_tokens * self.prefill_ms_per_token
                          if item.is_prefill else self.decode_ms_per_request)
+            if not item.emits_token:
+                tokens.append(None)
+                continue
             # Stable across processes and independent of batching/admission order.
             identity = sum((i + 1) * ord(c) for i, c in enumerate(item.request.request_id))
             tokens.append(1 + (identity + item.request.prompt_tokens * 17 + item.generated * 31) % 32000)

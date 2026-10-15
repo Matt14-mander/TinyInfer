@@ -26,9 +26,11 @@ def summarize(run):
                    "decided_ms": r.decided_ms, "rejection_delay_ms": r.decided_ms - r.request.arrival_ms,
                    "reason": r.reason, "required_blocks": r.required_blocks} for r in run.rejections]
     total = len(requests) + len(rejections)
+    gaps = [b - a for result in run.results for a, b in zip(result.token_times_ms, result.token_times_ms[1:])]
     duration = run.finished_ms - run.started_ms
     # Time-weighted number of live request slots occupied during service.
-    busy = sum((step["end_ms"] - step["start_ms"]) * len(step["batch"]) for step in run.trace)
+    busy = sum((step["end_ms"] - step["start_ms"]) * step.get("active_requests", len(step["batch"])) for step in run.trace)
+    scheduled = sum((step["end_ms"] - step["start_ms"]) * len(step["batch"]) for step in run.trace)
     service = sum(step["end_ms"] - step["start_ms"] for step in run.trace)
     values = lambda key: [r[key] for r in requests if r[key] is not None]
     return {"mode": run.mode, "clock": "simulated_ms", "requests": requests,
@@ -38,6 +40,12 @@ def summarize(run):
             "rejection_delay_p95_ms": percentile([r["rejection_delay_ms"] for r in rejections], .95),
             "kv_policy": run.kv_policy, "kv": {k: v for k, v in run.kv.items() if k != "events"},
             "kv_waited_requests": len({e["request_id"] for e in run.admission_events if e["event"] == "kv_wait"}),
+            "token_budget": run.token_budget, "prefill_chunk_size": run.prefill_chunk_size,
+            "prefill_input_tokens": sum(s["prefill_tokens"] for s in run.trace),
+            "decode_input_tokens": sum(s["decode_tokens"] for s in run.trace),
+            "peak_step_input_tokens": max((s["input_tokens"] for s in run.trace), default=0),
+            "inter_token_p95_ms": percentile(gaps, .95), "max_inter_token_ms": max(gaps, default=None),
+            "scheduled_slot_utilization": scheduled / (duration * run.max_batch_size) if duration else 0.0,
             "steps": len(run.trace), "measurement_window_ms": duration,
             "generated_tokens": sum(len(r.tokens) for r in run.results),
             "output_tokens_per_second": sum(len(r.tokens) for r in run.results) * 1000 / duration if duration else 0.0,

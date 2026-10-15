@@ -26,10 +26,12 @@ def workloads(name):
 
 
 def compare(requests, batch_size=4, backend=None, trace=False,
-            kv_capacity_blocks=None, kv_block_size=1, kv_policy="wait"):
+            kv_capacity_blocks=None, kv_block_size=1, kv_policy="wait",
+            token_budget=None, prefill_chunk_size=None):
     requests = list(requests)
     backend = backend or SimulatedBackend()
-    runs = [simulate(requests, backend, mode, batch_size, kv_capacity_blocks, kv_block_size, kv_policy)
+    runs = [simulate(requests, backend, mode, batch_size, kv_capacity_blocks, kv_block_size, kv_policy,
+                     token_budget, prefill_chunk_size)
             for mode in ("static", "continuous")]
     outputs = [{r.request.request_id: r.tokens for r in run.results} for run in runs]
     shared_ids = outputs[0].keys() & outputs[1].keys()
@@ -53,7 +55,7 @@ def compare(requests, batch_size=4, backend=None, trace=False,
             report["kv_events"] = run.kv["events"]
             report["admission_events"] = run.admission_events
         reports.append(report)
-    return {"stage": 2, "backend": "deterministic_simulation", "real_backend": False,
+    return {"stage": 3, "backend": "deterministic_simulation", "real_backend": False,
             "same_output_sequences": True,
             "same_completed_request_ids": outputs[0].keys() == outputs[1].keys(),
             "reference_verified_requests": len(reference),
@@ -71,6 +73,8 @@ def main():
     parser.add_argument("--kv-capacity-blocks", type=int, default=None, help="None means unlimited; zero rejects all requests")
     parser.add_argument("--kv-block-size", type=int, default=1, help="token slots per block")
     parser.add_argument("--kv-policy", choices=["wait", "reject"], default="wait")
+    parser.add_argument("--token-budget", type=int, default=None, help="max prefill input tokens plus one per decoder in each step")
+    parser.add_argument("--prefill-chunk-size", type=int, default=None, help="optional per-request prefill cap; requires token budget")
     parser.add_argument("--format", choices=["text", "json"], default="text")
     parser.add_argument("--trace", action="store_true")
     args = parser.parse_args()
@@ -79,7 +83,7 @@ def main():
                     if args.requests else workloads(args.scenario))
         report = compare(requests, args.batch_size, trace=args.trace,
                          kv_capacity_blocks=args.kv_capacity_blocks, kv_block_size=args.kv_block_size,
-                         kv_policy=args.kv_policy)
+                         kv_policy=args.kv_policy, token_budget=args.token_budget, prefill_chunk_size=args.prefill_chunk_size)
     except (ValueError, TypeError, OSError) as error:
         parser.error(str(error))
     if args.format == "json":
@@ -99,11 +103,13 @@ def main():
                 r["completed_requests"], r["rejected_requests"], r["kv"]["peak_reserved_blocks"],
                 "unlimited" if r["kv"]["capacity_blocks"] is None else r["kv"]["capacity_blocks"],
                 r["kv"]["final_reserved_blocks"]))
+            print("  token budget=%s; peak step input=%d; inter-token p95=%s ms; max=%s ms" % (
+                r["token_budget"], r["peak_step_input_tokens"], fmt(r["inter_token_p95_ms"]), fmt(r["max_inter_token_ms"])))
             for rejection in r["rejections"]:
                 print("  rejected %s: %s at %.3f ms" % (rejection["request_id"], rejection["reason"], rejection["decided_ms"]))
             if args.trace:
                 for step in r["trace"]:
-                    print("  %.3f -> %.3f KV start=%d blocks; %s" % (step["start_ms"], step["end_ms"], step["kv_reserved_blocks"],
+                    print("  %.3f -> %.3f KV start=%d blocks, input=%d; %s" % (step["start_ms"], step["end_ms"], step["kv_reserved_blocks"], step["input_tokens"],
                           ", ".join(i["request_id"] + ":" + i["phase"] for i in step["batch"])))
                 for event in r["kv_events"]:
                     print("  KV %.3f %s %s blocks=%d used=%d" % (event["time_ms"], event["event"], event["request_id"], event["blocks"], event["used_blocks"]))
