@@ -1,4 +1,4 @@
-"""All reported times and rates are simulated, not measured model performance."""
+"""Shared metrics; run.clock explicitly distinguishes virtual and wall-clock timing."""
 from collections import Counter
 import math
 import statistics
@@ -33,7 +33,7 @@ def summarize(run):
     scheduled = sum((step["end_ms"] - step["start_ms"]) * len(step["batch"]) for step in run.trace)
     service = sum(step["end_ms"] - step["start_ms"] for step in run.trace)
     values = lambda key: [r[key] for r in requests if r[key] is not None]
-    return {"mode": run.mode, "clock": "simulated_ms", "requests": requests,
+    return {"mode": run.mode, "clock": run.clock, "backend_stats": run.backend_stats, "requests": requests,
             "submitted_requests": total, "completed_requests": len(requests), "rejected_requests": len(rejections),
             "rejection_rate": len(rejections) / total if total else 0.0,
             "rejections": rejections, "rejections_by_reason": dict(Counter(r["reason"] for r in rejections)),

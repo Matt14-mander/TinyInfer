@@ -1,0 +1,7 @@
+Test project /Users/zhengyuanhao/Desktop/Project/TinyInfer/build-bench
+    Start 48: tinyinfer_serving_scheduler_tests
+1/1 Test #48: tinyinfer_serving_scheduler_tests ...   Passed    1.27 sec
+
+100% tests passed out of 1
+
+Total Test time (real) =   1.28 sec

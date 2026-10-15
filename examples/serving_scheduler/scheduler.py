@@ -2,6 +2,7 @@
 from collections import deque
 from dataclasses import dataclass, field
 import math
+import sys
 from typing import List
 try:
     from .backend import Backend, Request, WorkItem
@@ -46,11 +47,13 @@ class Simulation:
     kv_policy: str = "wait"
     token_budget: int = None
     prefill_chunk_size: int = None
+    clock: str = "simulated_ms"
+    backend_stats: dict = field(default_factory=dict)
 
 
-def simulate(requests, backend: Backend, mode="continuous", max_batch_size=4,
+def _schedule(requests, backend: Backend, mode="continuous", max_batch_size=4,
              kv_capacity_blocks=None, kv_block_size=1, kv_policy="wait",
-             token_budget=None, prefill_chunk_size=None):
+             token_budget=None, prefill_chunk_size=None, _clock=None):
     if mode not in ("static", "continuous"):
         raise ValueError("mode must be static or continuous")
     if type(max_batch_size) is not int or max_batch_size < 1:
@@ -71,7 +74,8 @@ def simulate(requests, backend: Backend, mode="continuous", max_batch_size=4,
     incoming.sort(key=lambda r: r.arrival_ms)
     if not incoming:
         return Simulation(mode, max_batch_size, 0.0, 0.0, [], [], kv=cache.summary(), kv_policy=kv_policy,
-                          token_budget=token_budget, prefill_chunk_size=prefill_chunk_size)
+                          token_budget=token_budget, prefill_chunk_size=prefill_chunk_size, clock="wall_ms" if _clock else "simulated_ms",
+                          backend_stats=backend.stats() if _clock else {})
     now = started = float(incoming[0].arrival_ms)
     pending_index = 0
     waiting = deque()
@@ -90,8 +94,14 @@ def simulate(requests, backend: Backend, mode="continuous", max_batch_size=4,
 
     try:
         while pending_index < len(incoming) or waiting or active:
+            if _clock:
+                now = _clock.now_ms()
             if not active and not waiting and incoming[pending_index].arrival_ms > now:
-                now = float(incoming[pending_index].arrival_ms)
+                if _clock:
+                    _clock.wait_until(incoming[pending_index].arrival_ms)
+                    now = _clock.now_ms()
+                else:
+                    now = float(incoming[pending_index].arrival_ms)
             # Observe arrivals even while a static cohort is still active. A
             # permanently oversized request is rejected independently of slots.
             while pending_index < len(incoming) and incoming[pending_index].arrival_ms <= now:
@@ -149,8 +159,11 @@ def simulate(requests, backend: Backend, mode="continuous", max_batch_size=4,
                     remaining -= count
             if not work:
                 raise RuntimeError("token scheduling failed to make progress")
+            dispatch_start = _clock.now_ms() if _clock else now
             step = backend.step(tuple(work))
-            if (isinstance(step.duration_ms, bool) or not isinstance(step.duration_ms, (int, float))
+            if _clock:
+                backend.synchronize()
+            if not _clock and (isinstance(step.duration_ms, bool) or not isinstance(step.duration_ms, (int, float))
                     or not math.isfinite(step.duration_ms) or step.duration_ms <= 0):
                 raise ValueError("backend must return finite positive step duration")
             if len(step.tokens) != len(work):
@@ -161,10 +174,10 @@ def simulate(requests, backend: Backend, mode="continuous", max_batch_size=4,
                         raise ValueError("finished prefill/decode must return a nonnegative integer token")
                 elif token is not None:
                     raise ValueError("unfinished prefill must return None, not an early token")
-            end = now + step.duration_ms
+            end = _clock.now_ms() if _clock else now + step.duration_ms
             if not math.isfinite(end) or end <= now:
                 raise ValueError("virtual clock overflow or insufficient precision")
-            trace.append({"start_ms": now, "end_ms": end, "kv_reserved_blocks": cache.used_blocks,
+            trace.append({"start_ms": dispatch_start, "end_ms": end, "kv_reserved_blocks": cache.used_blocks,
                           "active_requests": len(active),
                           "deferred_requests": [r.request.request_id for r in active if r not in work_results],
                           "input_tokens": sum(w.input_tokens for w in work),
@@ -187,17 +200,39 @@ def simulate(requests, backend: Backend, mode="continuous", max_batch_size=4,
                 if len(result.tokens) == result.request.output_tokens:
                     completed.append(result)
                     finished_ids.add(result.request.request_id)
-                    cache.release(result.request.request_id, end)
+                    if _clock:
+                        backend.release(result.request.request_id)
+                    cache.release(result.request.request_id, _clock.now_ms() if _clock else end)
             active = [r for r in active if r.request.request_id not in finished_ids]
             now = end
     finally:
-        # Virtual reservations are released even if the backend or validation
-        # fails. Real device resources will need terminal completion in stage 4.
-        for request_id in list(cache.reservations):
-            cache.release(request_id, now, reason="abort_cleanup")
+        # CPU replies establish terminal completion; clear native KV before
+        # releasing the logical budget. Preserve the primary failure on cleanup.
+        failing = sys.exc_info()[0] is not None
+        try:
+            if _clock:
+                backend.clear()
+        except Exception:
+            if not failing:
+                raise
+        finally:
+            for request_id in list(cache.reservations):
+                cache.release(request_id, _clock.now_ms() if _clock else now, reason="abort_cleanup")
+    if _clock:
+        now = _clock.now_ms()
     completed_by_id = {r.request.request_id: r for r in completed}
     rejected_by_id = {r.request.request_id: r for r in rejected}
     return Simulation(mode, max_batch_size, started, now,
                       [completed_by_id[r.request_id] for r in incoming if r.request_id in completed_by_id], trace,
                       [rejected_by_id[r.request_id] for r in incoming if r.request_id in rejected_by_id],
-                      cache.summary(), decisions, kv_policy, token_budget, prefill_chunk_size)
+                      cache.summary(), decisions, kv_policy, token_budget, prefill_chunk_size,
+                      "wall_ms" if _clock else "simulated_ms",
+                      backend.stats() if _clock else {})
+
+
+def simulate(requests, backend: Backend, mode="continuous", max_batch_size=4,
+             kv_capacity_blocks=None, kv_block_size=1, kv_policy="wait",
+             token_budget=None, prefill_chunk_size=None):
+    """Virtual-time entry point retained for stages 1-3."""
+    return _schedule(requests, backend, mode, max_batch_size, kv_capacity_blocks,
+                     kv_block_size, kv_policy, token_budget, prefill_chunk_size)

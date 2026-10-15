@@ -1,0 +1,10 @@
+test_backend_failure_clears_native_kv_and_reusable (test_real_backend.RealBackendTests) ... ok
+test_greedy_reference_both_modes_and_chunk_boundaries (test_real_backend.RealBackendTests) ... ok
+test_kv_rejection_and_all_rejected_no_forward (test_real_backend.RealBackendTests) ... ok
+test_real_arrivals_and_ignore_cost_formula (test_real_backend.RealBackendTests) ... ok
+test_virtual_backend_rejected_and_limits_fail_explicitly (test_real_backend.RealBackendTests) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 1.070s
+
+OK

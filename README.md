@@ -206,6 +206,7 @@ consistency tests and explicitly simulated TTFT/TPOT/throughput/P95 metrics.
 Block-based KV budget reservation, FIFO capacity waiting, explicit rejection
 policies and completion/error cleanup are implemented in stage two. Chunked
 prefill is implemented in stage three with per-step token budgets, decode priority,
-round-robin prefill progress and simulated latency/throughput tradeoffs. Real-backend
-serving remains stage four.
-This example does not add LLM serving support to the C++ Runtime.
+round-robin prefill progress and simulated latency/throughput tradeoffs. Stage four adds a local random-weight single-layer decoder using actual TinyInfer
+CPU attention/logits/KV operations, a wall-clock driver and measured request
+metrics; see the [engineering acceptance](examples/serving_scheduler/STAGE4.md).
+It is neither a pretrained LLM nor hardware-batched or production network serving.

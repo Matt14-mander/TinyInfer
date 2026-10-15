@@ -208,3 +208,16 @@ foreach(TINYINFER_TEST_TARGET IN LISTS TINYINFER_TEST_TARGETS)
         target_compile_options(${TINYINFER_TEST_TARGET} PRIVATE -UNDEBUG)
     endif()
 endforeach()
+
+# Optional Python example integration; no Python dependency for core-only builds.
+if(TARGET tinyinfer_serving_worker)
+    find_package(Python3 3.7 COMPONENTS Interpreter QUIET)
+    if(Python3_Interpreter_FOUND)
+        add_test(NAME tinyinfer_serving_scheduler_tests
+            COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
+                "TINYINFER_SERVING_WORKER=$<TARGET_FILE:tinyinfer_serving_worker>"
+                ${Python3_EXECUTABLE} -m unittest discover
+                -s ${PROJECT_SOURCE_DIR}/examples/serving_scheduler -v)
+        set_tests_properties(tinyinfer_serving_scheduler_tests PROPERTIES TIMEOUT 180)
+    endif()
+endif()

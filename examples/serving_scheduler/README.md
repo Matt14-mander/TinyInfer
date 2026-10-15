@@ -1,7 +1,8 @@
 # Serving Scheduler 学习实验
 
-**前三阶段已实现：Static / Continuous Batching、KV 容量约束，以及 Chunked Prefill。**
-Python 3.7+ 标准库、确定性模拟后端、虚拟时钟，无需模型或 GPU。
+**四个学习阶段已完成：前三阶段模拟调度，以及微型 Transformer 的真实 TinyInfer CPU 工程验收。**
+前三阶段使用 Python 3.7+ 标准库、确定性模拟后端和虚拟时钟；第四阶段编译 C++ worker，
+执行实际数值推理并使用墙钟。无需下载模型或 GPU。
 本例独立于 TinyInfer C++ Runtime，不改变 Phase 5.4 CUDA 开发状态。
 
 ## 四阶段计划
@@ -11,11 +12,11 @@ Python 3.7+ 标准库、确定性模拟后端、虚拟时钟，无需模型或 G
 | 1 | Static / Continuous Batching | 已实现；FIFO、边界补位、输出一致性、手算 trace |
 | 2 | KV 容量约束、请求拒绝 | 已实现；block 预留、等待／拒绝、完成／异常回收 |
 | 3 | Chunked Prefill | 已实现；每轮 token 预算、decode 优先、prefill 轮转、进度与首 token 边界 |
-| 4 | 真实后端及性能测量 | 待实现；真实 prefill/decode/logits/KV、完成同步、真实 TTFT/TPOT/吞吐/P95 |
+| 4 | 真实后端及性能测量 | 已完成微型随机权重 Transformer CPU 验收：真实 logits/KV、墙钟、44 项测试与三轮测量 |
 
-KV 账本不等于真实显存分配。第四阶段需要自回归模型接口，当前静态 MLP/ONNX Prepared
-入口不能直接充当 LLM serving 后端；还需替换虚拟时钟为真实到达队列和等待逻辑，并处理
-EOS、取消和请求失败，不能只替换 `Backend.step()` 就宣称得到生产服务。
+前三阶段 KV 是账本模拟；第四阶段在独立 TinyInfer C++ worker 中实际分配 CPU K/V Tensor。
+真实入口是 real_benchmark.py，模型未训练且逐请求串行计算，不代表预训练大模型或硬件
+batching 性能。构建、计时边界与验收详见 [STAGE4.md](STAGE4.md)。本例不提供生产网络服务。
 
 ## 运行
 
@@ -180,7 +181,7 @@ A 在 0 ms 到达，prompt=1/output=4；B 在 2 ms 到达，prompt=6/output=1。
 后端接口增加 WorkItem.prefill_start/prefill_tokens 与可选 token 结果；这是模拟协议变化。
 旧自定义后端若默认每项都返回 token，必须先支持未完成 chunk 返回 None 才能开启分块。
 
-## 指标口径：全部是模拟值
+## 共享指标口径（benchmark.py 是模拟值；第四阶段 real_benchmark.py 是墙钟值）
 
 - Queue = admitted − arrival。
 - TTFT = 首 token 交付 − arrival，包含排队和 prefill。
@@ -216,8 +217,10 @@ A 在 0 ms 到达，prompt=1/output=4；B 在 2 ms 到达，prompt=6/output=1。
 | test_kv_cache.py | 第二阶段 17 项容量、拒绝、回收及异常测试 |
 | test_chunked_prefill.py | 第三阶段 10 项进度、预算、decode 优先、输出/回收与手算取舍测试 |
 | requests.json | 可编辑输入样例 |
-| results/ | 保留历史阶段；stage3/ 含当前 39 项测试与分块/完整 prefill 对照 |
+| realtime.py | 真实到达等待、完成后 token 交付与墙钟驱动 |
+| tinyinfer_worker.cpp / tinyinfer_backend.py | 真实 attention/logits/KV 数值后端及持久进程适配 |
+| real_benchmark.py / test_real_backend.py | 真实计时、完整前缀参考、5 项集成测试 |
+| results/ | 保留模拟历史；stage4/ 含 44 项测试、ASan、真实指标与构建环境 |
 
-第四阶段应另存模型/精度、环境、batch/token/KV 预算、长度/到达分布、warmup、独立运行次数、
-每请求时间戳及失败/拒绝口径。模型完成并交付 token 后才能计时，不能用成本公式或只提交
-kernel 的时间代替真实 TTFT/TPOT。
+第四阶段已保留模型/精度、环境、固定到达/长度分布、warmup、独立 worker 次数、
+每请求时间戳、拒绝及资源计数。详见 [第四阶段验收与限制](STAGE4.md)。
