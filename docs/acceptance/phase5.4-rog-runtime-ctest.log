@@ -1,0 +1,772 @@
+Start testing: Oct 16 22:07 �й���׼ʱ��
+----------------------------------------------------------
+1/47 Testing: tinyinfer_tests
+1/47 Test: tinyinfer_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/47 Testing: tinyinfer_phase0_tests
+2/47 Test: tinyinfer_phase0_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_phase0_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_phase0_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_phase0_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_phase0_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/47 Testing: tinyinfer_tensor_index_tests
+3/47 Test: tinyinfer_tensor_index_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_tensor_index_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_tensor_index_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_tensor_index_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_tensor_index_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+4/47 Testing: tinyinfer_tensor_value_tests
+4/47 Test: tinyinfer_tensor_value_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_tensor_value_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_tensor_value_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_tensor_value_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_tensor_value_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/47 Testing: tinyinfer_tensor_reshape_tests
+5/47 Test: tinyinfer_tensor_reshape_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_tensor_reshape_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_tensor_reshape_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_tensor_reshape_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_tensor_reshape_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/47 Testing: tinyinfer_tensor_transpose_tests
+6/47 Test: tinyinfer_tensor_transpose_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_tensor_transpose_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_tensor_transpose_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_tensor_transpose_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_tensor_transpose_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+7/47 Testing: tinyinfer_tensor_contiguous_tests
+7/47 Test: tinyinfer_tensor_contiguous_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_tensor_contiguous_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_tensor_contiguous_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_tensor_contiguous_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_tensor_contiguous_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+8/47 Testing: tinyinfer_tensor_dtype_tests
+8/47 Test: tinyinfer_tensor_dtype_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_tensor_dtype_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_tensor_dtype_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_tensor_dtype_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_tensor_dtype_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+9/47 Testing: tinyinfer_allocator_tests
+9/47 Test: tinyinfer_allocator_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_allocator_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_allocator_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_allocator_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_allocator_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+10/47 Testing: tinyinfer_arena_allocator_tests
+10/47 Test: tinyinfer_arena_allocator_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_arena_allocator_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_arena_allocator_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_arena_allocator_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_arena_allocator_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+11/47 Testing: tinyinfer_buffer_storage_tests
+11/47 Test: tinyinfer_buffer_storage_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_buffer_storage_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_buffer_storage_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_buffer_storage_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_buffer_storage_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+12/47 Testing: tinyinfer_tensor_view_tests
+12/47 Test: tinyinfer_tensor_view_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_tensor_view_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_tensor_view_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_tensor_view_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_tensor_view_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+13/47 Testing: tinyinfer_tensor_slice_tests
+13/47 Test: tinyinfer_tensor_slice_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_tensor_slice_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_tensor_slice_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.17 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_tensor_slice_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_tensor_slice_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+14/47 Testing: tinyinfer_tensor_layout_tests
+14/47 Test: tinyinfer_tensor_layout_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_tensor_layout_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_tensor_layout_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_tensor_layout_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_tensor_layout_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+15/47 Testing: tinyinfer_tensor_iterator_tests
+15/47 Test: tinyinfer_tensor_iterator_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_tensor_iterator_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_tensor_iterator_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_tensor_iterator_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_tensor_iterator_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+16/47 Testing: tinyinfer_kernel_runner_tests
+16/47 Test: tinyinfer_kernel_runner_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_kernel_runner_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_kernel_runner_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_kernel_runner_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_kernel_runner_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+17/47 Testing: tinyinfer_elementwise_ops_tests
+17/47 Test: tinyinfer_elementwise_ops_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_elementwise_ops_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_elementwise_ops_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_elementwise_ops_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_elementwise_ops_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+18/47 Testing: tinyinfer_reduction_normalization_tests
+18/47 Test: tinyinfer_reduction_normalization_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_reduction_normalization_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_reduction_normalization_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_reduction_normalization_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_reduction_normalization_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+19/47 Testing: tinyinfer_matmul_kernel_tests
+19/47 Test: tinyinfer_matmul_kernel_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_matmul_kernel_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_matmul_kernel_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_matmul_kernel_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_matmul_kernel_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+20/47 Testing: tinyinfer_graph_data_model_tests
+20/47 Test: tinyinfer_graph_data_model_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_graph_data_model_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_graph_data_model_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_graph_data_model_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_graph_data_model_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+21/47 Testing: tinyinfer_graph_analysis_tests
+21/47 Test: tinyinfer_graph_analysis_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_graph_analysis_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_graph_analysis_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_graph_analysis_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_graph_analysis_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+22/47 Testing: tinyinfer_operator_schema_tests
+22/47 Test: tinyinfer_operator_schema_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_operator_schema_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_operator_schema_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_operator_schema_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_operator_schema_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+23/47 Testing: tinyinfer_operator_coverage_tests
+23/47 Test: tinyinfer_operator_coverage_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_operator_coverage_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_operator_coverage_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+Checking Add
+Checking Multiply
+Checking Subtract
+Checking MatMul
+Checking Gemm
+Checking FusedGemmActivation
+Checking ReLU
+Checking Tanh
+Checking GELU
+Checking Softmax
+Checking LayerNorm
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_operator_coverage_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_operator_coverage_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+24/47 Testing: tinyinfer_graph_validation_tests
+24/47 Test: tinyinfer_graph_validation_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_graph_validation_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_graph_validation_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_graph_validation_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_graph_validation_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+25/47 Testing: tinyinfer_graph_optimizer_tests
+25/47 Test: tinyinfer_graph_optimizer_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_graph_optimizer_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_graph_optimizer_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_graph_optimizer_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_graph_optimizer_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+26/47 Testing: tinyinfer_graph_optimization_passes_tests
+26/47 Test: tinyinfer_graph_optimization_passes_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_graph_optimization_passes_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_graph_optimization_passes_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_graph_optimization_passes_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_graph_optimization_passes_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+27/47 Testing: tinyinfer_matmul_add_canonicalization_tests
+27/47 Test: tinyinfer_matmul_add_canonicalization_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_matmul_add_canonicalization_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_matmul_add_canonicalization_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_matmul_add_canonicalization_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_matmul_add_canonicalization_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+28/47 Testing: tinyinfer_gemm_activation_fusion_tests
+28/47 Test: tinyinfer_gemm_activation_fusion_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_gemm_activation_fusion_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_gemm_activation_fusion_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_gemm_activation_fusion_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_gemm_activation_fusion_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+29/47 Testing: tinyinfer_execution_context_tests
+29/47 Test: tinyinfer_execution_context_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_execution_context_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_execution_context_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_execution_context_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_execution_context_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+30/47 Testing: tinyinfer_memory_plan_tests
+30/47 Test: tinyinfer_memory_plan_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_memory_plan_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_memory_plan_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_memory_plan_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_memory_plan_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+31/47 Testing: tinyinfer_cpu_operator_registry_tests
+31/47 Test: tinyinfer_cpu_operator_registry_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_cpu_operator_registry_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_cpu_operator_registry_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_cpu_operator_registry_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_cpu_operator_registry_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+32/47 Testing: tinyinfer_graph_mlp_tests
+32/47 Test: tinyinfer_graph_mlp_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_graph_mlp_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_graph_mlp_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_graph_mlp_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_graph_mlp_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+33/47 Testing: tinyinfer_onnx_importer_tests
+33/47 Test: tinyinfer_onnx_importer_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_onnx_importer_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_onnx_importer_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_onnx_importer_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_onnx_importer_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+34/47 Testing: tinyinfer_onnx_compatibility_tests
+34/47 Test: tinyinfer_onnx_compatibility_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_onnx_compatibility_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_onnx_compatibility_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_onnx_compatibility_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_onnx_compatibility_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+35/47 Testing: tinyinfer_onnx_operator_registry_tests
+35/47 Test: tinyinfer_onnx_operator_registry_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_onnx_operator_registry_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_onnx_operator_registry_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_onnx_operator_registry_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_onnx_operator_registry_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+36/47 Testing: tinyinfer_protobuf_model_parser_tests
+36/47 Test: tinyinfer_protobuf_model_parser_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_protobuf_model_parser_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_protobuf_model_parser_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_protobuf_model_parser_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_protobuf_model_parser_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+37/47 Testing: tinyinfer_onnx_gemm_fixture_tests
+37/47 Test: tinyinfer_onnx_gemm_fixture_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_onnx_gemm_fixture_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_onnx_gemm_fixture_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_onnx_gemm_fixture_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_onnx_gemm_fixture_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+38/47 Testing: tinyinfer_onnx_rl_mlp_fixture_tests
+38/47 Test: tinyinfer_onnx_rl_mlp_fixture_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_onnx_rl_mlp_fixture_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_onnx_rl_mlp_fixture_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_onnx_rl_mlp_fixture_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_onnx_rl_mlp_fixture_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+39/47 Testing: tinyinfer_gemm_tests
+39/47 Test: tinyinfer_gemm_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_gemm_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_gemm_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_gemm_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_gemm_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+40/47 Testing: tinyinfer_cpu_execution_plan_tests
+40/47 Test: tinyinfer_cpu_execution_plan_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_cpu_execution_plan_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_cpu_execution_plan_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.06 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_cpu_execution_plan_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_cpu_execution_plan_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+41/47 Testing: tinyinfer_gemm_kernel_fusion_tests
+41/47 Test: tinyinfer_gemm_kernel_fusion_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_gemm_kernel_fusion_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_gemm_kernel_fusion_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_gemm_kernel_fusion_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_gemm_kernel_fusion_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+42/47 Testing: tinyinfer_device_runtime_tests
+42/47 Test: tinyinfer_device_runtime_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_device_runtime_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_device_runtime_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_device_runtime_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_device_runtime_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+43/47 Testing: tinyinfer_backend_capability_tests
+43/47 Test: tinyinfer_backend_capability_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_backend_capability_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_backend_capability_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_backend_capability_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_backend_capability_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+44/47 Testing: tinyinfer_cuda_contract_tests
+44/47 Test: tinyinfer_cuda_contract_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_cuda_contract_tests.exe"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_cuda_contract_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+773 column-major CPU interpretation cases passed; CUDA GPU execution NOT tested
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_cuda_contract_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_cuda_contract_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+45/47 Testing: tinyinfer_cuda_runtime_tests
+45/47 Test: tinyinfer_cuda_runtime_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_cuda_runtime_tests.exe" "--require-device"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_cuda_runtime_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+Device: NVIDIA GeForce RTX 4070 Laptop GPU
+PASS: owned copies, offsets, overlap, zero bytes, ordering, publication, lifetime and errors
+<end of output>
+Test time =   0.23 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_cuda_runtime_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_cuda_runtime_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+46/47 Testing: tinyinfer_cuda_toolchain_tests
+46/47 Test: tinyinfer_cuda_toolchain_tests
+Command: "E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests/tinyinfer_cuda_toolchain_tests.exe" "--require-device"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_cuda_toolchain_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+NVIDIA GeForce RTX 4070 Laptop GPU; sm_89; runtime=12050; driver=12050; cuBLAS=120503; pedantic FP32; kernel + row-major SGEMM checked
+<end of output>
+Test time =   0.37 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_cuda_toolchain_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_cuda_toolchain_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+47/47 Testing: tinyinfer_serving_scheduler_tests
+47/47 Test: tinyinfer_serving_scheduler_tests
+Command: "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe" "-E" "env" "PYTHONDONTWRITEBYTECODE=1" "TINYINFER_SERVING_WORKER=E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/examples/tinyinfer_serving_worker.exe" "C:/Users/Rog/AppData/Local/Programs/Python/Python312/python.exe" "-m" "unittest" "discover" "-s" "E:/Project Learning/AI Infra/TinyInfer/examples/serving_scheduler" "-v"
+Directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda/tests
+"tinyinfer_serving_scheduler_tests" start time: Oct 16 22:07 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+test_all_modes_budgets_kv_policies_and_token_conservation (test_chunked_prefill.ChunkedPrefillTests.test_all_modes_budgets_kv_policies_and_token_conservation) ... ok
+test_backend_rejects_invalid_chunk_ranges (test_chunked_prefill.ChunkedPrefillTests.test_backend_rejects_invalid_chunk_ranges) ... ok
+test_budget_smaller_than_batch_progress_and_residency (test_chunked_prefill.ChunkedPrefillTests.test_budget_smaller_than_batch_progress_and_residency) ... ok
+test_decode_priority_hand_calculated_latency_tradeoff (test_chunked_prefill.ChunkedPrefillTests.test_decode_priority_hand_calculated_latency_tradeoff) ... ok
+test_failure_after_partial_prefill_cleanup (test_chunked_prefill.ChunkedPrefillTests.test_failure_after_partial_prefill_cleanup) ... ok
+test_invalid_configuration_empty_and_zero_capacity (test_chunked_prefill.ChunkedPrefillTests.test_invalid_configuration_empty_and_zero_capacity) ... ok
+test_large_budget_reproduces_unchunked_results (test_chunked_prefill.ChunkedPrefillTests.test_large_budget_reproduces_unchunked_results) ... ok
+test_no_early_or_missing_tokens_and_error_cleanup (test_chunked_prefill.ChunkedPrefillTests.test_no_early_or_missing_tokens_and_error_cleanup) ... ok
+test_partial_prefill_no_early_token_and_exact_progress (test_chunked_prefill.ChunkedPrefillTests.test_partial_prefill_no_early_token_and_exact_progress) ... ok
+test_round_robin_prefill_short_request_gets_progress (test_chunked_prefill.ChunkedPrefillTests.test_round_robin_prefill_short_request_gets_progress) ... ok
+test_backend_failure_and_invalid_output_cleanup (test_kv_cache.AdmissionTests.test_backend_failure_and_invalid_output_cleanup) ... ok
+test_batch_full_is_queued_not_kv_rejected (test_kv_cache.AdmissionTests.test_batch_full_is_queued_not_kv_rejected) ... ok
+test_different_acceptance_sets_are_not_false_correctness_failure (test_kv_cache.AdmissionTests.test_different_acceptance_sets_are_not_false_correctness_failure) ... ok
+test_failure_after_partial_completion_releases_only_live_requests (test_kv_cache.AdmissionTests.test_failure_after_partial_completion_releases_only_live_requests) ... ok
+test_fifo_head_blocking_without_bypass (test_kv_cache.AdmissionTests.test_fifo_head_blocking_without_bypass) ... ok
+test_invalid_policy_and_empty_with_capacity (test_kv_cache.AdmissionTests.test_invalid_policy_and_empty_with_capacity) ... ok
+test_no_overcommit_no_leak_and_all_requests_terminal (test_kv_cache.AdmissionTests.test_no_overcommit_no_leak_and_all_requests_terminal) ... ok
+test_oversized_rejection_during_static_cohort (test_kv_cache.AdmissionTests.test_oversized_rejection_during_static_cohort) ... ok
+test_reject_pressure_does_not_block_smaller_requests (test_kv_cache.AdmissionTests.test_reject_pressure_does_not_block_smaller_requests) ... ok
+test_reserve_entire_budget_not_only_prompt (test_kv_cache.AdmissionTests.test_reserve_entire_budget_not_only_prompt) ... ok
+test_rounding_can_reject_raw_token_fit (test_kv_cache.AdmissionTests.test_rounding_can_reject_raw_token_fit) ... ok
+test_static_cohort_keeps_empty_slot_despite_free_cache (test_kv_cache.AdmissionTests.test_static_cohort_keeps_empty_slot_despite_free_cache) ... ok
+test_temporarily_full_waits_then_releases (test_kv_cache.AdmissionTests.test_temporarily_full_waits_then_releases) ... ok
+test_zero_capacity_and_all_rejected_metrics (test_kv_cache.AdmissionTests.test_zero_capacity_and_all_rejected_metrics) ... ok
+test_invalid_and_duplicate_reservations (test_kv_cache.KVCacheTests.test_invalid_and_duplicate_reservations) ... ok
+test_reservation_snapshot_not_mutable (test_kv_cache.KVCacheTests.test_reservation_snapshot_not_mutable) ... ok
+test_rounding_exact_fit_and_atomic_failed_reserve (test_kv_cache.KVCacheTests.test_rounding_exact_fit_and_atomic_failed_reserve) ... ok
+test_backend_failure_clears_native_kv_and_reusable (test_real_backend.RealBackendTests.test_backend_failure_clears_native_kv_and_reusable) ... ok
+test_greedy_reference_both_modes_and_chunk_boundaries (test_real_backend.RealBackendTests.test_greedy_reference_both_modes_and_chunk_boundaries) ... ok
+test_kv_rejection_and_all_rejected_no_forward (test_real_backend.RealBackendTests.test_kv_rejection_and_all_rejected_no_forward) ... ok
+test_real_arrivals_and_ignore_cost_formula (test_real_backend.RealBackendTests.test_real_arrivals_and_ignore_cost_formula) ... ok
+test_virtual_backend_rejected_and_limits_fail_explicitly (test_real_backend.RealBackendTests.test_virtual_backend_rejected_and_limits_fail_explicitly) ... ok
+test_admission_only_at_boundaries (test_scheduler.SchedulerTests.test_admission_only_at_boundaries) ... ok
+test_arrival_exact_boundary (test_scheduler.SchedulerTests.test_arrival_exact_boundary) ... ok
+test_empty (test_scheduler.SchedulerTests.test_empty) ... ok
+test_fifo_at_equal_arrival (test_scheduler.SchedulerTests.test_fifo_at_equal_arrival) ... ok
+test_hand_calculated_trace (test_scheduler.SchedulerTests.test_hand_calculated_trace) ... ok
+test_idle_window_and_single_token_tpot (test_scheduler.SchedulerTests.test_idle_window_and_single_token_tpot) ... ok
+test_invalid_costs_and_backend (test_scheduler.SchedulerTests.test_invalid_costs_and_backend) ... ok
+test_invalid_requests (test_scheduler.SchedulerTests.test_invalid_requests) ... ok
+test_output_independent_of_peers (test_scheduler.SchedulerTests.test_output_independent_of_peers) ... ok
+test_outputs_and_capacity (test_scheduler.SchedulerTests.test_outputs_and_capacity) ... ok
+test_single_slot_equivalence (test_scheduler.SchedulerTests.test_single_slot_equivalence) ... ok
+test_tpot_with_prefill_stall (test_scheduler.SchedulerTests.test_tpot_with_prefill_stall) ... ok
+
+----------------------------------------------------------------------
+Ran 44 tests in 0.137s
+
+OK
+<end of output>
+Test time =   0.41 sec
+----------------------------------------------------------
+Test Passed.
+"tinyinfer_serving_scheduler_tests" end time: Oct 16 22:07 �й���׼ʱ��
+"tinyinfer_serving_scheduler_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Oct 16 22:07 �й���׼ʱ��

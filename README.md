@@ -209,6 +209,14 @@ matrix/bias/epilogue cases; both ONNX fixtures have static contract coverage.
 operators, Prepared models and GPU performance will be developed on ROG after
 collecting its hardware/toolchain inventory. Metal Phase 5.3 remains unaccepted.
 
+ROG now has an optional native resource-runtime slice (`TINYINFER_ENABLE_CUDA=ON`):
+device allocations, a non-default stream, pinned transfers and event completion.
+The [ROG acceptance](docs/acceptance/phase5.4-rog-runtime.md) records 47/47 tests
+and native memory checks. Use `tools/build_cuda_rog.ps1` in a separate PowerShell
+process for the verified private CUDA 12.5.1/MSVC 14.29 setup. CUDA production
+operators, Prepared models and performance acceptance are still pending; the
+standalone kernel/cuBLAS smoke test does not establish that model support.
+
 ## Serving scheduler learning example
 
 [Serving scheduler](examples/serving_scheduler/README.md) implements Static and

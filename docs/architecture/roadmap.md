@@ -166,6 +166,10 @@ gate, with device/wait/scheduling variability recorded.
 on 2026-10-13 with SDK-free operator contracts and cuBLAS mapping metadata tested
 by CPU interpretation. It is not CUDA execution; native development/acceptance
 is deferred to the ROG by the user. Phase 5.3 performance acceptance stays open.
+On 2026-10-16, the [first ROG runtime slice](../acceptance/phase5.4-rog-runtime.md)
+adds optional CUDA device resources, ordered transfers and event completion,
+with 47/47 CUDA-enabled tests and native memory checks. Production CUDA
+operators/models/performance remain open; the toolchain probe is not their acceptance.
 First deliver one prepared GPU backend and measured host-to-host inference;
 then validate the second backend against the same contract. CPU threading,
 quantization and broader CPU fusion tuning remain separate extensions. GPU

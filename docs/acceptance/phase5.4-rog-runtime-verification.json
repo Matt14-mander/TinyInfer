@@ -1,0 +1,83 @@
+{
+  "date": "2026-10-16",
+  "baseline": "bfca554",
+  "scope": "Native CUDA resource runtime and installation/precision smoke probe only; production operators/models/performance pending",
+  "environment": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "gpu": "NVIDIA GeForce RTX 4070 Laptop GPU, 555.97, 8188 MiB",
+    "toolkit": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2024 NVIDIA Corporation\nBuilt on Thu_Jun__6_03:03:05_Pacific_Daylight_Time_2024\nCuda compilation tools, release 12.5, V12.5.82\nBuild cuda_12.5.r12.5/compiler.34385749_0",
+    "toolkit_resolution": "PATH",
+    "msvc": "19.29.30158 (VC tools 14.29.30133)",
+    "cmake": "3.30.5-msvc23 Ninja",
+    "architectures": "89-real",
+    "driver_unchanged": "555.97",
+    "toolkit_root": "build-cuda-sdk-12.5.1/toolkit",
+    "system_sdk_preserved": "CUDA 10.2",
+    "persistent_environment_changed": false
+  },
+  "source_sha256": {
+    "tests/CMakeLists.txt": "eab1e433670d403abdecac713343aa266ccc1d8c2cf086f8580ee9a1b2cbf400",
+    "tests/cuda_runtime_test.cpp": "4db50f4415295493d877a78e7a92520e668d17bb63bc5925f345df089c547feb",
+    "tests/cuda_toolchain_test.cu": "fcc6cabea210c3ec8b6ea911be6ddd3a6b48c3edf12fa6107ff18282c557d255",
+    "src/ops/basic_ops.cpp": "e37d7fc33e7db6f2a0a2a916969a87e24b786a5d2d68a5fbc56df394d328fcb4",
+    "CMakeLists.txt": "2aabc190fa42a2427a93fdca3031c743ade5c0c08d1b3b6ad7141ec48e42ac44",
+    "include/tinyinfer/backend/cuda/cuda_runtime.h": "1a7445e413e28178193f882b49fd20e80a5d7ae7c08d3cd4db809f3b8796565d",
+    "src/backend/cuda/cuda_runtime.cpp": "a43663eb323c67156aebe597d9a3fb02eb6b519d9139733e92131a7f18e5660b",
+    "tools/build_cuda_rog.ps1": "c392781d38a7793c424f6fd67badd44a11dcca2f501f3ac53178524cdf7304c6"
+  },
+  "binary_sha256": {
+    "build-phase54-cuda/tests/tinyinfer_cuda_toolchain_tests.exe": "f102b43610426eb400ef6956d08817e7dc6d5de4e70c900e0c1bea30e7d6c38f",
+    "build-phase54-cuda/tests/tinyinfer_cuda_runtime_tests.exe": "c324533d339b5b6f80605dd6aa46eab63be4e7cd87bf721fb9545f998d8d5535"
+  },
+  "archive_sha256": {
+    "cuda_sanitizer_api-windows-x86_64-12.5.81-archive.zip": "09a8e3438cae3a2f391f3befe7d092bfd2c2157ec4383e5494a2904a2d708ca3",
+    "cuda_nvcc-windows-x86_64-12.5.82-archive.zip": "51cec40087b524478c4d204a102ad5de86cd30d0bd2f9e87339032b55296448b",
+    "cuda_cccl-windows-x86_64-12.5.39-archive.zip": "748c07d466556b1562cc46a0389948af1e3fd92cc667ebf697bf6a9a30e736de",
+    "libcublas-windows-x86_64-12.5.3.2-archive.zip": "d3628039eb3d39ba9fe6a5350447b10483dd13d5973b5e4cde1d3e917d457d01",
+    "cuda_cudart-windows-x86_64-12.5.82-archive.zip": "079dd4349ee536a80308bfeb745a75b729d3957a430dd1cd0051bbd26fe4007e"
+  },
+  "tests": {
+    "cuda_on": {
+      "tests": "47/47",
+      "seconds": 2.07,
+      "require_device": true,
+      "skipped": 0,
+      "build": "build-phase54-cuda"
+    },
+    "cuda_off": {
+      "tests": "45/45",
+      "seconds": 4.29,
+      "msvc": "19.43.34808",
+      "build": "build-phase54-contract"
+    },
+    "memcheck_runtime": {
+      "tool": "Compute Sanitizer 12.5.81 memcheck --leak-check full",
+      "errors": 0,
+      "leaked_bytes": 0
+    },
+    "memcheck_toolchain": {
+      "errors": 0,
+      "leaked_bytes": 0
+    },
+    "native_probe": {
+      "runtime_version": 12050,
+      "driver_version": 12050,
+      "cublas_version": 120503,
+      "math": "CUBLAS_PEDANTIC_MATH",
+      "atomics": "CUBLAS_ATOMICS_NOT_ALLOWED",
+      "expected_output": [
+        38,
+        44,
+        86,
+        100
+      ]
+    }
+  },
+  "limitations": [
+    "No TinyInfer native CUDA operator dispatch or Prepared CUDA model API",
+    "773 cases remain CPU interpretation only",
+    "No CUDA performance acceptance",
+    "No Windows host ASan/UBSan, racecheck, device-loss or hang injection",
+    "No Mac Metal gate status change"
+  ]
+}

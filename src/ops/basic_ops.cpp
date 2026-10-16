@@ -177,7 +177,7 @@ void gelu_out(Tensor& output, const Tensor& input,
               std::string_view approximate) {
     if (approximate == "none") {
         constexpr float kInverseSqrtTwo = 0.7071067811865475F;
-        run_unary_kernel_into<float>(output, input, [](float value) {
+        run_unary_kernel_into<float>(output, input, [kInverseSqrtTwo](float value) {
             return 0.5F * value * (1.0F + std::erf(value * kInverseSqrtTwo));
         });
         return;
@@ -190,7 +190,7 @@ void gelu_out(Tensor& output, const Tensor& input,
     constexpr float kCubicCoefficient = 0.044715F;
     run_unary_kernel_into<float>(
         output, input,
-        [](float value) {
+        [kSqrtTwoOverPi, kCubicCoefficient](float value) {
             const auto cubic = value * value * value;
             return 0.5F * value *
                    (1.0F + std::tanh(kSqrtTwoOverPi *

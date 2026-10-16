@@ -199,11 +199,30 @@ if(TINYINFER_ENABLE_METAL)
     endforeach()
 endif()
 
+if(TINYINFER_ENABLE_CUDA)
+    add_executable(tinyinfer_cuda_runtime_tests cuda_runtime_test.cpp)
+    target_link_libraries(tinyinfer_cuda_runtime_tests PRIVATE TinyInfer::cuda)
+    add_executable(tinyinfer_cuda_toolchain_tests cuda_toolchain_test.cu)
+    target_link_libraries(tinyinfer_cuda_toolchain_tests PRIVATE CUDA::cudart CUDA::cublas)
+    set_target_properties(tinyinfer_cuda_toolchain_tests PROPERTIES
+        CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED YES CUDA_RUNTIME_LIBRARY Shared)
+    foreach(kind runtime toolchain)
+        if(TINYINFER_CUDA_REQUIRE_DEVICE)
+            add_test(NAME tinyinfer_cuda_${kind}_tests COMMAND tinyinfer_cuda_${kind}_tests --require-device)
+        else()
+            add_test(NAME tinyinfer_cuda_${kind}_tests COMMAND tinyinfer_cuda_${kind}_tests)
+        endif()
+        set_tests_properties(tinyinfer_cuda_${kind}_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 180)
+    endforeach()
+endif()
+
 # Existing tests also use assert(). Keep those checks active in Release gates.
 get_property(TINYINFER_TEST_TARGETS DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
 foreach(TINYINFER_TEST_TARGET IN LISTS TINYINFER_TEST_TARGETS)
     if(MSVC)
-        target_compile_options(${TINYINFER_TEST_TARGET} PRIVATE /UNDEBUG)
+        target_compile_options(${TINYINFER_TEST_TARGET} PRIVATE
+            $<$<COMPILE_LANGUAGE:CXX>:/UNDEBUG>
+            $<$<COMPILE_LANGUAGE:CUDA>:-UNDEBUG>)
     else()
         target_compile_options(${TINYINFER_TEST_TARGET} PRIVATE -UNDEBUG)
     endif()
