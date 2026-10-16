@@ -20,3 +20,4 @@ rules.ninja
 *.bench.json
 *.bench.txt
 /benchmark-results/
+__pycache__/

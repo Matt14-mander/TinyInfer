@@ -4,6 +4,12 @@ Date: 2026-10-13 (Asia/Shanghai). Baseline: `d01126a`, Phase 5.3 transfer follow
 Status: Mac portable preparation slice implemented; native CUDA work deferred to
 ROG by the user. Phase 5.3 Metal performance gates remain unmet and unchanged.
 
+2026-10-16 update: ROG inventory and SDK-free Release baseline are complete
+(45/45 tests, 773 CPU interpretation cases). Native implementation is pending
+a compatible Toolkit configuration: only CUDA 10.2 was found, incompatible with
+the default MSVC 19.43 and lacking the planned pedantic math API. No installation
+or native GPU acceptance is claimed. See [ROG preflight](../acceptance/phase5.4-rog-preflight.md).
+
 ## Goal and sequence
 
 Run the same static FP32 model under CPU, Metal and CUDA contracts. Phase 5.4 is

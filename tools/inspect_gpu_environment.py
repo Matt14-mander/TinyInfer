@@ -3,6 +3,7 @@
 import argparse
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
 import platform
 import shutil
@@ -67,10 +68,21 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
+    # Windows CUDA installers may set CUDA_PATH without putting nvcc on PATH.
+    # Report the installed compiler rather than treating a PATH miss as no SDK.
+    nvcc = shutil.which('nvcc')
+    toolkit_resolution = 'PATH' if nvcc else 'not_found'
+    if not nvcc and os.environ.get('CUDA_PATH'):
+        candidate = Path(os.environ['CUDA_PATH']) / 'bin' / (
+            'nvcc.exe' if platform.system() == 'Windows' else 'nvcc')
+        if candidate.is_file():
+            nvcc = str(candidate)
+            toolkit_resolution = 'CUDA_PATH'
     report = {'collected_utc': datetime.now(timezone.utc).isoformat(),
               'platform': platform.platform(), 'machine': platform.machine(),
               'cuda_driver_inventory': probe(['nvidia-smi']),
-              'cuda_toolkit': probe(['nvcc', '--version']),
+              'cuda_toolkit': probe([nvcc or 'nvcc', '--version']),
+              'cuda_toolkit_resolution': toolkit_resolution,
               'cuda_gpu_details': probe(['nvidia-smi', '--query-gpu=name,driver_version,memory.total', '--format=csv,noheader']),
               'cmake': probe(['cmake', '--version']),
               'compiler': probe(['clang', '--version']),
