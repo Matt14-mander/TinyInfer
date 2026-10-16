@@ -1,0 +1,41 @@
+{
+  "stage": 4,
+  "status": "local tiny Transformer CPU engineering acceptance passed",
+  "date": "2026-10-15",
+  "real_backend": true,
+  "pretrained": false,
+  "hardware_batched": false,
+  "clock": "wall_ms",
+  "full_tests": 44,
+  "real_backend_tests": 5,
+  "asan_ubsan_real_tests": 5,
+  "ctest_real_integration": 1,
+  "independent_worker_processes": 3,
+  "configurations": 4,
+  "requests_per_configuration": 30,
+  "output_tokens_per_configuration": 120,
+  "all_reference_outputs_equal": true,
+  "native_kv_final_bytes": 0,
+  "logical_reservations_final": 0,
+  "scope": "standalone serving example; serial real TinyInfer CPU operators with actual KV; not full LLM serving",
+  "native_worker_sha256": "c138b20763059e502c1ddb4a72de6fd35921c414743d175c9517f58205b416b6",
+  "source_sha256": {
+    "tinyinfer_worker.cpp": "6bbfd52773c70c26032d2bbba3aa8203a97b99f992523ab58c22c8700fe4ed6c",
+    "tinyinfer_backend.py": "097bf001121ea3c745e1cd521da84eea1eaeb2b7ed644e92862e2e2ad2c506c7",
+    "realtime.py": "a6e63b0bfaad65115589c155ea89d2e434fcc20d511c756e251258451739bf8f",
+    "scheduler.py": "9e408db84daadfff6eed6476b998b66d1cbf5c5bd05010efa56262a3e94ae866",
+    "metrics.py": "85e6e3318db556dc77c91e2678e27542cecff2a5cc4018ca2c3d76ca80a7d5a4",
+    "real_benchmark.py": "1f0869d562c04a48bcc5ce00ce8a7e7af3b765fe8a8a09ecd5da4711f7a78cd5",
+    "test_real_backend.py": "c617ba173a8940d4d5e7ee40ff4d2c1433ed82508d61aa7de91bd2f6b861a625"
+  },
+  "limitations": [
+    "random weights and synthetic token IDs",
+    "no tokenizer, EOS or production network service",
+    "no cross-request tensor batching or GPU backend",
+    "small engineering workload; no SLA or speedup gate"
+  ],
+  "resolved_development_failures": [
+    "Initial C++ reference model name collided with tinyinfer::Model; renamed TinyDecoder"
+  ],
+  "worker_normal_shutdown": "QUIT and checked exit status; failure path terminates and joins"
+}

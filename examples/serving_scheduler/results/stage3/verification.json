@@ -1,0 +1,28 @@
+{
+  "stage": 3,
+  "date": "2026-10-15",
+  "status": "passed",
+  "tests": 39,
+  "legacy_tests": 29,
+  "new_chunk_tests": 10,
+  "clock": "simulated_ms",
+  "unchunked_stage1_stage2_metrics_unchanged": true,
+  "invariants": [
+    "prefill ranges contiguous with no repeated or skipped prompt tokens",
+    "first output only on final prefill chunk",
+    "per-step prefill plus decode tokens within budget",
+    "all existing decoders served before prefill",
+    "full KV reservation until completion; zero final reservations",
+    "completed outputs match independent unchunked reference"
+  ],
+  "tradeoff": "long_prefill continuous max token interval 21.2 -> 2.2 ms; TTFT p95 22.2 -> 47.8 ms and modeled throughput 457.14 -> 313.73 tokens/s",
+  "real_backend": false,
+  "next_stage": "real backend, actual arrivals, KV and completed token timing",
+  "source_sha256": {
+    "backend.py": "30ebf5c3e778d18948ff826af626658656680bffb26c698a10133482cbb26973",
+    "scheduler.py": "c3f2858af2f7de5263b000fca6d5be49c6ee50f07e2b97aee1119b7d22c7e351",
+    "metrics.py": "291e89ebbde2c1cec90e7b2e517911b1ff72dcb0e1afcb9e7932fa689d05989e",
+    "benchmark.py": "b63885ff1945405d402c7ca958d8db6a1cba2eade4a8589c4e85f1d48fcc61ca",
+    "test_chunked_prefill.py": "8d7c7ba6ca7b9813be2017318a1e940c755ab896bd765ec719c43d43089e5391"
+  }
+}

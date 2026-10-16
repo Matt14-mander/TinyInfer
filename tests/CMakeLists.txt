@@ -179,6 +179,26 @@ target_compile_definitions(tinyinfer_backend_capability_tests PRIVATE
     TINYINFER_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 add_test(NAME tinyinfer_backend_capability_tests COMMAND tinyinfer_backend_capability_tests)
 
+add_executable(tinyinfer_cuda_contract_tests cuda_contract_test.cpp)
+target_link_libraries(tinyinfer_cuda_contract_tests PRIVATE TinyInfer::cuda_contract)
+target_compile_definitions(tinyinfer_cuda_contract_tests PRIVATE TINYINFER_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+add_test(NAME tinyinfer_cuda_contract_tests COMMAND tinyinfer_cuda_contract_tests)
+
+if(TINYINFER_ENABLE_METAL)
+    foreach(kind runtime kernel execution_plan)
+        add_executable(tinyinfer_metal_${kind}_tests metal_${kind}_test.cpp)
+        target_link_libraries(tinyinfer_metal_${kind}_tests PRIVATE TinyInfer::metal)
+        target_compile_definitions(tinyinfer_metal_${kind}_tests PRIVATE
+            TINYINFER_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+        if(TINYINFER_METAL_REQUIRE_DEVICE)
+            add_test(NAME tinyinfer_metal_${kind}_tests COMMAND tinyinfer_metal_${kind}_tests --require-device)
+        else()
+            add_test(NAME tinyinfer_metal_${kind}_tests COMMAND tinyinfer_metal_${kind}_tests)
+        endif()
+        set_tests_properties(tinyinfer_metal_${kind}_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 180)
+    endforeach()
+endif()
+
 # Existing tests also use assert(). Keep those checks active in Release gates.
 get_property(TINYINFER_TEST_TARGETS DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
 foreach(TINYINFER_TEST_TARGET IN LISTS TINYINFER_TEST_TARGETS)
@@ -188,3 +208,16 @@ foreach(TINYINFER_TEST_TARGET IN LISTS TINYINFER_TEST_TARGETS)
         target_compile_options(${TINYINFER_TEST_TARGET} PRIVATE -UNDEBUG)
     endif()
 endforeach()
+
+# Optional Python example integration; no Python dependency for core-only builds.
+if(TARGET tinyinfer_serving_worker)
+    find_package(Python3 3.7 COMPONENTS Interpreter QUIET)
+    if(Python3_Interpreter_FOUND)
+        add_test(NAME tinyinfer_serving_scheduler_tests
+            COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
+                "TINYINFER_SERVING_WORKER=$<TARGET_FILE:tinyinfer_serving_worker>"
+                ${Python3_EXECUTABLE} -m unittest discover
+                -s ${PROJECT_SOURCE_DIR}/examples/serving_scheduler -v)
+        set_tests_properties(tinyinfer_serving_scheduler_tests PROPERTIES TIMEOUT 180)
+    endif()
+endif()

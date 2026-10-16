@@ -1,0 +1,351 @@
+{
+  "stage": 2,
+  "backend": "deterministic_simulation",
+  "real_backend": false,
+  "same_output_sequences": true,
+  "same_completed_request_ids": true,
+  "reference_verified_requests": 0,
+  "cost_model": {
+    "overhead_ms": 1.0,
+    "prefill_ms_per_token": 0.1,
+    "decode_ms_per_request": 0.2
+  },
+  "reports": [
+    {
+      "mode": "static",
+      "clock": "simulated_ms",
+      "requests": [],
+      "submitted_requests": 8,
+      "completed_requests": 0,
+      "rejected_requests": 8,
+      "rejection_rate": 1.0,
+      "rejections": [
+        {
+          "request_id": "long",
+          "arrival_ms": 0,
+          "decided_ms": 0.0,
+          "rejection_delay_ms": 0.0,
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 20
+        },
+        {
+          "request_id": "short0",
+          "arrival_ms": 0,
+          "decided_ms": 0.0,
+          "rejection_delay_ms": 0.0,
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6
+        },
+        {
+          "request_id": "short1",
+          "arrival_ms": 0,
+          "decided_ms": 0.0,
+          "rejection_delay_ms": 0.0,
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6
+        },
+        {
+          "request_id": "short2",
+          "arrival_ms": 0,
+          "decided_ms": 0.0,
+          "rejection_delay_ms": 0.0,
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6
+        },
+        {
+          "request_id": "short3",
+          "arrival_ms": 0,
+          "decided_ms": 0.0,
+          "rejection_delay_ms": 0.0,
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6
+        },
+        {
+          "request_id": "short4",
+          "arrival_ms": 0,
+          "decided_ms": 0.0,
+          "rejection_delay_ms": 0.0,
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6
+        },
+        {
+          "request_id": "short5",
+          "arrival_ms": 0,
+          "decided_ms": 0.0,
+          "rejection_delay_ms": 0.0,
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6
+        },
+        {
+          "request_id": "short6",
+          "arrival_ms": 0,
+          "decided_ms": 0.0,
+          "rejection_delay_ms": 0.0,
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6
+        }
+      ],
+      "rejections_by_reason": {
+        "request_exceeds_kv_capacity": 8
+      },
+      "rejection_delay_p95_ms": 0.0,
+      "kv_policy": "wait",
+      "kv": {
+        "capacity_blocks": 0,
+        "block_size_tokens": 1,
+        "capacity_tokens": 0,
+        "peak_reserved_blocks": 0,
+        "final_reserved_blocks": 0,
+        "final_reservations": 0
+      },
+      "kv_waited_requests": 0,
+      "steps": 0,
+      "measurement_window_ms": 0.0,
+      "generated_tokens": 0,
+      "output_tokens_per_second": 0.0,
+      "requests_per_second": 0.0,
+      "ttft_p50_ms": null,
+      "ttft_p95_ms": null,
+      "tpot_mean_ms": null,
+      "request_latency_p95_ms": null,
+      "slot_utilization": 0.0,
+      "service_slot_utilization": 0.0,
+      "trace": [],
+      "kv_events": [],
+      "admission_events": [
+        {
+          "time_ms": 0.0,
+          "event": "reject",
+          "request_id": "long",
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 20,
+          "available_blocks": 0
+        },
+        {
+          "time_ms": 0.0,
+          "event": "reject",
+          "request_id": "short0",
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6,
+          "available_blocks": 0
+        },
+        {
+          "time_ms": 0.0,
+          "event": "reject",
+          "request_id": "short1",
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6,
+          "available_blocks": 0
+        },
+        {
+          "time_ms": 0.0,
+          "event": "reject",
+          "request_id": "short2",
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6,
+          "available_blocks": 0
+        },
+        {
+          "time_ms": 0.0,
+          "event": "reject",
+          "request_id": "short3",
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6,
+          "available_blocks": 0
+        },
+        {
+          "time_ms": 0.0,
+          "event": "reject",
+          "request_id": "short4",
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6,
+          "available_blocks": 0
+        },
+        {
+          "time_ms": 0.0,
+          "event": "reject",
+          "request_id": "short5",
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6,
+          "available_blocks": 0
+        },
+        {
+          "time_ms": 0.0,
+          "event": "reject",
+          "request_id": "short6",
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6,
+          "available_blocks": 0
+        }
+      ]
+    },
+    {
+      "mode": "continuous",
+      "clock": "simulated_ms",
+      "requests": [],
+      "submitted_requests": 8,
+      "completed_requests": 0,
+      "rejected_requests": 8,
+      "rejection_rate": 1.0,
+      "rejections": [
+        {
+          "request_id": "long",
+          "arrival_ms": 0,
+          "decided_ms": 0.0,
+          "rejection_delay_ms": 0.0,
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 20
+        },
+        {
+          "request_id": "short0",
+          "arrival_ms": 0,
+          "decided_ms": 0.0,
+          "rejection_delay_ms": 0.0,
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6
+        },
+        {
+          "request_id": "short1",
+          "arrival_ms": 0,
+          "decided_ms": 0.0,
+          "rejection_delay_ms": 0.0,
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6
+        },
+        {
+          "request_id": "short2",
+          "arrival_ms": 0,
+          "decided_ms": 0.0,
+          "rejection_delay_ms": 0.0,
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6
+        },
+        {
+          "request_id": "short3",
+          "arrival_ms": 0,
+          "decided_ms": 0.0,
+          "rejection_delay_ms": 0.0,
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6
+        },
+        {
+          "request_id": "short4",
+          "arrival_ms": 0,
+          "decided_ms": 0.0,
+          "rejection_delay_ms": 0.0,
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6
+        },
+        {
+          "request_id": "short5",
+          "arrival_ms": 0,
+          "decided_ms": 0.0,
+          "rejection_delay_ms": 0.0,
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6
+        },
+        {
+          "request_id": "short6",
+          "arrival_ms": 0,
+          "decided_ms": 0.0,
+          "rejection_delay_ms": 0.0,
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6
+        }
+      ],
+      "rejections_by_reason": {
+        "request_exceeds_kv_capacity": 8
+      },
+      "rejection_delay_p95_ms": 0.0,
+      "kv_policy": "wait",
+      "kv": {
+        "capacity_blocks": 0,
+        "block_size_tokens": 1,
+        "capacity_tokens": 0,
+        "peak_reserved_blocks": 0,
+        "final_reserved_blocks": 0,
+        "final_reservations": 0
+      },
+      "kv_waited_requests": 0,
+      "steps": 0,
+      "measurement_window_ms": 0.0,
+      "generated_tokens": 0,
+      "output_tokens_per_second": 0.0,
+      "requests_per_second": 0.0,
+      "ttft_p50_ms": null,
+      "ttft_p95_ms": null,
+      "tpot_mean_ms": null,
+      "request_latency_p95_ms": null,
+      "slot_utilization": 0.0,
+      "service_slot_utilization": 0.0,
+      "trace": [],
+      "kv_events": [],
+      "admission_events": [
+        {
+          "time_ms": 0.0,
+          "event": "reject",
+          "request_id": "long",
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 20,
+          "available_blocks": 0
+        },
+        {
+          "time_ms": 0.0,
+          "event": "reject",
+          "request_id": "short0",
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6,
+          "available_blocks": 0
+        },
+        {
+          "time_ms": 0.0,
+          "event": "reject",
+          "request_id": "short1",
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6,
+          "available_blocks": 0
+        },
+        {
+          "time_ms": 0.0,
+          "event": "reject",
+          "request_id": "short2",
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6,
+          "available_blocks": 0
+        },
+        {
+          "time_ms": 0.0,
+          "event": "reject",
+          "request_id": "short3",
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6,
+          "available_blocks": 0
+        },
+        {
+          "time_ms": 0.0,
+          "event": "reject",
+          "request_id": "short4",
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6,
+          "available_blocks": 0
+        },
+        {
+          "time_ms": 0.0,
+          "event": "reject",
+          "request_id": "short5",
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6,
+          "available_blocks": 0
+        },
+        {
+          "time_ms": 0.0,
+          "event": "reject",
+          "request_id": "short6",
+          "reason": "request_exceeds_kv_capacity",
+          "required_blocks": 6,
+          "available_blocks": 0
+        }
+      ]
+    }
+  ]
+}

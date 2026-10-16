@@ -1,0 +1,5 @@
+[
+  {"request_id": "long", "arrival_ms": 0, "prompt_tokens": 8, "output_tokens": 12},
+  {"request_id": "short_a", "arrival_ms": 0, "prompt_tokens": 4, "output_tokens": 2},
+  {"request_id": "short_b", "arrival_ms": 1.5, "prompt_tokens": 4, "output_tokens": 2}
+]

@@ -1,0 +1,38 @@
+{
+  "phase": "5.3",
+  "date": "2026-10-13",
+  "measurement_status": "delivered",
+  "performance_acceptance": "not_passed",
+  "target_unchanged": true,
+  "processes": 12,
+  "samples_per_warm_mode": 31,
+  "warmup": 5,
+  "correctness": {
+    "release_actual_gpu": {
+      "passed": 46,
+      "total": 46
+    },
+    "asan_ubsan_actual_gpu_execution_plan": {
+      "passed": 1,
+      "total": 1
+    }
+  },
+  "original_gates": {
+    "target_p50": false,
+    "target_p95": true,
+    "fallback_p50": false
+  },
+  "final_gates": {
+    "target_p50": false,
+    "target_p95": false,
+    "fallback_p50": true
+  },
+  "resolved": "duplicate owned input copy on whole-model CPU fallback",
+  "remaining": [
+    "target p50 >=1.2 speedup in both rounds",
+    "target p95 ratio <=1.05 in both rounds"
+  ],
+  "report": "../benchmarks/mac-metal-phase5.3.md",
+  "transfer_follow_up": "phase5.3-transfer-verification.json",
+  "latest_performance_acceptance": "not_passed"
+}

@@ -1,0 +1,27 @@
+{
+  "stage": 2,
+  "status": "passed",
+  "clock": "simulated_ms",
+  "tests": 29,
+  "stage1_unlimited_metrics_unchanged": true,
+  "resource_invariants": [
+    "no overcommit",
+    "one terminal decision per request",
+    "final reservations zero",
+    "failed reservation atomic",
+    "backend failure cleanup"
+  ],
+  "comparison": "all completed outputs checked against unconstrained independent request runs; admission sets may differ",
+  "real_kv_allocation": false,
+  "remaining_stages": [
+    "Chunked Prefill",
+    "real inference backend and wall-clock performance"
+  ],
+  "source_sha256": {
+    "kv_cache.py": "0281c03675ae905535d8c5446212fb986ee89daead43fc51337e4df3390cea63",
+    "scheduler.py": "cf2f9ebb533078125cd1a7d7c9bb298bf822bd4ab492edec8d32682d65b95c9d",
+    "metrics.py": "70cccfcef91c1ddf110a2c14adc0bbe436c989ccc320308d0d06ade512421c07",
+    "benchmark.py": "b55f8e8ed7fe072f4afd9038aece1ca0ac329d14c0c22bd8211cd594c8c22b99",
+    "test_kv_cache.py": "36739c78e407008fc45d8bb3d5700f9e76d8a94ec9457f6a2530134b521f7ad5"
+  }
+}

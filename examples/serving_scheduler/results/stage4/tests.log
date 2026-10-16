@@ -1,0 +1,49 @@
+test_all_modes_budgets_kv_policies_and_token_conservation (test_chunked_prefill.ChunkedPrefillTests) ... ok
+test_backend_rejects_invalid_chunk_ranges (test_chunked_prefill.ChunkedPrefillTests) ... ok
+test_budget_smaller_than_batch_progress_and_residency (test_chunked_prefill.ChunkedPrefillTests) ... ok
+test_decode_priority_hand_calculated_latency_tradeoff (test_chunked_prefill.ChunkedPrefillTests) ... ok
+test_failure_after_partial_prefill_cleanup (test_chunked_prefill.ChunkedPrefillTests) ... ok
+test_invalid_configuration_empty_and_zero_capacity (test_chunked_prefill.ChunkedPrefillTests) ... ok
+test_large_budget_reproduces_unchunked_results (test_chunked_prefill.ChunkedPrefillTests) ... ok
+test_no_early_or_missing_tokens_and_error_cleanup (test_chunked_prefill.ChunkedPrefillTests) ... ok
+test_partial_prefill_no_early_token_and_exact_progress (test_chunked_prefill.ChunkedPrefillTests) ... ok
+test_round_robin_prefill_short_request_gets_progress (test_chunked_prefill.ChunkedPrefillTests) ... ok
+test_backend_failure_and_invalid_output_cleanup (test_kv_cache.AdmissionTests) ... ok
+test_batch_full_is_queued_not_kv_rejected (test_kv_cache.AdmissionTests) ... ok
+test_different_acceptance_sets_are_not_false_correctness_failure (test_kv_cache.AdmissionTests) ... ok
+test_failure_after_partial_completion_releases_only_live_requests (test_kv_cache.AdmissionTests) ... ok
+test_fifo_head_blocking_without_bypass (test_kv_cache.AdmissionTests) ... ok
+test_invalid_policy_and_empty_with_capacity (test_kv_cache.AdmissionTests) ... ok
+test_no_overcommit_no_leak_and_all_requests_terminal (test_kv_cache.AdmissionTests) ... ok
+test_oversized_rejection_during_static_cohort (test_kv_cache.AdmissionTests) ... ok
+test_reject_pressure_does_not_block_smaller_requests (test_kv_cache.AdmissionTests) ... ok
+test_reserve_entire_budget_not_only_prompt (test_kv_cache.AdmissionTests) ... ok
+test_rounding_can_reject_raw_token_fit (test_kv_cache.AdmissionTests) ... ok
+test_static_cohort_keeps_empty_slot_despite_free_cache (test_kv_cache.AdmissionTests) ... ok
+test_temporarily_full_waits_then_releases (test_kv_cache.AdmissionTests) ... ok
+test_zero_capacity_and_all_rejected_metrics (test_kv_cache.AdmissionTests) ... ok
+test_invalid_and_duplicate_reservations (test_kv_cache.KVCacheTests) ... ok
+test_reservation_snapshot_not_mutable (test_kv_cache.KVCacheTests) ... ok
+test_rounding_exact_fit_and_atomic_failed_reserve (test_kv_cache.KVCacheTests) ... ok
+test_backend_failure_clears_native_kv_and_reusable (test_real_backend.RealBackendTests) ... ok
+test_greedy_reference_both_modes_and_chunk_boundaries (test_real_backend.RealBackendTests) ... ok
+test_kv_rejection_and_all_rejected_no_forward (test_real_backend.RealBackendTests) ... ok
+test_real_arrivals_and_ignore_cost_formula (test_real_backend.RealBackendTests) ... ok
+test_virtual_backend_rejected_and_limits_fail_explicitly (test_real_backend.RealBackendTests) ... ok
+test_admission_only_at_boundaries (test_scheduler.SchedulerTests) ... ok
+test_arrival_exact_boundary (test_scheduler.SchedulerTests) ... ok
+test_empty (test_scheduler.SchedulerTests) ... ok
+test_fifo_at_equal_arrival (test_scheduler.SchedulerTests) ... ok
+test_hand_calculated_trace (test_scheduler.SchedulerTests) ... ok
+test_idle_window_and_single_token_tpot (test_scheduler.SchedulerTests) ... ok
+test_invalid_costs_and_backend (test_scheduler.SchedulerTests) ... ok
+test_invalid_requests (test_scheduler.SchedulerTests) ... ok
+test_output_independent_of_peers (test_scheduler.SchedulerTests) ... ok
+test_outputs_and_capacity (test_scheduler.SchedulerTests) ... ok
+test_single_slot_equivalence (test_scheduler.SchedulerTests) ... ok
+test_tpot_with_prefill_stall (test_scheduler.SchedulerTests) ... ok
+
+----------------------------------------------------------------------
+Ran 44 tests in 0.329s
+
+OK

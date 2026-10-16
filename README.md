@@ -2,7 +2,7 @@
 
 TinyInfer is a lightweight AI inference runtime built for learning and experimentation. Its long-term scope spans tensors, computation graphs, execution, kernel optimization, quantization, and hardware backends.
 
-TinyInfer has completed **Phase 3 — Model Runtime** and has entered **Phase 4 — Optimization Engine**. It can execute the Phase 0 two-layer MLP through both the eager Tensor API and the Graph Runtime, and it can load and execute a documented restricted ONNX model through its format-independent `ModelLoader` and named `Model` interface.
+TinyInfer has completed the static FP32 CPU optimization slice and is developing **Phase 5 — Hardware Backends**. It can execute the Phase 0 two-layer MLP through both the eager Tensor API and the Graph Runtime, and it can load and execute a documented restricted ONNX model through its format-independent `ModelLoader` and named `Model` interface.
 
 ## Current development stage
 
@@ -11,8 +11,8 @@ Phase 0  Learning Prototype       Complete
 Phase 1  Tensor Runtime           Complete (v0.1 scope)
 Phase 2  Graph Execution Engine   Complete (v0.2 MVP scope)
 Phase 3  Model Runtime            Complete (v0.3 restricted ONNX scope)
-Phase 4  Optimization Engine      In progress (graph + memory optimization)
-Phase 5  Hardware Backend         In progress (5.0 contracts accepted on Mac)
+Phase 4  Optimization Engine      Complete (measured static FP32 CPU slice)
+Phase 5  Hardware Backend         In progress (Prepared Metal models; performance gates pending)
 Phase 6  ML Compiler Direction    Not started
 ```
 
@@ -42,8 +42,8 @@ validation.
 | v0.1 Tensor Engine | Complete: Tensor, eager operators, CPU execution, MLP inference |
 | v0.2 Graph Runtime | Complete (MVP): graph model, validation, execution context, CPU dispatch, Graph MLP |
 | v0.3 Model Runtime | Complete: protobuf parser, real Gemm MLP fixture, restricted ONNX import, diagnostics, compatibility profile, and Mac/ROG CPU baselines |
-| v0.4 Optimization Engine | In progress: graph simplification, lifetime planning, buffer reuse, CPU SIMD MatMul, Gemm + ReLU fusion, and prepared CPU execution; threading and quantization remain planned |
-| v0.5 Hardware Backends | In progress: Phase 5.0 device/capability/completion contracts accepted on Mac; Metal is the first Phase 5.1 backend, GPU operators and model execution pending |
+| v0.4 Optimization Engine | Complete for the measured static FP32 CPU slice: graph simplification, lifetime planning, buffer reuse, CPU SIMD MatMul, Gemm + ReLU fusion, and prepared CPU execution; threading and quantization remain deferred |
+| v0.5 Hardware Backends | In progress: Phase 5.0–5.2 initial Metal scope accepted on Mac; Phase 5.3 performance gates unmet; Phase 5.4 Mac CUDA preparation complete, native CUDA pending on ROG |
 
 See the [documentation index](docs/README.md) for an overview. The current
 system design lives under `docs/architecture`, learning-oriented walkthroughs
@@ -52,9 +52,11 @@ under `docs/tutorials`, and design rationale under `docs/decisions`.
 The [Phase 5.0 Mac acceptance](docs/acceptance/phase5.0.md) records 43/43 tests
 in both Release configurations and 2/2 targeted sanitizer tests. Device discovery,
 queue creation and runtime shader compilation are verified, not GPU arithmetic.
-Continue [Phase 5.1](docs/plans/phase5.md) on Mac with optional Metal allocation,
-transfers/completion and operator kernels; real Metal execution is required for
-acceptance. CUDA remains the later backend rather than replacing the Mac slice.
+Subsequent [Phase 5.1](docs/acceptance/phase5.1.md) and
+[Phase 5.2](docs/acceptance/phase5.2.md) add actual Metal operators and prepared
+model execution with Mac device validation. Phase 5.3 performance acceptance
+remains open; [Phase 5.4 Mac preparation](docs/acceptance/phase5.4-mac-preparation.md)
+is delivered, with native CUDA implementation and validation pending on ROG.
 
 ## Repository layout
 
@@ -146,9 +148,11 @@ the exact parser, importer, dtype, operator, and rejection matrix.
 
 ## Next milestone
 
-The active milestone is **v0.4 Optimization Engine**. The initial CPU MatMul
-foundation already includes reference, stride-aware, cache-blocked, reusable
-RHS packing, and SIMD paths. The GraphPass/PassManager pipeline now includes a
+The active milestone is **v0.5 Hardware Backends**; its current status and
+acceptance boundaries are described below and in the [Phase 5 plan](docs/plans/phase5.md).
+The completed measured CPU optimization foundation includes reference,
+stride-aware, cache-blocked, reusable RHS packing, and SIMD MatMul paths.
+The GraphPass/PassManager pipeline now includes a
 rebuilding GraphRewriter, cascading Constant Folding, and output-driven Dead
 Code Elimination with composed ValueId mappings. Lifetime analysis and buffer
 reuse are now connected to `ExecutionContext` through a static `MemoryPlan`.
@@ -170,3 +174,51 @@ experiment remain documented. Next work is broader shape/ISA tuning, multi-row
 tiling, optional threading, and a measured Int8 path. Every
 optimization must preserve the v0.3 correctness contract and be justified by
 reproducible before-and-after benchmarks.
+
+
+## Optional Prepared Metal models (Phase 5.1/5.2)
+
+macOS can build `TinyInfer::metal` with `-DTINYINFER_ENABLE_METAL=ON` (default OFF).
+The device runtime supports initial FP32 Add/ReLU/Tanh/MatMul/Gemm/ReLU epilogues
+and Softmax, with explicit device views, owned transfers and completion. The
+[Metal example](examples/metal_ops.cpp) runs a checked GPU Gemm → ReLU chain.
+[Actual-device acceptance](docs/acceptance/phase5.1.md) records the support scope
+and all verification. `MetalExecutionPlan` uploads constants once and creates
+independent contexts with reusable device activations and explicit whole-model
+CPU fallback. The [model example](examples/metal_model.cpp) loads an ONNX fixture;
+[Phase 5.2 acceptance](docs/acceptance/phase5.2.md) defines the supported scope.
+[Phase 5.3 measurements](docs/benchmarks/mac-metal-phase5.3.md) report completed
+end-to-end analysis and a resolved fallback-copy regression. The frozen target
+performance gates remain unmet; Phase 5.3 is not yet accepted.
+[Transfer follow-up](docs/benchmarks/mac-metal-phase5.3-transfer.md) reduces
+Buffer copies and reuses staging, with retained p95 diagnostics and failed gates.
+
+## CUDA preparation contracts (Phase 5.4, Mac slice)
+
+`TinyInfer::cuda_contract` is an SDK-free C++ preparation library for the prospective
+CUDA operator subset and cuBLAS matrix mapping. It does not provide an executable
+CUDA backend or prove GPU availability. The CPU interpretation tests cover 773
+matrix/bias/epilogue cases; both ONNX fixtures have static contract coverage.
+
+```bash
+./build-bench/examples/tinyinfer_cuda_contract_inspect tests/fixtures/phase3_mlp_gemm.onnx
+```
+
+[Mac preparation delivery](docs/acceptance/phase5.4-mac-preparation.md) and the
+[Phase 5.4 plan](docs/plans/phase5.4.md) define the boundary. Native CUDA runtime,
+operators, Prepared models and GPU performance will be developed on ROG after
+collecting its hardware/toolchain inventory. Metal Phase 5.3 remains unaccepted.
+
+## Serving scheduler learning example
+
+[Serving scheduler](examples/serving_scheduler/README.md) implements Static and
+Continuous Batching using a deterministic Python backend and virtual clock.
+It includes FIFO admission, iteration-boundary refill, request traces, output
+consistency tests and explicitly simulated TTFT/TPOT/throughput/P95 metrics.
+Block-based KV budget reservation, FIFO capacity waiting, explicit rejection
+policies and completion/error cleanup are implemented in stage two. Chunked
+prefill is implemented in stage three with per-step token budgets, decode priority,
+round-robin prefill progress and simulated latency/throughput tradeoffs. Stage four adds a local random-weight single-layer decoder using actual TinyInfer
+CPU attention/logits/KV operations, a wall-clock driver and measured request
+metrics; see the [engineering acceptance](examples/serving_scheduler/STAGE4.md).
+It is neither a pretrained LLM nor hardware-batched or production network serving.

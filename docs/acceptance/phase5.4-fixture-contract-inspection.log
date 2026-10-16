@@ -1,0 +1,14 @@
+Portable CUDA contract inspection only; no GPU execution or placement
+__onnx_node_0: portable CUDA contract valid; device, spans and native execution remain unverified
+  prospective column-major call m=3, n=1, k=2, left=B, right=A, lda=2, ldb=2, ldc=3
+__onnx_node_1: portable CUDA contract valid; device, spans and native execution remain unverified
+__onnx_node_2: portable CUDA contract valid; device, spans and native execution remain unverified
+  prospective column-major call m=2, n=1, k=3, left=B, right=A, lda=3, ldb=3, ldc=2
+__onnx_node_3: portable CUDA contract valid; device, spans and native execution remain unverified
+Portable CUDA contract inspection only; no GPU execution or placement
+__onnx_node_0: portable CUDA contract valid; device, spans and native execution remain unverified
+  prospective column-major call m=5, n=1, k=4, left=B, right=A, lda=4, ldb=4, ldc=5
+__onnx_node_1: portable CUDA contract valid; device, spans and native execution remain unverified
+__onnx_node_2: portable CUDA contract valid; device, spans and native execution remain unverified
+  prospective column-major call m=2, n=1, k=5, left=B, right=A, lda=5, ldb=5, ldc=2
+__onnx_node_3: portable CUDA contract valid; device, spans and native execution remain unverified

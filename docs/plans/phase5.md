@@ -1,7 +1,7 @@
 # Phase 5 — Hardware Backends
 
 - 规划日期：2026-10-11（Asia/Shanghai）。
-- 状态：Phase 5.0 设备契约与 Mac 本地验收完成；Phase 5.1 GPU 算子尚未开始。
+- 状态：Phase 5.0/5.1/5.2 初始 Metal 范围在 Mac 验收完成；Phase 5.3 基准和两版实机性能分析已交付，目标性能门槛尚未通过。
 - 基线：`924a7e2`，Phase 4.5 静态 FP32 CPU 优化收口。
 
 ## 核心目标
@@ -119,3 +119,50 @@ CPU 回退控制沿用 5% 中位数回退门槛。比较同输入、输出所有
 下一步 Phase 5.1：可选 Objective-C++ Metal 模块、设备分配/传输/完成适配，
 先完成真机复制与逐元素 kernel，再推进矩阵及必要算子。
 shader/pipeline 在准备阶段创建，编译成本单独报告，不能混入 steady-state timer。
+
+
+## Phase 5.1 收口（2026-10-12）
+
+按用户确认优先完成 Mac Metal。可选 Objective-C++ target、private buffer/staging
+复制、完成与错误保活、实际布局检查，以及 Add/ReLU/Tanh/MatMul/Gemm/
+FusedGemmActivation/Softmax 的初始 FP32 device kernel 已实现。
+Metal 开启实机全套 45/45、CPU-only 43/43、native CPU 参考 GPU 定向 2/2、
+宿主 ASan/UBSan GPU 定向 2/2 通过，启用 API Validation，无 GPU skip。
+248 个数值/边界用例包含两个 ONNX fixture 的三个独立参考输入。
+见 [Phase 5.1 验收](../acceptance/phase5.1.md) 与 [架构](../architecture/metal_backend.md)。
+
+当前提供显式设备算子接口，尚未提供正式 GPU Model/context API。初始矩阵/Softmax
+kernel 是正确性实现，性能不在本轮验收范围。下一步按 5.2 建立设备权重/步骤准备、
+每 context 激活、重复输入绑定、独立主机输出与完整模型回退；5.3 再测端到端收益。
+
+## Phase 5.2 完成记录（2026-10-12）
+
+Prepared Metal Model/context、常量一次上传、独立设备激活 arena、完成后复用、整图 CPU Auto 回退已实现。两个 ONNX fixture 实机结果通过 CPU/golden 对照；详见 [验收记录](../acceptance/phase5.2.md)。下一阶段拆分准备、输入上传、设备运行、输出下载和端到端耗时，尚未声明 GPU 加速收益。
+
+## Phase 5.3 首轮交付（2026-10-13，性能验收未通过）
+
+端到端/分阶段/驻留基准、两轮六进程采样工具、原始数据与报告已交付。
+首次测量定位并修复 CPU 回退的重复输入复制；两版各六个进程复测，共十二个进程。
+修复后回退 p50 延迟比为 0.938/1.028，通过 5% 门槛。
+冻结目标的 p50 加速比为 1.027/1.029，未达到 1.2；第二轮 p95 比为 1.070，超过 1.05。
+Phase 5.3 保持未验收状态；下一步调查输入/输出传输成本及 p95 波动，随后按相同门槛复测。
+详见 [开发与测量协议](phase5.3.md)、[Mac 性能报告](../benchmarks/mac-metal-phase5.3.md)
+及 [验收状态](../acceptance/phase5.3-verification.json)。本轮不宣称 GPU 端到端加速达标。
+
+### Phase 5.3 传输优化复测（2026-10-13）
+
+直接从 Tensor Buffer 上传、直接下载到独立 Tensor、命令完成后复用 native staging 已实现。
+Release 实机 46/46、Metal ASan/UBSan 3/3 通过；同门槛六进程复测通过数值与资源检查。
+目标 p50 加速比 0.995/1.073，第一轮 p95 比 1.127，仍未达到验收门槛；CPU 回退门槛通过。
+p95 单独诊断发现设备命令和主机等待均有波动，且记录到较高系统负载；尚不能归因于单一原因。
+资源成本降低已验证，但不宣称端到端性能稳定提升。下一步应在空闲 Mac 条件复测原门槛。
+详见 [传输优化与 p95 报告](../benchmarks/mac-metal-phase5.3-transfer.md)。
+
+## Phase 5.4 启动（2026-10-13）
+
+用户确认先完成 Mac 可开发验证部分，之后转到 ROG 本机推进 CUDA。
+本轮交付 SDK-free CUDA 算子准备契约、cuBLAS 矩阵映射描述、773 个 CPU 解释对照用例、
+两个 fixture 静态检查与 ROG 环境采集/实施计划。此模块不是可执行 CUDA 后端。
+详见 [Phase 5.4 计划](phase5.4.md) 与 [Mac 准备层交付](../acceptance/phase5.4-mac-preparation.md)。
+CUDA stream/event、真实算子、Prepared context 及性能验收保留到 ROG；
+Phase 5.3 Metal 性能门槛未通过的状态保持不变。

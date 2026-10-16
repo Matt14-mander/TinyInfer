@@ -150,7 +150,22 @@ fallback contracts. [Phase 5.0 acceptance](../acceptance/phase5.0.md) implements
 these contracts and CPU adapters while retaining existing host APIs. Current
 Mac inventory verifies Intel Iris Plus Graphics 645, a Metal queue and runtime
 shader library compilation, so Metal is the first backend; CUDA follows after
-ROG GPU/toolchain verification. GPU kernels and model execution have not started.
+ROG GPU/toolchain verification. [Phase 5.1 acceptance](../acceptance/phase5.1.md)
+on 2026-10-12 implements initial Metal FP32 device operators/copies/completion.
+The actual-device Release suite passes 45/45, CPU-only 43/43; targeted native
+CPU reference and host sanitizer checks pass. Prepared GPU model APIs are accepted in [Phase 5.2](../acceptance/phase5.2.md):
+shared constants, independent contexts, completion-safe arena reuse and explicit
+whole-model CPU fallback. [Phase 5.3 measurements](../benchmarks/mac-metal-phase5.3.md) on 2026-10-13
+deliver end-to-end/stage/resident timing and fix duplicate CPU fallback input
+copying. The frozen target p50/p95 performance gates remain unmet; Phase 5.3
+is open for transfer overhead and tail-latency work. A
+[transfer follow-up](../benchmarks/mac-metal-phase5.3-transfer.md) removes host
+Buffer copies and caches staging; the six-process recheck still fails the target
+gate, with device/wait/scheduling variability recorded.
+[Phase 5.4 Mac preparation](../acceptance/phase5.4-mac-preparation.md) begins
+on 2026-10-13 with SDK-free operator contracts and cuBLAS mapping metadata tested
+by CPU interpretation. It is not CUDA execution; native development/acceptance
+is deferred to the ROG by the user. Phase 5.3 performance acceptance stays open.
 First deliver one prepared GPU backend and measured host-to-host inference;
 then validate the second backend against the same contract. CPU threading,
 quantization and broader CPU fusion tuning remain separate extensions. GPU

@@ -71,8 +71,10 @@ def main():
               'platform': platform.platform(), 'machine': platform.machine(),
               'cuda_driver_inventory': probe(['nvidia-smi']),
               'cuda_toolkit': probe(['nvcc', '--version']),
+              'cuda_gpu_details': probe(['nvidia-smi', '--query-gpu=name,driver_version,memory.total', '--format=csv,noheader']),
               'cmake': probe(['cmake', '--version']),
               'compiler': probe(['clang', '--version']),
+              'host_cxx_compiler': probe(['c++', '--version']),
               'scope': 'Hardware/toolchain inventory only; no TinyInfer GPU kernel acceptance.'}
     if platform.system() == 'Darwin':
         report.update(macos=probe(['sw_vers']), developer_directory=probe(['xcode-select', '-p']),
@@ -80,6 +82,9 @@ def main():
                       metal_offline_compiler=probe(['xcrun', '--find', 'metal']),
                       metal_runtime=metal_devices())
     elif platform.system() == 'Windows':
+        report['windows_msvc_path'] = probe(['cmd', '/c', 'where', 'cl'])
+        report['windows_cpu'] = probe(['powershell', '-NoProfile', '-Command',
+            'Get-CimInstance Win32_Processor | Select-Object Name,NumberOfCores,NumberOfLogicalProcessors | ConvertTo-Json'])
         report['windows_gpu'] = probe(['powershell', '-NoProfile', '-Command',
             'Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion | ConvertTo-Json'])
     output = json.dumps(report, indent=2, ensure_ascii=False) + '\n'

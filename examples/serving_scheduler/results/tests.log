@@ -1,0 +1,17 @@
+test_admission_only_at_boundaries (test_scheduler.SchedulerTests) ... ok
+test_arrival_exact_boundary (test_scheduler.SchedulerTests) ... ok
+test_empty (test_scheduler.SchedulerTests) ... ok
+test_fifo_at_equal_arrival (test_scheduler.SchedulerTests) ... ok
+test_hand_calculated_trace (test_scheduler.SchedulerTests) ... ok
+test_idle_window_and_single_token_tpot (test_scheduler.SchedulerTests) ... ok
+test_invalid_costs_and_backend (test_scheduler.SchedulerTests) ... ok
+test_invalid_requests (test_scheduler.SchedulerTests) ... ok
+test_output_independent_of_peers (test_scheduler.SchedulerTests) ... ok
+test_outputs_and_capacity (test_scheduler.SchedulerTests) ... ok
+test_single_slot_equivalence (test_scheduler.SchedulerTests) ... ok
+test_tpot_with_prefill_stall (test_scheduler.SchedulerTests) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.023s
+
+OK
