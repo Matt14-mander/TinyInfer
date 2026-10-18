@@ -47,5 +47,13 @@ class ProtocolTests(unittest.TestCase):
             bad = copy.deepcopy(good); mutate(bad)
             with self.assertRaises(RuntimeError): bench.validate(bad, 31, 5)
 
+    def test_isolated_fallback_validation(self):
+        isolated=report()
+        isolated['cases']=[c for c in isolated['cases'] if c['workload']=='fallback']
+        bench.validate(isolated,31,5,workloads=('fallback',))
+        with self.assertRaises(RuntimeError): bench.validate(isolated,31,5)
+        isolated['cases'][0]['results'][1]['effective']='cuda'
+        with self.assertRaises(RuntimeError): bench.validate(isolated,31,5,workloads=('fallback',))
+
 
 if __name__ == '__main__': unittest.main()

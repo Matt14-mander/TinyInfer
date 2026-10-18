@@ -1,0 +1,58 @@
+{
+  "before": {
+    "utc": "2026-10-18T11:54:08.621100+00:00",
+    "gpu": {
+      "command": [
+        "nvidia-smi",
+        "--query-gpu=name,driver_version,memory.total,memory.used,pstate,temperature.gpu,power.draw,clocks.sm,utilization.gpu",
+        "--format=csv"
+      ],
+      "returncode": 0,
+      "stdout": "name, driver_version, memory.total [MiB], memory.used [MiB], pstate, temperature.gpu, power.draw [W], clocks.current.sm [MHz], utilization.gpu [%]\nNVIDIA GeForce RTX 4070 Laptop GPU, 555.97, 8188 MiB, 2008 MiB, P8, 55, 5.13 W, 210 MHz, 18 %\n",
+      "stderr": ""
+    },
+    "host": {
+      "command": [
+        "powershell",
+        "-NoProfile",
+        "-Command",
+        "[pscustomobject]@{cpu=@(Get-CimInstance Win32_Processor | Select-Object Name,LoadPercentage);battery=@(Get-CimInstance Win32_Battery | Select-Object BatteryStatus,EstimatedChargeRemaining);os=(Get-CimInstance Win32_OperatingSystem | Select-Object Caption,Version,FreePhysicalMemory);power=@(powercfg /getactivescheme)} | ConvertTo-Json -Depth 5"
+      ],
+      "returncode": 0,
+      "stdout": "{\n    \"cpu\":  [\n                {\n                    \"Name\":  \"13th Gen Intel(R) Core(TM) i9-13980HX\",\n                    \"LoadPercentage\":  5\n                }\n            ],\n    \"battery\":  [\n                    {\n                        \"BatteryStatus\":  2,\n                        \"EstimatedChargeRemaining\":  100\n                    }\n                ],\n    \"os\":  {\n               \"Caption\":  \"Microsoft Windows 11 \u5bb6\u5ead\u7248 \u4e2d\u6587\u7248\",\n               \"Version\":  \"10.0.26200\",\n               \"FreePhysicalMemory\":  2207780\n           },\n    \"power\":  [\n                  \"\u7535\u6e90\u65b9\u6848 GUID: 27fa6203-3987-4dcc-918d-748559d549ec  (Performance)\"\n              ]\n}\n",
+      "stderr": ""
+    }
+  },
+  "after": {
+    "utc": "2026-10-18T11:54:12.144004+00:00",
+    "gpu": {
+      "command": [
+        "nvidia-smi",
+        "--query-gpu=name,driver_version,memory.total,memory.used,pstate,temperature.gpu,power.draw,clocks.sm,utilization.gpu",
+        "--format=csv"
+      ],
+      "returncode": 0,
+      "stdout": "name, driver_version, memory.total [MiB], memory.used [MiB], pstate, temperature.gpu, power.draw [W], clocks.current.sm [MHz], utilization.gpu [%]\nNVIDIA GeForce RTX 4070 Laptop GPU, 555.97, 8188 MiB, 2015 MiB, P0, 56, 20.38 W, 2175 MHz, 2 %\n",
+      "stderr": ""
+    },
+    "host": {
+      "command": [
+        "powershell",
+        "-NoProfile",
+        "-Command",
+        "[pscustomobject]@{cpu=@(Get-CimInstance Win32_Processor | Select-Object Name,LoadPercentage);battery=@(Get-CimInstance Win32_Battery | Select-Object BatteryStatus,EstimatedChargeRemaining);os=(Get-CimInstance Win32_OperatingSystem | Select-Object Caption,Version,FreePhysicalMemory);power=@(powercfg /getactivescheme)} | ConvertTo-Json -Depth 5"
+      ],
+      "returncode": 0,
+      "stdout": "{\n    \"cpu\":  [\n                {\n                    \"Name\":  \"13th Gen Intel(R) Core(TM) i9-13980HX\",\n                    \"LoadPercentage\":  7\n                }\n            ],\n    \"battery\":  [\n                    {\n                        \"BatteryStatus\":  2,\n                        \"EstimatedChargeRemaining\":  100\n                    }\n                ],\n    \"os\":  {\n               \"Caption\":  \"Microsoft Windows 11 \u5bb6\u5ead\u7248 \u4e2d\u6587\u7248\",\n               \"Version\":  \"10.0.26200\",\n               \"FreePhysicalMemory\":  2218756\n           },\n    \"power\":  [\n                  \"\u7535\u6e90\u65b9\u6848 GUID: 27fa6203-3987-4dcc-918d-748559d549ec  (Performance)\"\n              ]\n}\n",
+      "stderr": ""
+    }
+  },
+  "command": [
+    "E:\\Project Learning\\AI Infra\\TinyInfer\\build-phase54-cuda\\benchmarks\\tinyinfer_cuda_model_benchmark.exe",
+    "--samples",
+    "31",
+    "--warmup",
+    "5"
+  ],
+  "returncode": 0
+}

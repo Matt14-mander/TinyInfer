@@ -1,0 +1,200 @@
+{
+  "date": "2026-10-18",
+  "timezone": "Asia/Shanghai",
+  "baseline": "23dcc5970e0da66200a0c97ff511d207ed16fa9b",
+  "state": "baseline plus static-negative preflight fix and regression harness; no kernel/precision/warm-gate changes",
+  "scope": "avoid CUDA initialization for statically unsupported models only; positive native validation and runtime-layout fallback unchanged",
+  "cold_diagnostic": {
+    "rows": [
+      {
+        "process": 1,
+        "wrapper_first": false,
+        "cuda_visible_devices": "-1",
+        "cpu_prepare_us": 14.8,
+        "wrapper_prepare_us": 34.1,
+        "cpu_first_inference_us": 510.4,
+        "wrapper_first_inference_us": 472.4,
+        "warm_p50_ratio": 0.9507042253521127
+      },
+      {
+        "process": 2,
+        "wrapper_first": true,
+        "cuda_visible_devices": "-1",
+        "cpu_prepare_us": 9.1,
+        "wrapper_prepare_us": 34.2,
+        "cpu_first_inference_us": 409.2,
+        "wrapper_first_inference_us": 452.6,
+        "warm_p50_ratio": 1.000871459694989
+      },
+      {
+        "process": 3,
+        "wrapper_first": false,
+        "cuda_visible_devices": "-1",
+        "cpu_prepare_us": 12.4,
+        "wrapper_prepare_us": 28.1,
+        "cpu_first_inference_us": 437.9,
+        "wrapper_first_inference_us": 400.8,
+        "warm_p50_ratio": 0.9879828326180257
+      },
+      {
+        "process": 4,
+        "wrapper_first": true,
+        "cuda_visible_devices": "-1",
+        "cpu_prepare_us": 5.2,
+        "wrapper_prepare_us": 34.6,
+        "cpu_first_inference_us": 444,
+        "wrapper_first_inference_us": 475.3,
+        "warm_p50_ratio": 0.9865707434052757
+      },
+      {
+        "process": 5,
+        "wrapper_first": false,
+        "cuda_visible_devices": "-1",
+        "cpu_prepare_us": 26,
+        "wrapper_prepare_us": 31.6,
+        "cpu_first_inference_us": 436.5,
+        "wrapper_first_inference_us": 433.5,
+        "warm_p50_ratio": 1.0012357884330203
+      },
+      {
+        "process": 6,
+        "wrapper_first": true,
+        "cuda_visible_devices": "-1",
+        "cpu_prepare_us": 5.4,
+        "wrapper_prepare_us": 36.3,
+        "cpu_first_inference_us": 431.8,
+        "wrapper_first_inference_us": 475.5,
+        "warm_p50_ratio": 0.9980158730158729
+      }
+    ],
+    "wrapper_prepare_us": {
+      "min": 28.1,
+      "median": 34.150000000000006,
+      "max": 36.3
+    },
+    "all_below_5ms": true,
+    "all_passed_without_visible_cuda_device": true
+  },
+  "correctness": {
+    "cuda_suite": {
+      "passed": 51,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 3.1
+    },
+    "cpu_only": {
+      "passed": 45,
+      "failed": 0,
+      "seconds": 1.67
+    },
+    "protocol_unittests": 4,
+    "hidden_device_static_fallback": "passed CUDA_VISIBLE_DEVICES=-1",
+    "primary_context_probe": "inactive before/after static rejection and CPU fallback; active during supported-model native positive control",
+    "memcheck": {
+      "test": "tinyinfer_cuda_execution_plan_tests --require-device",
+      "exit_code": 0,
+      "errors": 0,
+      "leaked_bytes": 0
+    }
+  },
+  "warm_regression": {
+    "gates": {
+      "target_p50": true,
+      "target_p95": true,
+      "fallback_p50": true
+    },
+    "performance_accepted": true,
+    "rounds": 2,
+    "processes_per_round": 3,
+    "samples_per_mode": 31,
+    "warmup": 5,
+    "metrics": [
+      {
+        "round": 1,
+        "workload": "target",
+        "p50_speedup": 10.494152954568975,
+        "p95_ratio": 0.10565174720654044,
+        "p50_latency_ratio": 0.09529115921305654
+      },
+      {
+        "round": 1,
+        "workload": "fallback",
+        "p50_speedup": 0.9990147783251232,
+        "p95_ratio": 1.0024301336573511,
+        "p50_latency_ratio": 1.0009861932938855
+      },
+      {
+        "round": 2,
+        "workload": "target",
+        "p50_speedup": 10.337107303141575,
+        "p95_ratio": 0.09942668335091723,
+        "p50_latency_ratio": 0.0967388623020376
+      },
+      {
+        "round": 2,
+        "workload": "fallback",
+        "p50_speedup": 1.0036945812807883,
+        "p95_ratio": 1.0238757533611498,
+        "p50_latency_ratio": 0.996319018404908
+      }
+    ]
+  },
+  "source_binary_match_to_measurement_metadata": true,
+  "limitations": [
+    "historical-before vs later-after, not simultaneous A/B",
+    "cold API timer excludes process/DLL loading",
+    "no hardware fault injection",
+    "shared desktop load",
+    "Mac Metal Phase 5.3 remains unmet"
+  ],
+  "hashes": [
+    {
+      "path": "src/backend/cuda/execution_plan.cpp",
+      "sha256": "54391124e5e778d0d2c7ecacce82745f8c68d7f56b4ccfad6c40f463a023cb3f"
+    },
+    {
+      "path": "tests/cuda_static_fallback_test.cpp",
+      "sha256": "49536a0c302f73baa9c579e334a19c308e92bdc602d917012b9822e39243f2e8"
+    },
+    {
+      "path": "tests/CMakeLists.txt",
+      "sha256": "e63105c73d582b85941404a846559d6130fc76e431a96a4cd2296034739c331b"
+    },
+    {
+      "path": "benchmarks/cuda_model_benchmark.cpp",
+      "sha256": "915c6432a45acfe251e66aa6d29d67a17884f3e3b83659f040ef3d5c9272faab"
+    },
+    {
+      "path": "tools/run_phase54_cuda.py",
+      "sha256": "8c0407b4b17180145a89bd97569ac0918baf60d0369716a990db251f1282ea71"
+    },
+    {
+      "path": "tools/run_phase54_cuda_cold_fallback.py",
+      "sha256": "23818960c1b7977af6a91be905aea1073a197eb547d53c4e67d05989d63a192d"
+    },
+    {
+      "path": "tools/test_phase54_cuda.py",
+      "sha256": "4a8345c427543e62ad24fa3820987cdf62f86cdebd3d1094e7d774469be8b036"
+    },
+    {
+      "path": "build-phase54-cuda/benchmarks/tinyinfer_cuda_model_benchmark.exe",
+      "sha256": "96739d1d819983c5e89025260c8a73ef697841f3abeed4e920a01dfecf331dd5"
+    },
+    {
+      "path": "build-phase54-cuda/tests/tinyinfer_cuda_static_fallback_tests.exe",
+      "sha256": "10fd220b501653b3441f3e289f086d57cd28ebb99f1e9b6c9be8c0320cb8f695"
+    },
+    {
+      "path": "build-phase54-cuda/tests/tinyinfer_cuda_execution_plan_tests.exe",
+      "sha256": "7553e280da4709e61caa1c6960e8812d2b1ec4e66577d4796e143f4c345e38a9"
+    },
+    {
+      "path": "docs/acceptance/phase5.4-cold-fallback-fixed/summary.json",
+      "sha256": "8a098c7a0f2fbf5a0524930fc3fdcf7b84ae311bbb0048ee99258644782dcc07"
+    },
+    {
+      "path": "docs/acceptance/phase5.4-results-rog-fallback-fixed/summary.json",
+      "sha256": "721ff1e8231246c5865210d26b92d6331773b6f97b480e34c1024bc3da22488b"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "protocol": "six fresh processes, fallback only, five warmups/31 warm samples; no CUDA enumeration in child",
+  "utc": "2026-10-18T11:54:04.508010+00:00",
+  "baseline": {
+    "command": [
+      "git",
+      "rev-parse",
+      "HEAD"
+    ],
+    "returncode": 0,
+    "stdout": "23dcc5970e0da66200a0c97ff511d207ed16fa9b\n",
+    "stderr": ""
+  },
+  "status": {
+    "command": [
+      "git",
+      "status",
+      "--short"
+    ],
+    "returncode": 0,
+    "stdout": " M benchmarks/cuda_model_benchmark.cpp\n M src/backend/cuda/execution_plan.cpp\n M tests/CMakeLists.txt\n M tools/run_phase54_cuda.py\n M tools/test_phase54_cuda.py\n?? tests/cuda_static_fallback_test.cpp\n?? tools/run_phase54_cuda_cold_fallback.py\n",
+    "stderr": ""
+  },
+  "binary_sha256": "96739d1d819983c5e89025260c8a73ef697841f3abeed4e920a01dfecf331dd5",
+  "source_sha256": {
+    "src/backend/cuda/execution_plan.cpp": "54391124e5e778d0d2c7ecacce82745f8c68d7f56b4ccfad6c40f463a023cb3f",
+    "benchmarks/cuda_model_benchmark.cpp": "915c6432a45acfe251e66aa6d29d67a17884f3e3b83659f040ef3d5c9272faab",
+    "tests/cuda_static_fallback_test.cpp": "49536a0c302f73baa9c579e334a19c308e92bdc602d917012b9822e39243f2e8",
+    "tools/run_phase54_cuda_cold_fallback.py": "23818960c1b7977af6a91be905aea1073a197eb547d53c4e67d05989d63a192d"
+  },
+  "cold_diagnostic_target_us": 5000,
+  "note": "5 ms is a local regression check, not a general startup SLA; process loading is outside API timers"
+}

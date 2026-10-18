@@ -248,6 +248,11 @@ CPU-favored. Memory includes logical payloads, process working set and device-wi
 snapshots, not exact per-process VRAM peak. These are scoped ROG results, not a
 universal GPU speedup or completion of the unmet Mac Metal Phase 5.3 gate.
 
+The [CPU fallback cold-start fix](docs/acceptance/phase5.4-rog-cold-fallback.md)
+rejects known unsupported models before CUDA initialization. Six isolated prepares
+take 28.1–36.3 us; real-device regression now passes 51/51 and the original warm
+performance gates still pass. Supported GPU models retain native validation.
+
 ## Serving scheduler learning example
 
 [Serving scheduler](examples/serving_scheduler/README.md) implements Static and

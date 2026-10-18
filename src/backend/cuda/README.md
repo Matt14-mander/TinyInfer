@@ -37,6 +37,10 @@ synchronous runs and independent host outputs. Strict is default; explicit
 device or runtime input layout, with a reason and no per-node fallback.
 CUDA allocation/upload/execution failures after runtime construction propagate,
 not CPU replay. Contexts sharing a plan must be externally serialized.
+Static negative capability checks now run before device discovery/runtime creation:
+known-unsupported models reject under Strict or select verified whole-model CPU
+without creating a CUDA context. Passing static checks still requires all native
+device/capability validation. See the [cold-start fix](../../../docs/acceptance/phase5.4-rog-cold-fallback.md).
 See [Prepared CUDA acceptance](../../../docs/acceptance/phase5.4-rog-prepared.md).
 
 Warm runs reuse TinyInfer device buffers and upload no constants/inputs; binding

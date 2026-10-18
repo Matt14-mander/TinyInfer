@@ -187,7 +187,13 @@ int main(int argc,char** argv) {
             }else throw std::invalid_argument("unknown argument");
         }
         if(memory_only) { memory_benchmark(); return 0; }
-        auto devices=CudaDeviceRuntime::enumerate_devices();if(devices.empty())throw std::runtime_error("actual Cuda GPU required");
+        // The isolated static-fallback probe must not initialize CUDA outside
+        // its preparation timer either. The normal five-workload run still
+        // requires a real device, never a CPU substitute for supported models.
+        if(workload!="fallback") {
+            auto devices=CudaDeviceRuntime::enumerate_devices();
+            if(devices.empty())throw std::runtime_error("actual Cuda GPU required");
+        }
         if(std::string(TINYINFER_BUILD_TYPE)!="Release" || !TINYINFER_NATIVE_ARCH)throw std::runtime_error("Release native CPU baseline required");
         std::cout<<std::fixed<<std::setprecision(6)<<"{\"schema\":1,\"samples\":"<<samples<<",\"warmup\":"<<warmup
                  <<",\"profiling\":"<<"false"<<",\"gpu_first\":"<<(gpu_first?"true":"false")<<",\"cases\":[";

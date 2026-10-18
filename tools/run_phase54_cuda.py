@@ -49,10 +49,10 @@ def analyze(reports):
     return {'percentile':'nearest rank ceil(n*p)', 'rows':rows,'gates':gates,'performance_accepted':all(gates.values())}
 
 
-def validate(report, samples, warmup):
+def validate(report, samples, warmup, workloads=WORKLOADS):
     if report.get('profiling', True) or report.get('samples') != samples or report.get('warmup') != warmup:
         raise RuntimeError('unexpected timing protocol')
-    if set(c['workload'] for c in report['cases']) != set(WORKLOADS) or len(report['cases']) != 5:
+    if set(c['workload'] for c in report['cases']) != set(workloads) or len(report['cases']) != len(workloads):
         raise RuntimeError('unexpected workloads')
     for case in report['cases']:
         if not case['correctness'] or [r['backend'] for r in case['results']] != ['cpu_auto', 'cuda']:

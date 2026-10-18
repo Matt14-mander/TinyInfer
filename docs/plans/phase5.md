@@ -199,3 +199,11 @@ M=128/K=N=1024 的 host-to-host E2E p50 加速为 10.62x/10.26x，p95 和整模�
 回退门槛均通过。小 ONNX fixture 仍 CPU 更快；内存报告区分逻辑 payload、进程 working
 set 和 WDDM 设备级快照，不声称精确每进程显存峰值。见[ROG 性能与内存报告](../benchmarks/rog-cuda-phase5.4.md)。
 这收口 ROG 初始模型/固定目标范围，不改变 Mac 5.3 未达标和 Phase 5 整体未完成状态。
+
+### ROG 静态 CPU 回退冷启动修复（2026-10-18）
+
+已知不支持的模型在 CUDA runtime/handle 创建前完成 SDK-free 否定检查和整模型 CPU 验证；
+Strict 直接报告静态原因，正向结果仍须经过真实设备检查。隐藏设备的六个 cold-only
+进程 prepare 中位数 34.15 µs；context probe 证明静态回退不激活 primary context。
+全套 51/51、CPU-only 45/45、memcheck 零错误/泄漏；原六进程性能门槛复测通过。
+详见[修复验收](../acceptance/phase5.4-rog-cold-fallback.md)。

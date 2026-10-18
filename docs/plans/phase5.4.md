@@ -41,6 +41,13 @@ gates passed. Tiny ONNX models remain CPU-favored. See [performance/memory repor
 Initial ROG model/target scope is accepted, not universal GPU acceleration.
 Mac Phase 5.3 performance remains unmet, so Phase 5 overall is not complete.
 
+Cold-start follow-up: known static CUDA contract rejections now select/verify
+CPU fallback (or reject under Strict) before device discovery/runtime creation.
+Six isolated fallback prepares take 28.1–36.3 us, primary context stays inactive;
+supported models still pass native validation and execute on GPU. Full CUDA
+51/51, CPU-only 45/45 and the original six-process performance gates pass again.
+See [cold fallback fix](../acceptance/phase5.4-rog-cold-fallback.md).
+
 ## Goal and sequence
 
 Run the same static FP32 model under CPU, Metal and CUDA contracts. Phase 5.4 is

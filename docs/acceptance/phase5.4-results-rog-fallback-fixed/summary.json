@@ -1,0 +1,2891 @@
+{
+  "percentile": "nearest rank ceil(n*p)",
+  "rows": [
+    {
+      "round": 1,
+      "workload": "phase3_mlp_gemm",
+      "processes": [
+        {
+          "process": 1,
+          "cpu_p50_us": 2.1,
+          "cpu_p95_us": 2.3,
+          "cuda_p50_us": 113.6,
+          "cuda_p95_us": 132.7,
+          "p50_speedup": 0.01848591549295775,
+          "p95_ratio": 57.69565217391304,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 0.2,
+                "p95_us": 0.3
+              },
+              "context_create_us": {
+                "p50_us": 11.5,
+                "p95_us": 11.5
+              },
+              "copy_host_output_us": {
+                "p50_us": 0.2,
+                "p95_us": 0.2
+              },
+              "first_inference_us": {
+                "p50_us": 10.7,
+                "p95_us": 10.7
+              },
+              "prepare_us": {
+                "p50_us": 31.4,
+                "p95_us": 31.4
+              },
+              "resident_only_us": {
+                "p50_us": 1.5,
+                "p95_us": 1.8
+              },
+              "resident_run_completed_us": {
+                "p50_us": 1.6,
+                "p95_us": 1.7
+              },
+              "warm_e2e_us": {
+                "p50_us": 2.1,
+                "p95_us": 2.3
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 14.7,
+                "p95_us": 27.2
+              },
+              "context_create_us": {
+                "p50_us": 7.0,
+                "p95_us": 7.0
+              },
+              "copy_host_output_us": {
+                "p50_us": 14.6,
+                "p95_us": 31.2
+              },
+              "first_inference_us": {
+                "p50_us": 29043.0,
+                "p95_us": 29043.0
+              },
+              "prepare_us": {
+                "p50_us": 76086.7,
+                "p95_us": 76086.7
+              },
+              "resident_only_us": {
+                "p50_us": 83.3,
+                "p95_us": 110.6
+              },
+              "resident_run_completed_us": {
+                "p50_us": 87.3,
+                "p95_us": 164.2
+              },
+              "warm_e2e_us": {
+                "p50_us": 113.6,
+                "p95_us": 132.7
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 48,
+              "activation_bytes": 28,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 350797824
+            },
+            "cuda": {
+              "weight_bytes": 68,
+              "activation_bytes": 28,
+              "logical_device_allocated_bytes": 104,
+              "process_peak_working_set_bytes": 350797824
+            }
+          }
+        },
+        {
+          "process": 2,
+          "cpu_p50_us": 2.0,
+          "cpu_p95_us": 2.3,
+          "cuda_p50_us": 120.9,
+          "cuda_p95_us": 289.4,
+          "p50_speedup": 0.016542597187758478,
+          "p95_ratio": 125.82608695652173,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 0.2,
+                "p95_us": 0.5
+              },
+              "context_create_us": {
+                "p50_us": 6.6,
+                "p95_us": 6.6
+              },
+              "copy_host_output_us": {
+                "p50_us": 0.2,
+                "p95_us": 0.3
+              },
+              "first_inference_us": {
+                "p50_us": 4.7,
+                "p95_us": 4.7
+              },
+              "prepare_us": {
+                "p50_us": 23.7,
+                "p95_us": 23.7
+              },
+              "resident_only_us": {
+                "p50_us": 1.5,
+                "p95_us": 1.8
+              },
+              "resident_run_completed_us": {
+                "p50_us": 1.6,
+                "p95_us": 3.3
+              },
+              "warm_e2e_us": {
+                "p50_us": 2.0,
+                "p95_us": 2.3
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 14.9,
+                "p95_us": 16.7
+              },
+              "context_create_us": {
+                "p50_us": 6.4,
+                "p95_us": 6.4
+              },
+              "copy_host_output_us": {
+                "p50_us": 15.0,
+                "p95_us": 18.9
+              },
+              "first_inference_us": {
+                "p50_us": 180.4,
+                "p95_us": 180.4
+              },
+              "prepare_us": {
+                "p50_us": 781.2,
+                "p95_us": 781.2
+              },
+              "resident_only_us": {
+                "p50_us": 86.0,
+                "p95_us": 163.4
+              },
+              "resident_run_completed_us": {
+                "p50_us": 96.6,
+                "p95_us": 152.0
+              },
+              "warm_e2e_us": {
+                "p50_us": 120.9,
+                "p95_us": 289.4
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 48,
+              "activation_bytes": 28,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 386121728
+            },
+            "cuda": {
+              "weight_bytes": 68,
+              "activation_bytes": 28,
+              "logical_device_allocated_bytes": 104,
+              "process_peak_working_set_bytes": 386121728
+            }
+          }
+        },
+        {
+          "process": 3,
+          "cpu_p50_us": 2.2,
+          "cpu_p95_us": 2.3,
+          "cuda_p50_us": 113.3,
+          "cuda_p95_us": 117.5,
+          "p50_speedup": 0.01941747572815534,
+          "p95_ratio": 51.08695652173913,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 0.2,
+                "p95_us": 0.3
+              },
+              "context_create_us": {
+                "p50_us": 12.4,
+                "p95_us": 12.4
+              },
+              "copy_host_output_us": {
+                "p50_us": 0.2,
+                "p95_us": 0.2
+              },
+              "first_inference_us": {
+                "p50_us": 11.6,
+                "p95_us": 11.6
+              },
+              "prepare_us": {
+                "p50_us": 28.8,
+                "p95_us": 28.8
+              },
+              "resident_only_us": {
+                "p50_us": 1.7,
+                "p95_us": 1.9
+              },
+              "resident_run_completed_us": {
+                "p50_us": 1.7,
+                "p95_us": 1.9
+              },
+              "warm_e2e_us": {
+                "p50_us": 2.2,
+                "p95_us": 2.3
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 15.5,
+                "p95_us": 15.7
+              },
+              "context_create_us": {
+                "p50_us": 8.4,
+                "p95_us": 8.4
+              },
+              "copy_host_output_us": {
+                "p50_us": 15.0,
+                "p95_us": 15.9
+              },
+              "first_inference_us": {
+                "p50_us": 30693.3,
+                "p95_us": 30693.3
+              },
+              "prepare_us": {
+                "p50_us": 85766.4,
+                "p95_us": 85766.4
+              },
+              "resident_only_us": {
+                "p50_us": 83.8,
+                "p95_us": 92.6
+              },
+              "resident_run_completed_us": {
+                "p50_us": 85.7,
+                "p95_us": 86.9
+              },
+              "warm_e2e_us": {
+                "p50_us": 113.3,
+                "p95_us": 117.5
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 48,
+              "activation_bytes": 28,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 350773248
+            },
+            "cuda": {
+              "weight_bytes": 68,
+              "activation_bytes": 28,
+              "logical_device_allocated_bytes": 104,
+              "process_peak_working_set_bytes": 350773248
+            }
+          }
+        }
+      ],
+      "median_p50_speedup": 0.01848591549295775,
+      "median_p95_ratio": 57.69565217391304,
+      "median_p50_latency_ratio": 54.09523809523809
+    },
+    {
+      "round": 1,
+      "workload": "rl_actor_mlp_tanh",
+      "processes": [
+        {
+          "process": 1,
+          "cpu_p50_us": 2.0,
+          "cpu_p95_us": 2.2,
+          "cuda_p50_us": 124.2,
+          "cuda_p95_us": 146.7,
+          "p50_speedup": 0.01610305958132045,
+          "p95_ratio": 66.68181818181817,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 0.2,
+                "p95_us": 0.3
+              },
+              "context_create_us": {
+                "p50_us": 8.4,
+                "p95_us": 8.4
+              },
+              "copy_host_output_us": {
+                "p50_us": 0.2,
+                "p95_us": 0.2
+              },
+              "first_inference_us": {
+                "p50_us": 6.4,
+                "p95_us": 6.4
+              },
+              "prepare_us": {
+                "p50_us": 21.9,
+                "p95_us": 21.9
+              },
+              "resident_only_us": {
+                "p50_us": 1.5,
+                "p95_us": 1.7
+              },
+              "resident_run_completed_us": {
+                "p50_us": 1.5,
+                "p95_us": 1.7
+              },
+              "warm_e2e_us": {
+                "p50_us": 2.0,
+                "p95_us": 2.2
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 14.7,
+                "p95_us": 15.8
+              },
+              "context_create_us": {
+                "p50_us": 6.2,
+                "p95_us": 6.2
+              },
+              "copy_host_output_us": {
+                "p50_us": 14.6,
+                "p95_us": 23.6
+              },
+              "first_inference_us": {
+                "p50_us": 149.1,
+                "p95_us": 149.1
+              },
+              "prepare_us": {
+                "p50_us": 793.4,
+                "p95_us": 793.4
+              },
+              "resident_only_us": {
+                "p50_us": 83.7,
+                "p95_us": 332.9
+              },
+              "resident_run_completed_us": {
+                "p50_us": 88.9,
+                "p95_us": 120.4
+              },
+              "warm_e2e_us": {
+                "p50_us": 124.2,
+                "p95_us": 146.7
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 120,
+              "activation_bytes": 44,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 350896128
+            },
+            "cuda": {
+              "weight_bytes": 148,
+              "activation_bytes": 44,
+              "logical_device_allocated_bytes": 208,
+              "process_peak_working_set_bytes": 350896128
+            }
+          }
+        },
+        {
+          "process": 2,
+          "cpu_p50_us": 2.1,
+          "cpu_p95_us": 2.3,
+          "cuda_p50_us": 110.7,
+          "cuda_p95_us": 141.8,
+          "p50_speedup": 0.018970189701897018,
+          "p95_ratio": 61.65217391304349,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 0.3,
+                "p95_us": 0.3
+              },
+              "context_create_us": {
+                "p50_us": 7.1,
+                "p95_us": 7.1
+              },
+              "copy_host_output_us": {
+                "p50_us": 0.2,
+                "p95_us": 0.2
+              },
+              "first_inference_us": {
+                "p50_us": 4.8,
+                "p95_us": 4.8
+              },
+              "prepare_us": {
+                "p50_us": 25.7,
+                "p95_us": 25.7
+              },
+              "resident_only_us": {
+                "p50_us": 1.5,
+                "p95_us": 1.8
+              },
+              "resident_run_completed_us": {
+                "p50_us": 1.5,
+                "p95_us": 1.7
+              },
+              "warm_e2e_us": {
+                "p50_us": 2.1,
+                "p95_us": 2.3
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 14.6,
+                "p95_us": 19.3
+              },
+              "context_create_us": {
+                "p50_us": 7.0,
+                "p95_us": 7.0
+              },
+              "copy_host_output_us": {
+                "p50_us": 14.7,
+                "p95_us": 25.6
+              },
+              "first_inference_us": {
+                "p50_us": 2039.5,
+                "p95_us": 2039.5
+              },
+              "prepare_us": {
+                "p50_us": 858.6,
+                "p95_us": 858.6
+              },
+              "resident_only_us": {
+                "p50_us": 87.3,
+                "p95_us": 284.9
+              },
+              "resident_run_completed_us": {
+                "p50_us": 86.3,
+                "p95_us": 117.4
+              },
+              "warm_e2e_us": {
+                "p50_us": 110.7,
+                "p95_us": 141.8
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 120,
+              "activation_bytes": 44,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 386121728
+            },
+            "cuda": {
+              "weight_bytes": 148,
+              "activation_bytes": 44,
+              "logical_device_allocated_bytes": 208,
+              "process_peak_working_set_bytes": 386121728
+            }
+          }
+        },
+        {
+          "process": 3,
+          "cpu_p50_us": 2.1,
+          "cpu_p95_us": 2.3,
+          "cuda_p50_us": 116.1,
+          "cuda_p95_us": 379.3,
+          "p50_speedup": 0.018087855297157625,
+          "p95_ratio": 164.91304347826087,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 0.3,
+                "p95_us": 0.3
+              },
+              "context_create_us": {
+                "p50_us": 10.0,
+                "p95_us": 10.0
+              },
+              "copy_host_output_us": {
+                "p50_us": 0.2,
+                "p95_us": 0.3
+              },
+              "first_inference_us": {
+                "p50_us": 6.9,
+                "p95_us": 6.9
+              },
+              "prepare_us": {
+                "p50_us": 23.1,
+                "p95_us": 23.1
+              },
+              "resident_only_us": {
+                "p50_us": 1.6,
+                "p95_us": 1.7
+              },
+              "resident_run_completed_us": {
+                "p50_us": 1.6,
+                "p95_us": 1.7
+              },
+              "warm_e2e_us": {
+                "p50_us": 2.1,
+                "p95_us": 2.3
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 8.7,
+                "p95_us": 15.7
+              },
+              "context_create_us": {
+                "p50_us": 6.3,
+                "p95_us": 6.3
+              },
+              "copy_host_output_us": {
+                "p50_us": 14.9,
+                "p95_us": 15.4
+              },
+              "first_inference_us": {
+                "p50_us": 149.5,
+                "p95_us": 149.5
+              },
+              "prepare_us": {
+                "p50_us": 967.3,
+                "p95_us": 967.3
+              },
+              "resident_only_us": {
+                "p50_us": 83.3,
+                "p95_us": 93.7
+              },
+              "resident_run_completed_us": {
+                "p50_us": 85.7,
+                "p95_us": 86.6
+              },
+              "warm_e2e_us": {
+                "p50_us": 116.1,
+                "p95_us": 379.3
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 120,
+              "activation_bytes": 44,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 350871552
+            },
+            "cuda": {
+              "weight_bytes": 148,
+              "activation_bytes": 44,
+              "logical_device_allocated_bytes": 208,
+              "process_peak_working_set_bytes": 350871552
+            }
+          }
+        }
+      ],
+      "median_p50_speedup": 0.018087855297157625,
+      "median_p95_ratio": 66.68181818181817,
+      "median_p50_latency_ratio": 55.28571428571428
+    },
+    {
+      "round": 1,
+      "workload": "control",
+      "processes": [
+        {
+          "process": 1,
+          "cpu_p50_us": 1187.0,
+          "cpu_p95_us": 1310.5,
+          "cuda_p50_us": 258.1,
+          "cuda_p95_us": 332.3,
+          "p50_speedup": 4.598992638512204,
+          "p95_ratio": 0.2535673407096528,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 135.1,
+                "p95_us": 140.1
+              },
+              "context_create_us": {
+                "p50_us": 1189.8,
+                "p95_us": 1189.8
+              },
+              "copy_host_output_us": {
+                "p50_us": 135.0,
+                "p95_us": 138.2
+              },
+              "first_inference_us": {
+                "p50_us": 1220.4,
+                "p95_us": 1220.4
+              },
+              "prepare_us": {
+                "p50_us": 1440.6,
+                "p95_us": 1440.6
+              },
+              "resident_only_us": {
+                "p50_us": 901.3,
+                "p95_us": 1099.0
+              },
+              "resident_run_completed_us": {
+                "p50_us": 889.5,
+                "p95_us": 1000.1
+              },
+              "warm_e2e_us": {
+                "p50_us": 1187.0,
+                "p95_us": 1310.5
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 174.7,
+                "p95_us": 215.1
+              },
+              "context_create_us": {
+                "p50_us": 7.8,
+                "p95_us": 7.8
+              },
+              "copy_host_output_us": {
+                "p50_us": 36.0,
+                "p95_us": 52.0
+              },
+              "first_inference_us": {
+                "p50_us": 4768.2,
+                "p95_us": 4768.2
+              },
+              "prepare_us": {
+                "p50_us": 1898.6,
+                "p95_us": 1898.6
+              },
+              "resident_only_us": {
+                "p50_us": 45.8,
+                "p95_us": 116.1
+              },
+              "resident_run_completed_us": {
+                "p50_us": 49.2,
+                "p95_us": 124.1
+              },
+              "warm_e2e_us": {
+                "p50_us": 258.1,
+                "p95_us": 332.3
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 1048576,
+              "activation_bytes": 131072,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 372559872
+            },
+            "cuda": {
+              "weight_bytes": 1050624,
+              "activation_bytes": 131072,
+              "logical_device_allocated_bytes": 1312768,
+              "process_peak_working_set_bytes": 372559872
+            }
+          }
+        },
+        {
+          "process": 2,
+          "cpu_p50_us": 1163.5,
+          "cpu_p95_us": 1308.1,
+          "cuda_p50_us": 261.7,
+          "cuda_p95_us": 399.8,
+          "p50_speedup": 4.445930454719144,
+          "p95_ratio": 0.3056341258313585,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 138.0,
+                "p95_us": 165.0
+              },
+              "context_create_us": {
+                "p50_us": 1226.9,
+                "p95_us": 1226.9
+              },
+              "copy_host_output_us": {
+                "p50_us": 138.2,
+                "p95_us": 162.2
+              },
+              "first_inference_us": {
+                "p50_us": 1184.3,
+                "p95_us": 1184.3
+              },
+              "prepare_us": {
+                "p50_us": 1514.1,
+                "p95_us": 1514.1
+              },
+              "resident_only_us": {
+                "p50_us": 903.1,
+                "p95_us": 944.0
+              },
+              "resident_run_completed_us": {
+                "p50_us": 912.8,
+                "p95_us": 1056.3
+              },
+              "warm_e2e_us": {
+                "p50_us": 1163.5,
+                "p95_us": 1308.1
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 174.9,
+                "p95_us": 208.8
+              },
+              "context_create_us": {
+                "p50_us": 13.5,
+                "p95_us": 13.5
+              },
+              "copy_host_output_us": {
+                "p50_us": 36.4,
+                "p95_us": 56.7
+              },
+              "first_inference_us": {
+                "p50_us": 485.1,
+                "p95_us": 485.1
+              },
+              "prepare_us": {
+                "p50_us": 1991.5,
+                "p95_us": 1991.5
+              },
+              "resident_only_us": {
+                "p50_us": 47.4,
+                "p95_us": 120.0
+              },
+              "resident_run_completed_us": {
+                "p50_us": 50.4,
+                "p95_us": 133.9
+              },
+              "warm_e2e_us": {
+                "p50_us": 261.7,
+                "p95_us": 399.8
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 1048576,
+              "activation_bytes": 131072,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 386121728
+            },
+            "cuda": {
+              "weight_bytes": 1050624,
+              "activation_bytes": 131072,
+              "logical_device_allocated_bytes": 1312768,
+              "process_peak_working_set_bytes": 386121728
+            }
+          }
+        },
+        {
+          "process": 3,
+          "cpu_p50_us": 1178.8,
+          "cpu_p95_us": 1278.5,
+          "cuda_p50_us": 260.3,
+          "cuda_p95_us": 339.9,
+          "p50_speedup": 4.528620822128313,
+          "p95_ratio": 0.265858427845131,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 135.0,
+                "p95_us": 152.5
+              },
+              "context_create_us": {
+                "p50_us": 1149.3,
+                "p95_us": 1149.3
+              },
+              "copy_host_output_us": {
+                "p50_us": 135.4,
+                "p95_us": 147.5
+              },
+              "first_inference_us": {
+                "p50_us": 1209.7,
+                "p95_us": 1209.7
+              },
+              "prepare_us": {
+                "p50_us": 1452.1,
+                "p95_us": 1452.1
+              },
+              "resident_only_us": {
+                "p50_us": 1040.2,
+                "p95_us": 1105.1
+              },
+              "resident_run_completed_us": {
+                "p50_us": 881.6,
+                "p95_us": 1045.7
+              },
+              "warm_e2e_us": {
+                "p50_us": 1178.8,
+                "p95_us": 1278.5
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 175.6,
+                "p95_us": 204.8
+              },
+              "context_create_us": {
+                "p50_us": 7.2,
+                "p95_us": 7.2
+              },
+              "copy_host_output_us": {
+                "p50_us": 37.2,
+                "p95_us": 47.3
+              },
+              "first_inference_us": {
+                "p50_us": 4925.3,
+                "p95_us": 4925.3
+              },
+              "prepare_us": {
+                "p50_us": 1964.0,
+                "p95_us": 1964.0
+              },
+              "resident_only_us": {
+                "p50_us": 54.6,
+                "p95_us": 147.6
+              },
+              "resident_run_completed_us": {
+                "p50_us": 52.9,
+                "p95_us": 146.7
+              },
+              "warm_e2e_us": {
+                "p50_us": 260.3,
+                "p95_us": 339.9
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 1048576,
+              "activation_bytes": 131072,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 372641792
+            },
+            "cuda": {
+              "weight_bytes": 1050624,
+              "activation_bytes": 131072,
+              "logical_device_allocated_bytes": 1312768,
+              "process_peak_working_set_bytes": 372641792
+            }
+          }
+        }
+      ],
+      "median_p50_speedup": 4.528620822128313,
+      "median_p95_ratio": 0.265858427845131,
+      "median_p50_latency_ratio": 0.22081778079402783
+    },
+    {
+      "round": 1,
+      "workload": "target",
+      "processes": [
+        {
+          "process": 1,
+          "cpu_p50_us": 10538.4,
+          "cpu_p95_us": 11017.3,
+          "cuda_p50_us": 941.8,
+          "cuda_p95_us": 1089.0,
+          "p50_speedup": 11.189636865576556,
+          "p95_ratio": 0.09884454448912167,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 550.8,
+                "p95_us": 615.9
+              },
+              "context_create_us": {
+                "p50_us": 4636.4,
+                "p95_us": 4636.4
+              },
+              "copy_host_output_us": {
+                "p50_us": 551.2,
+                "p95_us": 580.5
+              },
+              "first_inference_us": {
+                "p50_us": 11047.7,
+                "p95_us": 11047.7
+              },
+              "prepare_us": {
+                "p50_us": 5905.9,
+                "p95_us": 5905.9
+              },
+              "resident_only_us": {
+                "p50_us": 9098.5,
+                "p95_us": 9516.3
+              },
+              "resident_run_completed_us": {
+                "p50_us": 9152.5,
+                "p95_us": 9660.8
+              },
+              "warm_e2e_us": {
+                "p50_us": 10538.4,
+                "p95_us": 11017.3
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 686.1,
+                "p95_us": 869.5
+              },
+              "context_create_us": {
+                "p50_us": 12.0,
+                "p95_us": 12.0
+              },
+              "copy_host_output_us": {
+                "p50_us": 93.7,
+                "p95_us": 156.9
+              },
+              "first_inference_us": {
+                "p50_us": 1227.1,
+                "p95_us": 1227.1
+              },
+              "prepare_us": {
+                "p50_us": 6099.9,
+                "p95_us": 6099.9
+              },
+              "resident_only_us": {
+                "p50_us": 176.3,
+                "p95_us": 318.3
+              },
+              "resident_run_completed_us": {
+                "p50_us": 176.0,
+                "p95_us": 408.1
+              },
+              "warm_e2e_us": {
+                "p50_us": 941.8,
+                "p95_us": 1089.0
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 4194304,
+              "activation_bytes": 524288,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 392798208
+            },
+            "cuda": {
+              "weight_bytes": 4198400,
+              "activation_bytes": 524288,
+              "logical_device_allocated_bytes": 5246976,
+              "process_peak_working_set_bytes": 392798208
+            }
+          }
+        },
+        {
+          "process": 2,
+          "cpu_p50_us": 10140.5,
+          "cpu_p95_us": 10846.7,
+          "cuda_p50_us": 966.3,
+          "cuda_p95_us": 1178.1,
+          "p50_speedup": 10.494152954568975,
+          "p95_ratio": 0.1086136797366941,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 550.6,
+                "p95_us": 701.5
+              },
+              "context_create_us": {
+                "p50_us": 5549.4,
+                "p95_us": 5549.4
+              },
+              "copy_host_output_us": {
+                "p50_us": 554.1,
+                "p95_us": 715.1
+              },
+              "first_inference_us": {
+                "p50_us": 10648.5,
+                "p95_us": 10648.5
+              },
+              "prepare_us": {
+                "p50_us": 5941.5,
+                "p95_us": 5941.5
+              },
+              "resident_only_us": {
+                "p50_us": 8920.5,
+                "p95_us": 9284.8
+              },
+              "resident_run_completed_us": {
+                "p50_us": 8914.0,
+                "p95_us": 12268.8
+              },
+              "warm_e2e_us": {
+                "p50_us": 10140.5,
+                "p95_us": 10846.7
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 707.8,
+                "p95_us": 896.4
+              },
+              "context_create_us": {
+                "p50_us": 24.4,
+                "p95_us": 24.4
+              },
+              "copy_host_output_us": {
+                "p50_us": 95.6,
+                "p95_us": 157.7
+              },
+              "first_inference_us": {
+                "p50_us": 32363.1,
+                "p95_us": 32363.1
+              },
+              "prepare_us": {
+                "p50_us": 89463.1,
+                "p95_us": 89463.1
+              },
+              "resident_only_us": {
+                "p50_us": 203.8,
+                "p95_us": 343.7
+              },
+              "resident_run_completed_us": {
+                "p50_us": 187.6,
+                "p95_us": 269.0
+              },
+              "warm_e2e_us": {
+                "p50_us": 966.3,
+                "p95_us": 1178.1
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 4194304,
+              "activation_bytes": 524288,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 386121728
+            },
+            "cuda": {
+              "weight_bytes": 4198400,
+              "activation_bytes": 524288,
+              "logical_device_allocated_bytes": 5246976,
+              "process_peak_working_set_bytes": 386121728
+            }
+          }
+        },
+        {
+          "process": 3,
+          "cpu_p50_us": 10184.1,
+          "cpu_p95_us": 11106.3,
+          "cuda_p50_us": 995.2,
+          "cuda_p95_us": 1173.4,
+          "p50_speedup": 10.233219453376206,
+          "p95_ratio": 0.10565174720654044,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 551.1,
+                "p95_us": 619.0
+              },
+              "context_create_us": {
+                "p50_us": 4900.8,
+                "p95_us": 4900.8
+              },
+              "copy_host_output_us": {
+                "p50_us": 554.6,
+                "p95_us": 614.0
+              },
+              "first_inference_us": {
+                "p50_us": 11366.6,
+                "p95_us": 11366.6
+              },
+              "prepare_us": {
+                "p50_us": 6239.3,
+                "p95_us": 6239.3
+              },
+              "resident_only_us": {
+                "p50_us": 9496.9,
+                "p95_us": 10719.9
+              },
+              "resident_run_completed_us": {
+                "p50_us": 9258.5,
+                "p95_us": 10414.9
+              },
+              "warm_e2e_us": {
+                "p50_us": 10184.1,
+                "p95_us": 11106.3
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 702.2,
+                "p95_us": 972.6
+              },
+              "context_create_us": {
+                "p50_us": 13.5,
+                "p95_us": 13.5
+              },
+              "copy_host_output_us": {
+                "p50_us": 94.1,
+                "p95_us": 170.2
+              },
+              "first_inference_us": {
+                "p50_us": 1190.4,
+                "p95_us": 1190.4
+              },
+              "prepare_us": {
+                "p50_us": 6494.2,
+                "p95_us": 6494.2
+              },
+              "resident_only_us": {
+                "p50_us": 219.0,
+                "p95_us": 295.4
+              },
+              "resident_run_completed_us": {
+                "p50_us": 175.6,
+                "p95_us": 229.2
+              },
+              "warm_e2e_us": {
+                "p50_us": 995.2,
+                "p95_us": 1173.4
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 4194304,
+              "activation_bytes": 524288,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 393220096
+            },
+            "cuda": {
+              "weight_bytes": 4198400,
+              "activation_bytes": 524288,
+              "logical_device_allocated_bytes": 5246976,
+              "process_peak_working_set_bytes": 393220096
+            }
+          }
+        }
+      ],
+      "median_p50_speedup": 10.494152954568975,
+      "median_p95_ratio": 0.10565174720654044,
+      "median_p50_latency_ratio": 0.09529115921305654
+    },
+    {
+      "round": 1,
+      "workload": "fallback",
+      "processes": [
+        {
+          "process": 1,
+          "cpu_p50_us": 397.4,
+          "cpu_p95_us": 411.5,
+          "cuda_p50_us": 390.7,
+          "cuda_p95_us": 412.5,
+          "p50_speedup": 1.01714870744817,
+          "p95_ratio": 1.0024301336573511,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 140.9,
+                "p95_us": 144.2
+              },
+              "context_create_us": {
+                "p50_us": 5.0,
+                "p95_us": 5.0
+              },
+              "copy_host_output_us": {
+                "p50_us": 140.7,
+                "p95_us": 147.2
+              },
+              "first_inference_us": {
+                "p50_us": 416.3,
+                "p95_us": 416.3
+              },
+              "prepare_us": {
+                "p50_us": 7.1,
+                "p95_us": 7.1
+              },
+              "resident_only_us": {
+                "p50_us": 124.3,
+                "p95_us": 132.7
+              },
+              "resident_run_completed_us": {
+                "p50_us": 124.2,
+                "p95_us": 127.0
+              },
+              "warm_e2e_us": {
+                "p50_us": 397.4,
+                "p95_us": 411.5
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 140.9,
+                "p95_us": 147.6
+              },
+              "context_create_us": {
+                "p50_us": 2.5,
+                "p95_us": 2.5
+              },
+              "copy_host_output_us": {
+                "p50_us": 140.7,
+                "p95_us": 144.1
+              },
+              "first_inference_us": {
+                "p50_us": 390.3,
+                "p95_us": 390.3
+              },
+              "prepare_us": {
+                "p50_us": 21.3,
+                "p95_us": 21.3
+              },
+              "resident_only_us": {
+                "p50_us": 123.9,
+                "p95_us": 129.6
+              },
+              "resident_run_completed_us": {
+                "p50_us": 124.3,
+                "p95_us": 127.8
+              },
+              "warm_e2e_us": {
+                "p50_us": 390.7,
+                "p95_us": 412.5
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 0,
+              "activation_bytes": 131072,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 392798208
+            },
+            "cuda": {
+              "weight_bytes": 0,
+              "activation_bytes": 0,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 392798208
+            }
+          }
+        },
+        {
+          "process": 2,
+          "cpu_p50_us": 397.4,
+          "cpu_p95_us": 444.2,
+          "cuda_p50_us": 398.7,
+          "cuda_p95_us": 446.8,
+          "p50_speedup": 0.9967394030599448,
+          "p95_ratio": 1.005853219270599,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 137.9,
+                "p95_us": 140.8
+              },
+              "context_create_us": {
+                "p50_us": 9.8,
+                "p95_us": 9.8
+              },
+              "copy_host_output_us": {
+                "p50_us": 137.7,
+                "p95_us": 141.2
+              },
+              "first_inference_us": {
+                "p50_us": 418.4,
+                "p95_us": 418.4
+              },
+              "prepare_us": {
+                "p50_us": 3.6,
+                "p95_us": 3.6
+              },
+              "resident_only_us": {
+                "p50_us": 123.5,
+                "p95_us": 124.8
+              },
+              "resident_run_completed_us": {
+                "p50_us": 121.6,
+                "p95_us": 124.4
+              },
+              "warm_e2e_us": {
+                "p50_us": 397.4,
+                "p95_us": 444.2
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 137.9,
+                "p95_us": 141.1
+              },
+              "context_create_us": {
+                "p50_us": 8.4,
+                "p95_us": 8.4
+              },
+              "copy_host_output_us": {
+                "p50_us": 137.8,
+                "p95_us": 140.7
+              },
+              "first_inference_us": {
+                "p50_us": 531.2,
+                "p95_us": 531.2
+              },
+              "prepare_us": {
+                "p50_us": 34.8,
+                "p95_us": 34.8
+              },
+              "resident_only_us": {
+                "p50_us": 121.8,
+                "p95_us": 124.7
+              },
+              "resident_run_completed_us": {
+                "p50_us": 121.8,
+                "p95_us": 127.2
+              },
+              "warm_e2e_us": {
+                "p50_us": 398.7,
+                "p95_us": 446.8
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 0,
+              "activation_bytes": 131072,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 176635904
+            },
+            "cuda": {
+              "weight_bytes": 0,
+              "activation_bytes": 0,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 176635904
+            }
+          }
+        },
+        {
+          "process": 3,
+          "cpu_p50_us": 405.6,
+          "cpu_p95_us": 423.0,
+          "cuda_p50_us": 406.0,
+          "cuda_p95_us": 423.3,
+          "p50_speedup": 0.9990147783251232,
+          "p95_ratio": 1.000709219858156,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 140.7,
+                "p95_us": 141.1
+              },
+              "context_create_us": {
+                "p50_us": 2.8,
+                "p95_us": 2.8
+              },
+              "copy_host_output_us": {
+                "p50_us": 140.6,
+                "p95_us": 143.3
+              },
+              "first_inference_us": {
+                "p50_us": 489.0,
+                "p95_us": 489.0
+              },
+              "prepare_us": {
+                "p50_us": 8.2,
+                "p95_us": 8.2
+              },
+              "resident_only_us": {
+                "p50_us": 119.1,
+                "p95_us": 129.4
+              },
+              "resident_run_completed_us": {
+                "p50_us": 124.0,
+                "p95_us": 130.0
+              },
+              "warm_e2e_us": {
+                "p50_us": 405.6,
+                "p95_us": 423.0
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 140.7,
+                "p95_us": 142.0
+              },
+              "context_create_us": {
+                "p50_us": 2.5,
+                "p95_us": 2.5
+              },
+              "copy_host_output_us": {
+                "p50_us": 140.6,
+                "p95_us": 143.6
+              },
+              "first_inference_us": {
+                "p50_us": 473.3,
+                "p95_us": 473.3
+              },
+              "prepare_us": {
+                "p50_us": 25.3,
+                "p95_us": 25.3
+              },
+              "resident_only_us": {
+                "p50_us": 119.1,
+                "p95_us": 124.8
+              },
+              "resident_run_completed_us": {
+                "p50_us": 124.2,
+                "p95_us": 132.7
+              },
+              "warm_e2e_us": {
+                "p50_us": 406.0,
+                "p95_us": 423.3
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 0,
+              "activation_bytes": 131072,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 393220096
+            },
+            "cuda": {
+              "weight_bytes": 0,
+              "activation_bytes": 0,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 393220096
+            }
+          }
+        }
+      ],
+      "median_p50_speedup": 0.9990147783251232,
+      "median_p95_ratio": 1.0024301336573511,
+      "median_p50_latency_ratio": 1.0009861932938855
+    },
+    {
+      "round": 2,
+      "workload": "phase3_mlp_gemm",
+      "processes": [
+        {
+          "process": 1,
+          "cpu_p50_us": 2.1,
+          "cpu_p95_us": 2.4,
+          "cuda_p50_us": 111.5,
+          "cuda_p95_us": 121.5,
+          "p50_speedup": 0.01883408071748879,
+          "p95_ratio": 50.625,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 0.2,
+                "p95_us": 0.3
+              },
+              "context_create_us": {
+                "p50_us": 6.9,
+                "p95_us": 6.9
+              },
+              "copy_host_output_us": {
+                "p50_us": 0.2,
+                "p95_us": 0.2
+              },
+              "first_inference_us": {
+                "p50_us": 5.4,
+                "p95_us": 5.4
+              },
+              "prepare_us": {
+                "p50_us": 24.6,
+                "p95_us": 24.6
+              },
+              "resident_only_us": {
+                "p50_us": 1.6,
+                "p95_us": 1.8
+              },
+              "resident_run_completed_us": {
+                "p50_us": 1.7,
+                "p95_us": 1.8
+              },
+              "warm_e2e_us": {
+                "p50_us": 2.1,
+                "p95_us": 2.4
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 15.6,
+                "p95_us": 17.0
+              },
+              "context_create_us": {
+                "p50_us": 6.9,
+                "p95_us": 6.9
+              },
+              "copy_host_output_us": {
+                "p50_us": 15.1,
+                "p95_us": 16.2
+              },
+              "first_inference_us": {
+                "p50_us": 210.1,
+                "p95_us": 210.1
+              },
+              "prepare_us": {
+                "p50_us": 786.0,
+                "p95_us": 786.0
+              },
+              "resident_only_us": {
+                "p50_us": 86.1,
+                "p95_us": 112.4
+              },
+              "resident_run_completed_us": {
+                "p50_us": 85.6,
+                "p95_us": 94.1
+              },
+              "warm_e2e_us": {
+                "p50_us": 111.5,
+                "p95_us": 121.5
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 48,
+              "activation_bytes": 28,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 386138112
+            },
+            "cuda": {
+              "weight_bytes": 68,
+              "activation_bytes": 28,
+              "logical_device_allocated_bytes": 104,
+              "process_peak_working_set_bytes": 386138112
+            }
+          }
+        },
+        {
+          "process": 2,
+          "cpu_p50_us": 2.5,
+          "cpu_p95_us": 2.7,
+          "cuda_p50_us": 123.9,
+          "cuda_p95_us": 138.0,
+          "p50_speedup": 0.020177562550443905,
+          "p95_ratio": 51.11111111111111,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 0.3,
+                "p95_us": 0.4
+              },
+              "context_create_us": {
+                "p50_us": 13.2,
+                "p95_us": 13.2
+              },
+              "copy_host_output_us": {
+                "p50_us": 0.2,
+                "p95_us": 0.3
+              },
+              "first_inference_us": {
+                "p50_us": 10.5,
+                "p95_us": 10.5
+              },
+              "prepare_us": {
+                "p50_us": 32.5,
+                "p95_us": 32.5
+              },
+              "resident_only_us": {
+                "p50_us": 1.9,
+                "p95_us": 2.1
+              },
+              "resident_run_completed_us": {
+                "p50_us": 2.0,
+                "p95_us": 2.5
+              },
+              "warm_e2e_us": {
+                "p50_us": 2.5,
+                "p95_us": 2.7
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 16.2,
+                "p95_us": 16.4
+              },
+              "context_create_us": {
+                "p50_us": 7.5,
+                "p95_us": 7.5
+              },
+              "copy_host_output_us": {
+                "p50_us": 15.7,
+                "p95_us": 16.7
+              },
+              "first_inference_us": {
+                "p50_us": 35924.6,
+                "p95_us": 35924.6
+              },
+              "prepare_us": {
+                "p50_us": 81629.5,
+                "p95_us": 81629.5
+              },
+              "resident_only_us": {
+                "p50_us": 90.1,
+                "p95_us": 102.2
+              },
+              "resident_run_completed_us": {
+                "p50_us": 91.7,
+                "p95_us": 102.0
+              },
+              "warm_e2e_us": {
+                "p50_us": 123.9,
+                "p95_us": 138.0
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 48,
+              "activation_bytes": 28,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 350810112
+            },
+            "cuda": {
+              "weight_bytes": 68,
+              "activation_bytes": 28,
+              "logical_device_allocated_bytes": 104,
+              "process_peak_working_set_bytes": 350810112
+            }
+          }
+        },
+        {
+          "process": 3,
+          "cpu_p50_us": 3.1,
+          "cpu_p95_us": 3.2,
+          "cuda_p50_us": 156.0,
+          "cuda_p95_us": 238.9,
+          "p50_speedup": 0.019871794871794874,
+          "p95_ratio": 74.65625,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 0.3,
+                "p95_us": 0.4
+              },
+              "context_create_us": {
+                "p50_us": 10.0,
+                "p95_us": 10.0
+              },
+              "copy_host_output_us": {
+                "p50_us": 0.2,
+                "p95_us": 0.3
+              },
+              "first_inference_us": {
+                "p50_us": 6.8,
+                "p95_us": 6.8
+              },
+              "prepare_us": {
+                "p50_us": 44.0,
+                "p95_us": 44.0
+              },
+              "resident_only_us": {
+                "p50_us": 2.4,
+                "p95_us": 3.9
+              },
+              "resident_run_completed_us": {
+                "p50_us": 2.3,
+                "p95_us": 2.5
+              },
+              "warm_e2e_us": {
+                "p50_us": 3.1,
+                "p95_us": 3.2
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 17.4,
+                "p95_us": 35.1
+              },
+              "context_create_us": {
+                "p50_us": 9.7,
+                "p95_us": 9.7
+              },
+              "copy_host_output_us": {
+                "p50_us": 16.6,
+                "p95_us": 34.7
+              },
+              "first_inference_us": {
+                "p50_us": 326.5,
+                "p95_us": 326.5
+              },
+              "prepare_us": {
+                "p50_us": 1279.4,
+                "p95_us": 1279.4
+              },
+              "resident_only_us": {
+                "p50_us": 106.6,
+                "p95_us": 152.4
+              },
+              "resident_run_completed_us": {
+                "p50_us": 109.4,
+                "p95_us": 119.8
+              },
+              "warm_e2e_us": {
+                "p50_us": 156.0,
+                "p95_us": 238.9
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 48,
+              "activation_bytes": 28,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 386179072
+            },
+            "cuda": {
+              "weight_bytes": 68,
+              "activation_bytes": 28,
+              "logical_device_allocated_bytes": 104,
+              "process_peak_working_set_bytes": 386179072
+            }
+          }
+        }
+      ],
+      "median_p50_speedup": 0.019871794871794874,
+      "median_p95_ratio": 51.11111111111111,
+      "median_p50_latency_ratio": 50.32258064516129
+    },
+    {
+      "round": 2,
+      "workload": "rl_actor_mlp_tanh",
+      "processes": [
+        {
+          "process": 1,
+          "cpu_p50_us": 2.1,
+          "cpu_p95_us": 2.3,
+          "cuda_p50_us": 115.7,
+          "cuda_p95_us": 119.6,
+          "p50_speedup": 0.018150388936905792,
+          "p95_ratio": 52.0,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 0.3,
+                "p95_us": 0.3
+              },
+              "context_create_us": {
+                "p50_us": 7.2,
+                "p95_us": 7.2
+              },
+              "copy_host_output_us": {
+                "p50_us": 0.2,
+                "p95_us": 0.3
+              },
+              "first_inference_us": {
+                "p50_us": 5.6,
+                "p95_us": 5.6
+              },
+              "prepare_us": {
+                "p50_us": 27.4,
+                "p95_us": 27.4
+              },
+              "resident_only_us": {
+                "p50_us": 1.6,
+                "p95_us": 2.4
+              },
+              "resident_run_completed_us": {
+                "p50_us": 1.6,
+                "p95_us": 2.4
+              },
+              "warm_e2e_us": {
+                "p50_us": 2.1,
+                "p95_us": 2.3
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 15.5,
+                "p95_us": 17.8
+              },
+              "context_create_us": {
+                "p50_us": 6.9,
+                "p95_us": 6.9
+              },
+              "copy_host_output_us": {
+                "p50_us": 15.1,
+                "p95_us": 16.0
+              },
+              "first_inference_us": {
+                "p50_us": 2051.8,
+                "p95_us": 2051.8
+              },
+              "prepare_us": {
+                "p50_us": 815.1,
+                "p95_us": 815.1
+              },
+              "resident_only_us": {
+                "p50_us": 87.7,
+                "p95_us": 288.1
+              },
+              "resident_run_completed_us": {
+                "p50_us": 86.2,
+                "p95_us": 162.4
+              },
+              "warm_e2e_us": {
+                "p50_us": 115.7,
+                "p95_us": 119.6
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 120,
+              "activation_bytes": 44,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 386138112
+            },
+            "cuda": {
+              "weight_bytes": 148,
+              "activation_bytes": 44,
+              "logical_device_allocated_bytes": 208,
+              "process_peak_working_set_bytes": 386138112
+            }
+          }
+        },
+        {
+          "process": 2,
+          "cpu_p50_us": 2.3,
+          "cpu_p95_us": 2.5,
+          "cuda_p50_us": 122.0,
+          "cuda_p95_us": 128.9,
+          "p50_speedup": 0.01885245901639344,
+          "p95_ratio": 51.56,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 0.3,
+                "p95_us": 0.3
+              },
+              "context_create_us": {
+                "p50_us": 11.2,
+                "p95_us": 11.2
+              },
+              "copy_host_output_us": {
+                "p50_us": 0.2,
+                "p95_us": 0.3
+              },
+              "first_inference_us": {
+                "p50_us": 7.8,
+                "p95_us": 7.8
+              },
+              "prepare_us": {
+                "p50_us": 26.7,
+                "p95_us": 26.7
+              },
+              "resident_only_us": {
+                "p50_us": 1.8,
+                "p95_us": 1.9
+              },
+              "resident_run_completed_us": {
+                "p50_us": 1.8,
+                "p95_us": 1.9
+              },
+              "warm_e2e_us": {
+                "p50_us": 2.3,
+                "p95_us": 2.5
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 15.9,
+                "p95_us": 16.3
+              },
+              "context_create_us": {
+                "p50_us": 7.1,
+                "p95_us": 7.1
+              },
+              "copy_host_output_us": {
+                "p50_us": 15.5,
+                "p95_us": 16.1
+              },
+              "first_inference_us": {
+                "p50_us": 223.0,
+                "p95_us": 223.0
+              },
+              "prepare_us": {
+                "p50_us": 1026.5,
+                "p95_us": 1026.5
+              },
+              "resident_only_us": {
+                "p50_us": 88.2,
+                "p95_us": 91.1
+              },
+              "resident_run_completed_us": {
+                "p50_us": 90.9,
+                "p95_us": 94.8
+              },
+              "warm_e2e_us": {
+                "p50_us": 122.0,
+                "p95_us": 128.9
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 120,
+              "activation_bytes": 44,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 350887936
+            },
+            "cuda": {
+              "weight_bytes": 148,
+              "activation_bytes": 44,
+              "logical_device_allocated_bytes": 208,
+              "process_peak_working_set_bytes": 350887936
+            }
+          }
+        },
+        {
+          "process": 3,
+          "cpu_p50_us": 3.2,
+          "cpu_p95_us": 3.8,
+          "cuda_p50_us": 149.4,
+          "cuda_p95_us": 188.2,
+          "p50_speedup": 0.0214190093708166,
+          "p95_ratio": 49.526315789473685,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 0.4,
+                "p95_us": 0.5
+              },
+              "context_create_us": {
+                "p50_us": 9.6,
+                "p95_us": 9.6
+              },
+              "copy_host_output_us": {
+                "p50_us": 0.3,
+                "p95_us": 0.3
+              },
+              "first_inference_us": {
+                "p50_us": 6.7,
+                "p95_us": 6.7
+              },
+              "prepare_us": {
+                "p50_us": 35.1,
+                "p95_us": 35.1
+              },
+              "resident_only_us": {
+                "p50_us": 2.3,
+                "p95_us": 2.8
+              },
+              "resident_run_completed_us": {
+                "p50_us": 2.3,
+                "p95_us": 2.9
+              },
+              "warm_e2e_us": {
+                "p50_us": 3.2,
+                "p95_us": 3.8
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 17.9,
+                "p95_us": 36.2
+              },
+              "context_create_us": {
+                "p50_us": 9.6,
+                "p95_us": 9.6
+              },
+              "copy_host_output_us": {
+                "p50_us": 17.3,
+                "p95_us": 35.6
+              },
+              "first_inference_us": {
+                "p50_us": 2670.2,
+                "p95_us": 2670.2
+              },
+              "prepare_us": {
+                "p50_us": 1078.7,
+                "p95_us": 1078.7
+              },
+              "resident_only_us": {
+                "p50_us": 111.9,
+                "p95_us": 125.0
+              },
+              "resident_run_completed_us": {
+                "p50_us": 114.9,
+                "p95_us": 121.7
+              },
+              "warm_e2e_us": {
+                "p50_us": 149.4,
+                "p95_us": 188.2
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 120,
+              "activation_bytes": 44,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 386179072
+            },
+            "cuda": {
+              "weight_bytes": 148,
+              "activation_bytes": 44,
+              "logical_device_allocated_bytes": 208,
+              "process_peak_working_set_bytes": 386179072
+            }
+          }
+        }
+      ],
+      "median_p50_speedup": 0.01885245901639344,
+      "median_p95_ratio": 51.56,
+      "median_p50_latency_ratio": 53.04347826086957
+    },
+    {
+      "round": 2,
+      "workload": "control",
+      "processes": [
+        {
+          "process": 1,
+          "cpu_p50_us": 1204.2,
+          "cpu_p95_us": 1293.0,
+          "cuda_p50_us": 276.2,
+          "cuda_p95_us": 343.9,
+          "p50_speedup": 4.359884141926141,
+          "p95_ratio": 0.2659706109822119,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 148.2,
+                "p95_us": 162.5
+              },
+              "context_create_us": {
+                "p50_us": 1287.9,
+                "p95_us": 1287.9
+              },
+              "copy_host_output_us": {
+                "p50_us": 149.9,
+                "p95_us": 160.9
+              },
+              "first_inference_us": {
+                "p50_us": 1167.1,
+                "p95_us": 1167.1
+              },
+              "prepare_us": {
+                "p50_us": 1689.5,
+                "p95_us": 1689.5
+              },
+              "resident_only_us": {
+                "p50_us": 930.5,
+                "p95_us": 1002.5
+              },
+              "resident_run_completed_us": {
+                "p50_us": 965.1,
+                "p95_us": 1042.6
+              },
+              "warm_e2e_us": {
+                "p50_us": 1204.2,
+                "p95_us": 1293.0
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 187.9,
+                "p95_us": 266.7
+              },
+              "context_create_us": {
+                "p50_us": 20.8,
+                "p95_us": 20.8
+              },
+              "copy_host_output_us": {
+                "p50_us": 38.7,
+                "p95_us": 104.3
+              },
+              "first_inference_us": {
+                "p50_us": 464.0,
+                "p95_us": 464.0
+              },
+              "prepare_us": {
+                "p50_us": 2093.3,
+                "p95_us": 2093.3
+              },
+              "resident_only_us": {
+                "p50_us": 49.9,
+                "p95_us": 175.3
+              },
+              "resident_run_completed_us": {
+                "p50_us": 56.5,
+                "p95_us": 133.4
+              },
+              "warm_e2e_us": {
+                "p50_us": 276.2,
+                "p95_us": 343.9
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 1048576,
+              "activation_bytes": 131072,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 386138112
+            },
+            "cuda": {
+              "weight_bytes": 1050624,
+              "activation_bytes": 131072,
+              "logical_device_allocated_bytes": 1312768,
+              "process_peak_working_set_bytes": 386138112
+            }
+          }
+        },
+        {
+          "process": 2,
+          "cpu_p50_us": 1208.7,
+          "cpu_p95_us": 1281.3,
+          "cuda_p50_us": 257.4,
+          "cuda_p95_us": 343.2,
+          "p50_speedup": 4.695804195804197,
+          "p95_ratio": 0.2678529618356357,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 147.1,
+                "p95_us": 157.8
+              },
+              "context_create_us": {
+                "p50_us": 1345.3,
+                "p95_us": 1345.3
+              },
+              "copy_host_output_us": {
+                "p50_us": 147.0,
+                "p95_us": 152.3
+              },
+              "first_inference_us": {
+                "p50_us": 1412.6,
+                "p95_us": 1412.6
+              },
+              "prepare_us": {
+                "p50_us": 1720.6,
+                "p95_us": 1720.6
+              },
+              "resident_only_us": {
+                "p50_us": 1044.7,
+                "p95_us": 1171.0
+              },
+              "resident_run_completed_us": {
+                "p50_us": 996.3,
+                "p95_us": 1049.7
+              },
+              "warm_e2e_us": {
+                "p50_us": 1208.7,
+                "p95_us": 1281.3
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 187.6,
+                "p95_us": 220.8
+              },
+              "context_create_us": {
+                "p50_us": 9.1,
+                "p95_us": 9.1
+              },
+              "copy_host_output_us": {
+                "p50_us": 37.7,
+                "p95_us": 139.9
+              },
+              "first_inference_us": {
+                "p50_us": 6082.8,
+                "p95_us": 6082.8
+              },
+              "prepare_us": {
+                "p50_us": 2497.9,
+                "p95_us": 2497.9
+              },
+              "resident_only_us": {
+                "p50_us": 62.4,
+                "p95_us": 204.5
+              },
+              "resident_run_completed_us": {
+                "p50_us": 52.1,
+                "p95_us": 208.6
+              },
+              "warm_e2e_us": {
+                "p50_us": 257.4,
+                "p95_us": 343.2
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 1048576,
+              "activation_bytes": 131072,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 372559872
+            },
+            "cuda": {
+              "weight_bytes": 1050624,
+              "activation_bytes": 131072,
+              "logical_device_allocated_bytes": 1312768,
+              "process_peak_working_set_bytes": 372559872
+            }
+          }
+        },
+        {
+          "process": 3,
+          "cpu_p50_us": 1357.7,
+          "cpu_p95_us": 1599.8,
+          "cuda_p50_us": 322.8,
+          "cuda_p95_us": 525.2,
+          "p50_speedup": 4.206009913258984,
+          "p95_ratio": 0.3282910363795475,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 143.5,
+                "p95_us": 149.3
+              },
+              "context_create_us": {
+                "p50_us": 1219.3,
+                "p95_us": 1219.3
+              },
+              "copy_host_output_us": {
+                "p50_us": 141.0,
+                "p95_us": 148.7
+              },
+              "first_inference_us": {
+                "p50_us": 1197.0,
+                "p95_us": 1197.0
+              },
+              "prepare_us": {
+                "p50_us": 1596.7,
+                "p95_us": 1596.7
+              },
+              "resident_only_us": {
+                "p50_us": 1385.2,
+                "p95_us": 1538.0
+              },
+              "resident_run_completed_us": {
+                "p50_us": 947.1,
+                "p95_us": 995.2
+              },
+              "warm_e2e_us": {
+                "p50_us": 1357.7,
+                "p95_us": 1599.8
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 184.8,
+                "p95_us": 227.1
+              },
+              "context_create_us": {
+                "p50_us": 11.6,
+                "p95_us": 11.6
+              },
+              "copy_host_output_us": {
+                "p50_us": 38.8,
+                "p95_us": 111.1
+              },
+              "first_inference_us": {
+                "p50_us": 464.1,
+                "p95_us": 464.1
+              },
+              "prepare_us": {
+                "p50_us": 2541.3,
+                "p95_us": 2541.3
+              },
+              "resident_only_us": {
+                "p50_us": 65.3,
+                "p95_us": 206.4
+              },
+              "resident_run_completed_us": {
+                "p50_us": 57.8,
+                "p95_us": 170.5
+              },
+              "warm_e2e_us": {
+                "p50_us": 322.8,
+                "p95_us": 525.2
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 1048576,
+              "activation_bytes": 131072,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 386179072
+            },
+            "cuda": {
+              "weight_bytes": 1050624,
+              "activation_bytes": 131072,
+              "logical_device_allocated_bytes": 1312768,
+              "process_peak_working_set_bytes": 386179072
+            }
+          }
+        }
+      ],
+      "median_p50_speedup": 4.359884141926141,
+      "median_p95_ratio": 0.2678529618356357,
+      "median_p50_latency_ratio": 0.22936389304102306
+    },
+    {
+      "round": 2,
+      "workload": "target",
+      "processes": [
+        {
+          "process": 1,
+          "cpu_p50_us": 10134.5,
+          "cpu_p95_us": 11120.7,
+          "cuda_p50_us": 980.4,
+          "cuda_p95_us": 1236.9,
+          "p50_speedup": 10.337107303141575,
+          "p95_ratio": 0.11122501281394157,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 614.0,
+                "p95_us": 686.7
+              },
+              "context_create_us": {
+                "p50_us": 4731.8,
+                "p95_us": 4731.8
+              },
+              "copy_host_output_us": {
+                "p50_us": 619.7,
+                "p95_us": 736.2
+              },
+              "first_inference_us": {
+                "p50_us": 10664.0,
+                "p95_us": 10664.0
+              },
+              "prepare_us": {
+                "p50_us": 5832.2,
+                "p95_us": 5832.2
+              },
+              "resident_only_us": {
+                "p50_us": 9555.0,
+                "p95_us": 10476.8
+              },
+              "resident_run_completed_us": {
+                "p50_us": 10201.9,
+                "p95_us": 12705.2
+              },
+              "warm_e2e_us": {
+                "p50_us": 10134.5,
+                "p95_us": 11120.7
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 783.4,
+                "p95_us": 880.3
+              },
+              "context_create_us": {
+                "p50_us": 21.4,
+                "p95_us": 21.4
+              },
+              "copy_host_output_us": {
+                "p50_us": 110.8,
+                "p95_us": 157.6
+              },
+              "first_inference_us": {
+                "p50_us": 33169.2,
+                "p95_us": 33169.2
+              },
+              "prepare_us": {
+                "p50_us": 84213.2,
+                "p95_us": 84213.2
+              },
+              "resident_only_us": {
+                "p50_us": 225.2,
+                "p95_us": 336.0
+              },
+              "resident_run_completed_us": {
+                "p50_us": 216.4,
+                "p95_us": 351.2
+              },
+              "warm_e2e_us": {
+                "p50_us": 980.4,
+                "p95_us": 1236.9
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 4194304,
+              "activation_bytes": 524288,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 386138112
+            },
+            "cuda": {
+              "weight_bytes": 4198400,
+              "activation_bytes": 524288,
+              "logical_device_allocated_bytes": 5246976,
+              "process_peak_working_set_bytes": 386138112
+            }
+          }
+        },
+        {
+          "process": 2,
+          "cpu_p50_us": 10485.3,
+          "cpu_p95_us": 12227.1,
+          "cuda_p50_us": 1073.6,
+          "cuda_p95_us": 1215.7,
+          "p50_speedup": 9.766486587183309,
+          "p95_ratio": 0.09942668335091723,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 573.7,
+                "p95_us": 628.8
+              },
+              "context_create_us": {
+                "p50_us": 5151.1,
+                "p95_us": 5151.1
+              },
+              "copy_host_output_us": {
+                "p50_us": 567.0,
+                "p95_us": 611.1
+              },
+              "first_inference_us": {
+                "p50_us": 10860.4,
+                "p95_us": 10860.4
+              },
+              "prepare_us": {
+                "p50_us": 6906.7,
+                "p95_us": 6906.7
+              },
+              "resident_only_us": {
+                "p50_us": 9396.3,
+                "p95_us": 9715.2
+              },
+              "resident_run_completed_us": {
+                "p50_us": 9326.8,
+                "p95_us": 10289.3
+              },
+              "warm_e2e_us": {
+                "p50_us": 10485.3,
+                "p95_us": 12227.1
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 690.4,
+                "p95_us": 820.4
+              },
+              "context_create_us": {
+                "p50_us": 19.3,
+                "p95_us": 19.3
+              },
+              "copy_host_output_us": {
+                "p50_us": 105.8,
+                "p95_us": 148.4
+              },
+              "first_inference_us": {
+                "p50_us": 1090.5,
+                "p95_us": 1090.5
+              },
+              "prepare_us": {
+                "p50_us": 7237.0,
+                "p95_us": 7237.0
+              },
+              "resident_only_us": {
+                "p50_us": 208.4,
+                "p95_us": 274.0
+              },
+              "resident_run_completed_us": {
+                "p50_us": 182.5,
+                "p95_us": 206.2
+              },
+              "warm_e2e_us": {
+                "p50_us": 1073.6,
+                "p95_us": 1215.7
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 4194304,
+              "activation_bytes": 524288,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 392798208
+            },
+            "cuda": {
+              "weight_bytes": 4198400,
+              "activation_bytes": 524288,
+              "logical_device_allocated_bytes": 5246976,
+              "process_peak_working_set_bytes": 392798208
+            }
+          }
+        },
+        {
+          "process": 3,
+          "cpu_p50_us": 10939.0,
+          "cpu_p95_us": 11751.6,
+          "cuda_p50_us": 1008.4,
+          "cuda_p95_us": 1159.3,
+          "p50_speedup": 10.84787782625942,
+          "p95_ratio": 0.0986503965417475,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 553.6,
+                "p95_us": 601.7
+              },
+              "context_create_us": {
+                "p50_us": 4920.0,
+                "p95_us": 4920.0
+              },
+              "copy_host_output_us": {
+                "p50_us": 564.0,
+                "p95_us": 701.8
+              },
+              "first_inference_us": {
+                "p50_us": 10709.0,
+                "p95_us": 10709.0
+              },
+              "prepare_us": {
+                "p50_us": 6194.7,
+                "p95_us": 6194.7
+              },
+              "resident_only_us": {
+                "p50_us": 9323.2,
+                "p95_us": 10036.2
+              },
+              "resident_run_completed_us": {
+                "p50_us": 9442.2,
+                "p95_us": 10531.4
+              },
+              "warm_e2e_us": {
+                "p50_us": 10939.0,
+                "p95_us": 11751.6
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 698.9,
+                "p95_us": 792.8
+              },
+              "context_create_us": {
+                "p50_us": 18.4,
+                "p95_us": 18.4
+              },
+              "copy_host_output_us": {
+                "p50_us": 105.9,
+                "p95_us": 200.8
+              },
+              "first_inference_us": {
+                "p50_us": 36246.3,
+                "p95_us": 36246.3
+              },
+              "prepare_us": {
+                "p50_us": 114317.8,
+                "p95_us": 114317.8
+              },
+              "resident_only_us": {
+                "p50_us": 180.3,
+                "p95_us": 322.8
+              },
+              "resident_run_completed_us": {
+                "p50_us": 172.4,
+                "p95_us": 237.3
+              },
+              "warm_e2e_us": {
+                "p50_us": 1008.4,
+                "p95_us": 1159.3
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 4194304,
+              "activation_bytes": 524288,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 386179072
+            },
+            "cuda": {
+              "weight_bytes": 4198400,
+              "activation_bytes": 524288,
+              "logical_device_allocated_bytes": 5246976,
+              "process_peak_working_set_bytes": 386179072
+            }
+          }
+        }
+      ],
+      "median_p50_speedup": 10.337107303141575,
+      "median_p95_ratio": 0.09942668335091723,
+      "median_p50_latency_ratio": 0.0967388623020376
+    },
+    {
+      "round": 2,
+      "workload": "fallback",
+      "processes": [
+        {
+          "process": 1,
+          "cpu_p50_us": 454.6,
+          "cpu_p95_us": 582.8,
+          "cuda_p50_us": 455.8,
+          "cuda_p95_us": 616.7,
+          "p50_speedup": 0.9973672663448881,
+          "p95_ratio": 1.0581674673987647,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 143.3,
+                "p95_us": 165.9
+              },
+              "context_create_us": {
+                "p50_us": 10.6,
+                "p95_us": 10.6
+              },
+              "copy_host_output_us": {
+                "p50_us": 143.2,
+                "p95_us": 153.7
+              },
+              "first_inference_us": {
+                "p50_us": 426.7,
+                "p95_us": 426.7
+              },
+              "prepare_us": {
+                "p50_us": 4.3,
+                "p95_us": 4.3
+              },
+              "resident_only_us": {
+                "p50_us": 127.2,
+                "p95_us": 132.9
+              },
+              "resident_run_completed_us": {
+                "p50_us": 126.6,
+                "p95_us": 136.4
+              },
+              "warm_e2e_us": {
+                "p50_us": 454.6,
+                "p95_us": 582.8
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 143.2,
+                "p95_us": 153.5
+              },
+              "context_create_us": {
+                "p50_us": 8.8,
+                "p95_us": 8.8
+              },
+              "copy_host_output_us": {
+                "p50_us": 143.2,
+                "p95_us": 154.6
+              },
+              "first_inference_us": {
+                "p50_us": 469.7,
+                "p95_us": 469.7
+              },
+              "prepare_us": {
+                "p50_us": 35.3,
+                "p95_us": 35.3
+              },
+              "resident_only_us": {
+                "p50_us": 127.2,
+                "p95_us": 132.8
+              },
+              "resident_run_completed_us": {
+                "p50_us": 126.8,
+                "p95_us": 136.4
+              },
+              "warm_e2e_us": {
+                "p50_us": 455.8,
+                "p95_us": 616.7
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 0,
+              "activation_bytes": 131072,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 176656384
+            },
+            "cuda": {
+              "weight_bytes": 0,
+              "activation_bytes": 0,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 176656384
+            }
+          }
+        },
+        {
+          "process": 2,
+          "cpu_p50_us": 399.7,
+          "cpu_p95_us": 431.4,
+          "cuda_p50_us": 397.3,
+          "cuda_p95_us": 441.7,
+          "p50_speedup": 1.0060407752328215,
+          "p95_ratio": 1.0238757533611498,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 139.3,
+                "p95_us": 153.9
+              },
+              "context_create_us": {
+                "p50_us": 6.0,
+                "p95_us": 6.0
+              },
+              "copy_host_output_us": {
+                "p50_us": 140.6,
+                "p95_us": 146.8
+              },
+              "first_inference_us": {
+                "p50_us": 470.2,
+                "p95_us": 470.2
+              },
+              "prepare_us": {
+                "p50_us": 7.5,
+                "p95_us": 7.5
+              },
+              "resident_only_us": {
+                "p50_us": 121.7,
+                "p95_us": 124.4
+              },
+              "resident_run_completed_us": {
+                "p50_us": 121.9,
+                "p95_us": 135.5
+              },
+              "warm_e2e_us": {
+                "p50_us": 399.7,
+                "p95_us": 431.4
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 137.9,
+                "p95_us": 149.1
+              },
+              "context_create_us": {
+                "p50_us": 3.0,
+                "p95_us": 3.0
+              },
+              "copy_host_output_us": {
+                "p50_us": 137.9,
+                "p95_us": 148.2
+              },
+              "first_inference_us": {
+                "p50_us": 439.7,
+                "p95_us": 439.7
+              },
+              "prepare_us": {
+                "p50_us": 21.2,
+                "p95_us": 21.2
+              },
+              "resident_only_us": {
+                "p50_us": 121.7,
+                "p95_us": 127.2
+              },
+              "resident_run_completed_us": {
+                "p50_us": 121.6,
+                "p95_us": 127.6
+              },
+              "warm_e2e_us": {
+                "p50_us": 397.3,
+                "p95_us": 441.7
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 0,
+              "activation_bytes": 131072,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 392798208
+            },
+            "cuda": {
+              "weight_bytes": 0,
+              "activation_bytes": 0,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 392798208
+            }
+          }
+        },
+        {
+          "process": 3,
+          "cpu_p50_us": 407.5,
+          "cpu_p95_us": 462.1,
+          "cuda_p50_us": 406.0,
+          "cuda_p95_us": 458.9,
+          "p50_speedup": 1.0036945812807883,
+          "p95_ratio": 0.9930750919714346,
+          "stages": {
+            "cpu_auto": {
+              "bind_host_input_us": {
+                "p50_us": 137.8,
+                "p95_us": 145.7
+              },
+              "context_create_us": {
+                "p50_us": 8.6,
+                "p95_us": 8.6
+              },
+              "copy_host_output_us": {
+                "p50_us": 137.6,
+                "p95_us": 145.7
+              },
+              "first_inference_us": {
+                "p50_us": 379.0,
+                "p95_us": 379.0
+              },
+              "prepare_us": {
+                "p50_us": 3.4,
+                "p95_us": 3.4
+              },
+              "resident_only_us": {
+                "p50_us": 135.6,
+                "p95_us": 158.2
+              },
+              "resident_run_completed_us": {
+                "p50_us": 122.0,
+                "p95_us": 129.5
+              },
+              "warm_e2e_us": {
+                "p50_us": 407.5,
+                "p95_us": 462.1
+              }
+            },
+            "cuda": {
+              "bind_host_input_us": {
+                "p50_us": 137.9,
+                "p95_us": 143.9
+              },
+              "context_create_us": {
+                "p50_us": 9.5,
+                "p95_us": 9.5
+              },
+              "copy_host_output_us": {
+                "p50_us": 137.8,
+                "p95_us": 143.7
+              },
+              "first_inference_us": {
+                "p50_us": 431.9,
+                "p95_us": 431.9
+              },
+              "prepare_us": {
+                "p50_us": 37.9,
+                "p95_us": 37.9
+              },
+              "resident_only_us": {
+                "p50_us": 135.9,
+                "p95_us": 158.3
+              },
+              "resident_run_completed_us": {
+                "p50_us": 121.7,
+                "p95_us": 126.8
+              },
+              "warm_e2e_us": {
+                "p50_us": 406.0,
+                "p95_us": 458.9
+              }
+            }
+          },
+          "memory": {
+            "cpu_auto": {
+              "weight_bytes": 0,
+              "activation_bytes": 131072,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 176660480
+            },
+            "cuda": {
+              "weight_bytes": 0,
+              "activation_bytes": 0,
+              "logical_device_allocated_bytes": 0,
+              "process_peak_working_set_bytes": 176660480
+            }
+          }
+        }
+      ],
+      "median_p50_speedup": 1.0036945812807883,
+      "median_p95_ratio": 1.0238757533611498,
+      "median_p50_latency_ratio": 0.996319018404908
+    }
+  ],
+  "gates": {
+    "target_p50": true,
+    "target_p95": true,
+    "fallback_p50": true
+  },
+  "performance_accepted": true
+}

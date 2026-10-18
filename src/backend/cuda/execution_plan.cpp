@@ -1,6 +1,8 @@
 #include "tinyinfer/backend/cuda/execution_plan.h"
 #include "tinyinfer/backend/cuda/cuda_runtime.h"
 #include "tinyinfer/backend/cpu/execution_plan.h"
+#include "tinyinfer/backend/cpu_backend.h"
+#include "tinyinfer/backend/cuda/operator_contract.h"
 #include "tinyinfer/runtime/memory_plan.h"
 #include <algorithm>
 #include <optional>
@@ -20,6 +22,45 @@ public:
 private: std::uint32_t ordinal_; std::string reason_;
 };
 
+struct StaticCudaCheck {
+    std::string reason;
+    std::vector<NodeCapabilityDiagnostic> nodes;
+};
+StaticCudaCheck static_cuda_check(const Model& model, std::uint32_t ordinal,
+                                 const std::vector<NodeId>& order) {
+    // Negative filter only: success never establishes executable CUDA placement.
+    // No device discovery, runtime construction or CUDA API calls are allowed here.
+    StaticCudaCheck result;
+    const auto& graph = model.graph();
+    for (auto id : order) {
+        const auto& node = graph.node(id);
+        CapabilityQuery query{{DeviceKind::Cuda, ordinal}, node, {}, {}};
+        for (auto input : node.inputs) {
+            TensorDescriptor descriptor{graph.value(input).spec, std::nullopt};
+            if (graph.is_constant(input)) descriptor.strides = graph.constant(input).strides();
+            query.inputs.push_back(std::move(descriptor));
+        }
+        for (auto output : node.outputs) {
+            const auto spec = graph.value(output).spec;
+            query.outputs.push_back({spec, TensorLayout(spec.shape).strides()});
+        }
+        auto capability = cuda::validate_operator_contract(query);
+        if (!capability.supported && result.reason.empty())
+            result.reason = "unsupported node '" + node.name + "': " + capability.reason;
+        result.nodes.push_back({id, node.name, std::move(capability)});
+    }
+    // Include identity/constant endpoints and disconnected values, just as native
+    // preparation does. A zero-node model must not bypass dtype/rank/size limits.
+    for (const auto& value : graph.values()) {
+        Node check; check.op = OpType::ReLU; check.inputs = {value.id}; check.outputs = {value.id};
+        const TensorDescriptor descriptor{value.spec, TensorLayout(value.spec.shape).strides()};
+        const auto capability = cuda::validate_operator_contract({{DeviceKind::Cuda, ordinal}, check,
+            {descriptor}, {descriptor}});
+        if (!capability.supported && result.reason.empty())
+            result.reason = "value '" + value.name + "': " + capability.reason;
+    }
+    return result;
+}
 }
 namespace detail {
 struct CudaPlanState {
@@ -37,6 +78,19 @@ struct CudaPlanState {
           constants(model.graph().value_count()) {
         if (opts.fallback != FallbackPolicy::Strict && opts.fallback != FallbackPolicy::WholeModelCpu)
             throw std::invalid_argument("invalid Cuda fallback policy");
+        auto preflight = static_cuda_check(model, opts.ordinal, order);
+        if (!preflight.reason.empty()) {
+            if (opts.fallback == FallbackPolicy::Strict) throw std::runtime_error(preflight.reason);
+            // Validate the whole CPU model before publishing the early fallback.
+            // Do not present static rejection as device unavailability.
+            try { (void)select_model_backend(model, CpuBackend{}, FallbackPolicy::Strict); }
+            catch (const std::runtime_error& error) {
+                throw std::runtime_error(std::string("CPU fallback unavailable: ") + error.what());
+            }
+            placement = {{DeviceKind::Cuda, opts.ordinal}, {}, true, std::move(preflight.reason), std::move(preflight.nodes)};
+            cpu = std::make_unique<CpuExecutionPlan>(model);
+            return;
+        }
         // Only discovery/runtime construction is eligible for unavailable-device
         // fallback. Allocation, upload and execution failures must propagate.
         std::string unavailable;

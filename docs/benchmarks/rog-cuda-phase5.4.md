@@ -84,6 +84,11 @@ wrapper prepare 约 0.81–0.87 ms。代码目前先创建 CUDA runtime/handle �
 门槛，不能把 warm gate 通过解读为 CPU fallback 冷启动无回退。下一步可单独评估
 “已知静态不支持模型先做契约筛选”，本轮没有修改该路径。
 
+后续已完成[静态 CPU 回退冷启动修复](../acceptance/phase5.4-rog-cold-fallback.md)：
+先做 SDK-free 否定检查，六个隐藏设备的独立进程 prepare 为 28.1–36.3 µs；
+primary-context probe 确认不激活 CUDA context。原固定 gate 另跑六进程仍全部通过，
+target p50 加速 10.49x/10.34x。上面的旧值作为历史证据保留，不代表当前未修复状态。
+
 ## 资源与内存
 
 Target CPU packed weights 为 4,194,304 B，arena 524,288 B。
