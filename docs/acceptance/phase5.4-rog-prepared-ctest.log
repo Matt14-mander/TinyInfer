@@ -1,0 +1,113 @@
+2026-10-18 Asia/Shanghai; baseline 4c83854 + working tree
+exit_code=0
+PASS fixtures: CPU/golden, constant sharing, warm runs, context isolation
+PASS contracts: arena completion waits, moves, lifetime, Strict/whole-model fallback
+PASS endpoints: empty, identity, constants, offsets, size/rank limits
+PASS changing Gemm: inputs/RHS/bias snapshots, CPU fallback, GPU reentry
+PASS branches: multiple outputs, model/plan/output ownership
+PASS special values: zero K, fused ReLU, NaN bias, signed zero
+PASS fallback ownership: one lvalue snapshot, no moved-input copy
+Internal ctest changing into directory: E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda
+Test project E:/Project Learning/AI Infra/TinyInfer/build-phase54-cuda
+      Start  1: tinyinfer_tests
+ 1/49 Test  #1: tinyinfer_tests ...............................   Passed    0.01 sec
+      Start  2: tinyinfer_phase0_tests
+ 2/49 Test  #2: tinyinfer_phase0_tests ........................   Passed    0.01 sec
+      Start  3: tinyinfer_tensor_index_tests
+ 3/49 Test  #3: tinyinfer_tensor_index_tests ..................   Passed    0.02 sec
+      Start  4: tinyinfer_tensor_value_tests
+ 4/49 Test  #4: tinyinfer_tensor_value_tests ..................   Passed    0.02 sec
+      Start  5: tinyinfer_tensor_reshape_tests
+ 5/49 Test  #5: tinyinfer_tensor_reshape_tests ................   Passed    0.01 sec
+      Start  6: tinyinfer_tensor_transpose_tests
+ 6/49 Test  #6: tinyinfer_tensor_transpose_tests ..............   Passed    0.02 sec
+      Start  7: tinyinfer_tensor_contiguous_tests
+ 7/49 Test  #7: tinyinfer_tensor_contiguous_tests .............   Passed    0.02 sec
+      Start  8: tinyinfer_tensor_dtype_tests
+ 8/49 Test  #8: tinyinfer_tensor_dtype_tests ..................   Passed    0.03 sec
+      Start  9: tinyinfer_allocator_tests
+ 9/49 Test  #9: tinyinfer_allocator_tests .....................   Passed    0.01 sec
+      Start 10: tinyinfer_arena_allocator_tests
+10/49 Test #10: tinyinfer_arena_allocator_tests ...............   Passed    0.02 sec
+      Start 11: tinyinfer_buffer_storage_tests
+11/49 Test #11: tinyinfer_buffer_storage_tests ................   Passed    0.02 sec
+      Start 12: tinyinfer_tensor_view_tests
+12/49 Test #12: tinyinfer_tensor_view_tests ...................   Passed    0.02 sec
+      Start 13: tinyinfer_tensor_slice_tests
+13/49 Test #13: tinyinfer_tensor_slice_tests ..................   Passed    0.02 sec
+      Start 14: tinyinfer_tensor_layout_tests
+14/49 Test #14: tinyinfer_tensor_layout_tests .................   Passed    0.02 sec
+      Start 15: tinyinfer_tensor_iterator_tests
+15/49 Test #15: tinyinfer_tensor_iterator_tests ...............   Passed    0.02 sec
+      Start 16: tinyinfer_kernel_runner_tests
+16/49 Test #16: tinyinfer_kernel_runner_tests .................   Passed    0.02 sec
+      Start 17: tinyinfer_elementwise_ops_tests
+17/49 Test #17: tinyinfer_elementwise_ops_tests ...............   Passed    0.02 sec
+      Start 18: tinyinfer_reduction_normalization_tests
+18/49 Test #18: tinyinfer_reduction_normalization_tests .......   Passed    0.02 sec
+      Start 19: tinyinfer_matmul_kernel_tests
+19/49 Test #19: tinyinfer_matmul_kernel_tests .................   Passed    0.03 sec
+      Start 20: tinyinfer_graph_data_model_tests
+20/49 Test #20: tinyinfer_graph_data_model_tests ..............   Passed    0.02 sec
+      Start 21: tinyinfer_graph_analysis_tests
+21/49 Test #21: tinyinfer_graph_analysis_tests ................   Passed    0.14 sec
+      Start 22: tinyinfer_operator_schema_tests
+22/49 Test #22: tinyinfer_operator_schema_tests ...............   Passed    0.02 sec
+      Start 23: tinyinfer_operator_coverage_tests
+23/49 Test #23: tinyinfer_operator_coverage_tests .............   Passed    0.03 sec
+      Start 24: tinyinfer_graph_validation_tests
+24/49 Test #24: tinyinfer_graph_validation_tests ..............   Passed    0.02 sec
+      Start 25: tinyinfer_graph_optimizer_tests
+25/49 Test #25: tinyinfer_graph_optimizer_tests ...............   Passed    0.02 sec
+      Start 26: tinyinfer_graph_optimization_passes_tests
+26/49 Test #26: tinyinfer_graph_optimization_passes_tests .....   Passed    0.02 sec
+      Start 27: tinyinfer_matmul_add_canonicalization_tests
+27/49 Test #27: tinyinfer_matmul_add_canonicalization_tests ...   Passed    0.03 sec
+      Start 28: tinyinfer_gemm_activation_fusion_tests
+28/49 Test #28: tinyinfer_gemm_activation_fusion_tests ........   Passed    0.02 sec
+      Start 29: tinyinfer_execution_context_tests
+29/49 Test #29: tinyinfer_execution_context_tests .............   Passed    0.02 sec
+      Start 30: tinyinfer_memory_plan_tests
+30/49 Test #30: tinyinfer_memory_plan_tests ...................   Passed    0.01 sec
+      Start 31: tinyinfer_cpu_operator_registry_tests
+31/49 Test #31: tinyinfer_cpu_operator_registry_tests .........   Passed    0.02 sec
+      Start 32: tinyinfer_graph_mlp_tests
+32/49 Test #32: tinyinfer_graph_mlp_tests .....................   Passed    0.01 sec
+      Start 33: tinyinfer_onnx_importer_tests
+33/49 Test #33: tinyinfer_onnx_importer_tests .................   Passed    0.02 sec
+      Start 34: tinyinfer_onnx_compatibility_tests
+34/49 Test #34: tinyinfer_onnx_compatibility_tests ............   Passed    0.02 sec
+      Start 35: tinyinfer_onnx_operator_registry_tests
+35/49 Test #35: tinyinfer_onnx_operator_registry_tests ........   Passed    0.02 sec
+      Start 36: tinyinfer_protobuf_model_parser_tests
+36/49 Test #36: tinyinfer_protobuf_model_parser_tests .........   Passed    0.02 sec
+      Start 37: tinyinfer_onnx_gemm_fixture_tests
+37/49 Test #37: tinyinfer_onnx_gemm_fixture_tests .............   Passed    0.02 sec
+      Start 38: tinyinfer_onnx_rl_mlp_fixture_tests
+38/49 Test #38: tinyinfer_onnx_rl_mlp_fixture_tests ...........   Passed    0.02 sec
+      Start 39: tinyinfer_gemm_tests
+39/49 Test #39: tinyinfer_gemm_tests ..........................   Passed    0.01 sec
+      Start 40: tinyinfer_cpu_execution_plan_tests
+40/49 Test #40: tinyinfer_cpu_execution_plan_tests ............   Passed    0.06 sec
+      Start 41: tinyinfer_gemm_kernel_fusion_tests
+41/49 Test #41: tinyinfer_gemm_kernel_fusion_tests ............   Passed    0.02 sec
+      Start 42: tinyinfer_device_runtime_tests
+42/49 Test #42: tinyinfer_device_runtime_tests ................   Passed    0.02 sec
+      Start 43: tinyinfer_backend_capability_tests
+43/49 Test #43: tinyinfer_backend_capability_tests ............   Passed    0.02 sec
+      Start 44: tinyinfer_cuda_contract_tests
+44/49 Test #44: tinyinfer_cuda_contract_tests .................   Passed    0.05 sec
+      Start 45: tinyinfer_cuda_runtime_tests
+45/49 Test #45: tinyinfer_cuda_runtime_tests ..................   Passed    0.23 sec
+      Start 46: tinyinfer_cuda_toolchain_tests
+46/49 Test #46: tinyinfer_cuda_toolchain_tests ................   Passed    0.27 sec
+      Start 47: tinyinfer_cuda_kernel_tests
+47/49 Test #47: tinyinfer_cuda_kernel_tests ...................   Passed    0.46 sec
+      Start 48: tinyinfer_cuda_execution_plan_tests
+48/49 Test #48: tinyinfer_cuda_execution_plan_tests ...........   Passed    0.30 sec
+      Start 49: tinyinfer_serving_scheduler_tests
+49/49 Test #49: tinyinfer_serving_scheduler_tests .............   Passed    0.39 sec
+
+100% tests passed, 0 tests failed out of 49
+
+Total Test time (real) =   2.70 sec

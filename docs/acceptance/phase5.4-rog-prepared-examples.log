@@ -1,0 +1,6 @@
+2026-10-18 Asia/Shanghai; baseline 4c83854 + working tree
+exit_code=0
+probabilities: Tensor(shape=[1, 2], dtype=float32, data=[[0.5, 0.5]])
+constant uploads=4, bytes=68, activation bytes=28, GPU runs=3
+actions: Tensor(shape=[1, 2], dtype=float32, data=[[0.589468, -0.330533]])
+constant uploads=4, bytes=148, activation bytes=44, GPU runs=3

@@ -28,8 +28,20 @@ operands; submission/wait failures never replay on CPU. Single-runtime access
 requires external serialization.
 See [operator acceptance](../../../docs/acceptance/phase5.4-rog-operators.md).
 
-`CudaBackend` is a capability bridge; its legacy host `execute` throws. Prepared
-CUDA model/context APIs and whole-model Auto fallback are not implemented yet.
+`CudaBackend` is a capability bridge; its legacy host `execute` still throws.
+`CudaExecutionPlan` / `CudaExecutionContext` in `execution_plan.h` now provide
+the separate Prepared model path: immutable snapshot, shared constants uploaded
+once, private context inputs/activation arena, completion-safe slot reuse,
+synchronous runs and independent host outputs. Strict is default; explicit
+`WholeModelCpu` selects Prepared CPU Auto for unsupported capability/unavailable
+device or runtime input layout, with a reason and no per-node fallback.
+CUDA allocation/upload/execution failures after runtime construction propagate,
+not CPU replay. Contexts sharing a plan must be externally serialized.
+See [Prepared CUDA acceptance](../../../docs/acceptance/phase5.4-rog-prepared.md).
+
+Warm runs reuse TinyInfer device buffers and upload no constants/inputs; binding
+does H2D and output retrieval does D2H. Diagnostics count TinyInfer resources,
+not cuBLAS internal allocations or total process/device memory.
 Softmax uses one thread per reduction group: this is a correctness baseline,
 not an optimized reduction or a performance acceptance claim.
 

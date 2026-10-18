@@ -1,0 +1,135 @@
+{
+  "date": "2026-10-18",
+  "timezone": "Asia/Shanghai",
+  "baseline": "4c83854ee4d1d605c205dae05cdb0948a21a5250",
+  "source_state": "baseline plus working-tree implementation; selected source/binary SHA-256 of workspace bytes, sensitive to line endings",
+  "scope": "initial static FP32 Prepared CUDA models and externally serialized independent contexts; not performance acceptance",
+  "gpu": "NVIDIA GeForce RTX 4070 Laptop GPU",
+  "driver": "555.97",
+  "toolkit": "12.5.1",
+  "nvcc": "12.5.82",
+  "cublas": "12.5.3.2",
+  "host_compiler": "MSVC 14.29.30133 / cl 19.29.30158",
+  "configuration": {
+    "build": "Release",
+    "native": true,
+    "cuda_architecture": "89-real",
+    "require_device": true,
+    "fallback_default": "Strict",
+    "fallback_opt_in": "WholeModelCpu -> Prepared CPU Auto",
+    "contexts_thread_safe": false
+  },
+  "tests": {
+    "cuda": {
+      "passed": 49,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 2.7
+    },
+    "cpu_only": {
+      "passed": 45,
+      "failed": 0,
+      "seconds": 2.3,
+      "host_compiler": "MSVC 19.43"
+    },
+    "prepared_groups": [
+      "fixtures and golden values, shared constants, warm counters, context isolation",
+      "contracts, completion-safe arena reuse, moves, plan lifetime, explicit fallback",
+      "empty/identity/constant endpoints, offsets and rank/int32 bounds",
+      "changing A/RHS/bias, binding snapshots, CPU fallback and GPU reentry",
+      "branches and multiple outputs, source/plan/output ownership",
+      "zero K, fused ReLU, NaN bias and signed zero",
+      "fallback input snapshot allocation counts"
+    ],
+    "memcheck": {
+      "test": "tinyinfer_cuda_execution_plan_tests.exe --require-device",
+      "tool": "Compute Sanitizer 12.5.81",
+      "arguments": "--tool memcheck --leak-check full --error-exitcode 1",
+      "exit_code": 0,
+      "errors": 0,
+      "leaked_bytes": 0
+    },
+    "examples": [
+      {
+        "fixture": "phase3_mlp_gemm.onnx",
+        "constant_uploads": 4,
+        "constant_bytes": 68,
+        "activation_arena_bytes_per_context": 28,
+        "gpu_runs": 3
+      },
+      {
+        "fixture": "rl_actor_mlp_tanh.onnx",
+        "constant_uploads": 4,
+        "constant_bytes": 148,
+        "activation_arena_bytes_per_context": 44,
+        "gpu_runs": 3
+      }
+    ]
+  },
+  "not_tested": [
+    "performance acceptance",
+    "total RSS/device peak memory",
+    "parallel context calls",
+    "ROG ASan/UBSan",
+    "racecheck",
+    "hardware loss/OOM/hang injection"
+  ],
+  "files": [
+    {
+      "path": "CMakeLists.txt",
+      "sha256": "dbc165ed0520137ff8973b146bb0897fb23a48a14f40db11ba1268a6dca5897a"
+    },
+    {
+      "path": "examples/CMakeLists.txt",
+      "sha256": "6f9d4a7ed56d331dfd65aae3ed7a6ed15db00a4451ec386849e2929281a38668"
+    },
+    {
+      "path": "tests/CMakeLists.txt",
+      "sha256": "bea6c4f7553ec940c43a4a801de5a8dfb147447cd3ae68f53f9bb3da50898785"
+    },
+    {
+      "path": "include/tinyinfer/backend/cuda/execution_plan.h",
+      "sha256": "fee42c74c5665f5829295a932462b68d7008c843d8c1db2862c14637bc5c0f37"
+    },
+    {
+      "path": "src/backend/cuda/execution_plan.cpp",
+      "sha256": "e2847ec5e8e75e53104569ac35b1c06b387c016e4b53521789f96867bf1dece9"
+    },
+    {
+      "path": "tests/cuda_execution_plan_test.cpp",
+      "sha256": "4b2287f7295acb447b56e9cfefd89bbd9f37b055ca677d03246bef354b9e7615"
+    },
+    {
+      "path": "examples/cuda_model.cpp",
+      "sha256": "c835e14074d67f2e10a8c8c1ce54868522f4328c4c119fc85ad57df360508a84"
+    },
+    {
+      "path": "src/backend/cuda/cuda_runtime.cpp",
+      "sha256": "cb9b2a37609348d1d5726d8860921bb7b53c01053319a6a00f57cf1f9499d614"
+    },
+    {
+      "path": "src/backend/cuda/kernels.cu",
+      "sha256": "337817ac4d68698d8c2f8ea5a219bd29c77c8090274bad7c67c8e4a5936fa1a2"
+    },
+    {
+      "path": "src/backend/cuda/operator_contract.cpp",
+      "sha256": "d63537b8ca661384733711e14a249a5d7258ef32e5e1306126d728f62b70286c"
+    },
+    {
+      "path": "src/runtime/memory_plan.cpp",
+      "sha256": "c276fc54cc76a9b40a0110ef5d11f264912979d53c9af7b26c146c314b853815"
+    },
+    {
+      "path": "src/backend/cpu/execution_plan.cpp",
+      "sha256": "8d96307eb9ae0f240b34b1eaaae6c27810000fed6b64f31a4ba99e9df7637f4b"
+    },
+    {
+      "path": "build-phase54-cuda/tests/tinyinfer_cuda_execution_plan_tests.exe",
+      "sha256": "fb19b25b8541a12ca59429450e2050aec24aa48063df28025573874c8d945168"
+    },
+    {
+      "path": "build-phase54-cuda/examples/tinyinfer_cuda_model.exe",
+      "sha256": "a91f8557e6a8d6ca2777f169be0e7d2793092eaadaba11c271361f6187543b7f"
+    }
+  ]
+}

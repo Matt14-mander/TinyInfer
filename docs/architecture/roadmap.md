@@ -174,6 +174,11 @@ On 2026-10-18, [ROG initial CUDA operators](../acceptance/phase5.4-rog-operators
 pass 1032 numerical/model-chain cases, 48/48 full tests and native memory checks.
 This supersedes the pending-operators status above; Prepared CUDA models and
 performance acceptance remain open.
+Later that day, [Prepared CUDA models](../acceptance/phase5.4-rog-prepared.md)
+add shared constants and independent input/activation contexts, synchronous
+completion-safe runs and explicit whole-model CPU fallback. ROG passes 49/49,
+CPU-only 45/45 and Prepared CUDA memcheck/full leak checks. CUDA model correctness
+is accepted for the initial static FP32 slice; performance acceptance remains open.
 First deliver one prepared GPU backend and measured host-to-host inference;
 then validate the second backend against the same contract. CPU threading,
 quantization and broader CPU fusion tuning remain separate extensions. GPU

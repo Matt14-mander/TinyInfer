@@ -17,5 +17,10 @@ endif()
 add_executable(tinyinfer_cuda_contract_inspect cuda_contract.cpp)
 target_link_libraries(tinyinfer_cuda_contract_inspect PRIVATE TinyInfer::cuda_contract)
 
+if(TINYINFER_ENABLE_CUDA)
+    add_executable(tinyinfer_cuda_model cuda_model.cpp)
+    target_link_libraries(tinyinfer_cuda_model PRIVATE TinyInfer::cuda)
+endif()
+
 add_executable(tinyinfer_serving_worker serving_scheduler/tinyinfer_worker.cpp)
 target_link_libraries(tinyinfer_serving_worker PRIVATE TinyInfer::tinyinfer)

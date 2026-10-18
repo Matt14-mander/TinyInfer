@@ -1,8 +1,8 @@
 # Phase 5.4 — CUDA second backend
 
 Date: 2026-10-13 (Asia/Shanghai). Baseline: `d01126a`, Phase 5.3 transfer follow-up.
-Status: Mac preparation, ROG native resource runtime and initial device operators implemented;
-Prepared CUDA model integration and performance remain open. Phase 5.3 Metal
+Status: Mac preparation, ROG native resource runtime/operators and initial Prepared
+CUDA models implemented and verified; performance remains open. Phase 5.3 Metal
 performance gates remain unmet and unchanged.
 
 2026-10-16 update: ROG inventory and SDK-free Release baseline are complete
@@ -25,6 +25,13 @@ ROG passes 1032 numerical/model-chain cases (including the original 773 mapping
 cases on actual GPU), 48/48 full tests, 45/45 CPU-only tests and three native
 memcheck/full leak checks. Prepared CUDA models and performance remain pending.
 See [ROG operator acceptance](../acceptance/phase5.4-rog-operators.md).
+
+Later 2026-10-18 update: Prepared CUDA models and private contexts are verified
+on ROG: shared constants, per-context inputs/arena, completion-safe reuse,
+changed bindings, output ownership and explicit whole-model CPU Auto fallback.
+CUDA ON passes 49/49; CPU-only 45/45; Prepared CUDA memcheck/full leak check clean.
+See [Prepared acceptance](../acceptance/phase5.4-rog-prepared.md). This supersedes
+the pending-model status above; performance and Phase 5.3 Metal gates remain open.
 
 ## Goal and sequence
 
