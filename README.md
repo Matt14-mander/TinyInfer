@@ -12,7 +12,7 @@ Phase 1  Tensor Runtime           Complete (v0.1 scope)
 Phase 2  Graph Execution Engine   Complete (v0.2 MVP scope)
 Phase 3  Model Runtime            Complete (v0.3 restricted ONNX scope)
 Phase 4  Optimization Engine      Complete (measured static FP32 CPU slice)
-Phase 5  Hardware Backend         In progress (Prepared Metal/CUDA models; performance gates pending)
+Phase 5  Hardware Backend         In progress (ROG CUDA fixed-target gates passed; Mac Metal gates pending)
 Phase 6  ML Compiler Direction    Not started
 ```
 
@@ -43,7 +43,7 @@ validation.
 | v0.2 Graph Runtime | Complete (MVP): graph model, validation, execution context, CPU dispatch, Graph MLP |
 | v0.3 Model Runtime | Complete: protobuf parser, real Gemm MLP fixture, restricted ONNX import, diagnostics, compatibility profile, and Mac/ROG CPU baselines |
 | v0.4 Optimization Engine | Complete for the measured static FP32 CPU slice: graph simplification, lifetime planning, buffer reuse, CPU SIMD MatMul, Gemm + ReLU fusion, and prepared CPU execution; threading and quantization remain deferred |
-| v0.5 Hardware Backends | In progress: Phase 5.0–5.2 initial Metal scope accepted on Mac; Phase 5.3 performance gates unmet; Phase 5.4 ROG Prepared CUDA models verified, performance acceptance pending |
+| v0.5 Hardware Backends | In progress: Phase 5.0–5.2 initial Metal scope accepted on Mac; Phase 5.3 performance gates unmet; Phase 5.4 initial ROG CUDA correctness and fixed-target performance gates passed |
 
 See the [documentation index](docs/README.md) for an overview. The current
 system design lives under `docs/architecture`, learning-oriented walkthroughs
@@ -57,7 +57,8 @@ Subsequent [Phase 5.1](docs/acceptance/phase5.1.md) and
 model execution with Mac device validation. Phase 5.3 performance acceptance
 remains open; [Phase 5.4 Mac preparation](docs/acceptance/phase5.4-mac-preparation.md)
 is delivered; ROG native runtime, operators and Prepared CUDA models are now
-verified. GPU performance acceptance remains pending.
+verified. ROG's fixed-target performance gates now pass; Mac Metal performance
+acceptance remains open.
 
 ## Repository layout
 
@@ -240,7 +241,12 @@ auto result = context.output(plan.outputs()[0].first);
 Link `TinyInfer::cuda`. The optional `tinyinfer_cuda_model model.onnx` example runs
 three resident inferences. [Prepared CUDA acceptance](docs/acceptance/phase5.4-rog-prepared.md)
 records 49/49 ROG tests, 45/45 CPU-only and clean memcheck/full leak checks.
-This accepts the initial static FP32 model slice, not Phase 5.4 performance.
+The [ROG performance/memory report](docs/benchmarks/rog-cuda-phase5.4.md) records
+two rounds of three independent processes: target M=128/K=N=1024 E2E p50 speedups
+10.62x / 10.26x, with p95 and CPU-fallback gates passed. Tiny fixtures remain
+CPU-favored. Memory includes logical payloads, process working set and device-wide
+snapshots, not exact per-process VRAM peak. These are scoped ROG results, not a
+universal GPU speedup or completion of the unmet Mac Metal Phase 5.3 gate.
 
 ## Serving scheduler learning example
 

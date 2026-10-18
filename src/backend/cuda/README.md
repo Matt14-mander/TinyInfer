@@ -48,3 +48,11 @@ not an optimized reduction or a performance acceptance claim.
 Build with `TINYINFER_ENABLE_CUDA=ON`, CUDA >=12.0, `CUDA::cudart` and
 `CUDA::cublas`. ROG's verified private toolchain is selected by
 `tools/build_cuda_rog.ps1`; CPU-only builds do not enable CUDA or require its SDK.
+
+Windows performance harness: enable `TINYINFER_BUILD_BENCHMARKS=ON`, build
+`tinyinfer_cuda_model_benchmark`, and run `tools/run_phase54_cuda.py` with the
+same private SDK bin PATH. It preserves six independent processes, all raw
+samples and metadata, and separate memory-only snapshots. The
+[ROG report](../../../docs/benchmarks/rog-cuda-phase5.4.md) passes the fixed target
+gates; tiny models remain CPU-favored. No production kernel or reuse policy was
+changed for these measurements, and no exact per-process VRAM peak is claimed.

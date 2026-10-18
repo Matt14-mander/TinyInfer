@@ -42,3 +42,12 @@ if(TINYINFER_ENABLE_METAL)
         TINYINFER_BUILD_TYPE="$<CONFIG>"
         TINYINFER_NATIVE_ARCH=$<BOOL:${TINYINFER_ENABLE_NATIVE_ARCH}>)
 endif()
+
+if(TINYINFER_ENABLE_CUDA AND WIN32)
+    add_executable(tinyinfer_cuda_model_benchmark cuda_model_benchmark.cpp)
+    target_link_libraries(tinyinfer_cuda_model_benchmark PRIVATE TinyInfer::cuda CUDA::cudart Psapi)
+    target_compile_definitions(tinyinfer_cuda_model_benchmark PRIVATE
+        TINYINFER_PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
+        TINYINFER_BUILD_TYPE="$<CONFIG>"
+        TINYINFER_NATIVE_ARCH=$<BOOL:${TINYINFER_ENABLE_NATIVE_ARCH}>)
+endif()

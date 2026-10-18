@@ -1,7 +1,7 @@
 # Phase 5 — Hardware Backends
 
 - 规划日期：2026-10-11（Asia/Shanghai）。
-- 状态：5.0–5.2 初始 Metal 范围已验收，5.3 性能未达标；5.4 ROG 原生资源、初始算子及 Prepared CUDA 模型已验收，性能验收待完成。
+- 状态：5.0–5.2 初始 Metal 范围已验收，5.3 性能未达标；5.4 ROG 初始静态 FP32 模型正确性和固定目标性能门槛已通过，Phase 5 整体尚未完成。
 - 基线：`924a7e2`，Phase 4.5 静态 FP32 CPU 优化收口。
 
 ## 核心目标
@@ -191,3 +191,11 @@ CUDA 执行错误不重放。共享 plan 的 context 仍须外部串行调用。
 实机全套 49/49、CPU-only 45/45、Prepared 专项 memcheck/full leak 零错误零泄漏。
 详见[验收记录](../acceptance/phase5.4-rog-prepared.md)。下一步是冻结 ROG 性能目标并测量，
 不是将 Phase 5.4 或 Phase 5 整体标记完成。
+
+### ROG 固定性能目标通过（2026-10-18）
+
+随后按[预冻结协议](phase5.4-performance.md)完成两轮各三进程实测，目标
+M=128/K=N=1024 的 host-to-host E2E p50 加速为 10.62x/10.26x，p95 和整模型 CPU
+回退门槛均通过。小 ONNX fixture 仍 CPU 更快；内存报告区分逻辑 payload、进程 working
+set 和 WDDM 设备级快照，不声称精确每进程显存峰值。见[ROG 性能与内存报告](../benchmarks/rog-cuda-phase5.4.md)。
+这收口 ROG 初始模型/固定目标范围，不改变 Mac 5.3 未达标和 Phase 5 整体未完成状态。

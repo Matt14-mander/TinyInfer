@@ -1,0 +1,110 @@
+{
+  "date": "2026-10-18",
+  "timezone": "Asia/Shanghai",
+  "baseline": "6698ccce131adefa5f9552c2da6943d8413922d7",
+  "state": "baseline plus benchmark/harness/report changes; production kernels and execution unchanged",
+  "scope": "initial static FP32 ROG CUDA target; shared desktop conditions, no universal speedup or exact per-process VRAM peak claim",
+  "protocol": "docs/plans/phase5.4-performance.md",
+  "measurement": {
+    "rounds": 2,
+    "processes_per_round": 3,
+    "samples_per_warm_mode": 31,
+    "warmup": 5,
+    "percentile": "nearest rank ceil(n*p)",
+    "profiling": false,
+    "sanitizer": false,
+    "raw_results": "docs/acceptance/phase5.4-results-rog",
+    "retained_all_samples": true
+  },
+  "gates": {
+    "target_p50": true,
+    "target_p95": true,
+    "fallback_p50": true
+  },
+  "performance_accepted": true,
+  "round_metrics": [
+    {
+      "round": 1,
+      "workload": "target",
+      "p50_speedup": 10.616017231251226,
+      "p95_ratio": 0.09914603771666751,
+      "p50_latency_ratio": 0.09419728493433673
+    },
+    {
+      "round": 1,
+      "workload": "fallback",
+      "p50_speedup": 1.005338904363974,
+      "p95_ratio": 0.9693853704136481,
+      "p50_latency_ratio": 0.9946894481643962
+    },
+    {
+      "round": 2,
+      "workload": "target",
+      "p50_speedup": 10.26179000094509,
+      "p95_ratio": 0.10157991102126708,
+      "p50_latency_ratio": 0.0974488856142936
+    },
+    {
+      "round": 2,
+      "workload": "fallback",
+      "p50_speedup": 0.9935550935550935,
+      "p95_ratio": 0.9874066168623267,
+      "p50_latency_ratio": 1.006486712701402
+    }
+  ],
+  "verification": {
+    "source_binary_match_to_measured_metadata": true,
+    "cuda_suite": {
+      "passed": 49,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 2.69
+    },
+    "cpu_only": {
+      "passed": 45,
+      "failed": 0,
+      "seconds": 1.28
+    },
+    "protocol_unittests": 3,
+    "latency_processes_successful": 6,
+    "memory_processes_successful": 1
+  },
+  "limitations": [
+    "background CPU/GPU activity and low available physical memory",
+    "WDDM device-wide cudaMemGetInfo snapshots, not per-process VRAM peaks",
+    "whole-process working set includes both backends",
+    "fallback process-first preparation still incurs CUDA initialization cost",
+    "first-inference latency depends on model starting order and library loading",
+    "Mac Metal Phase 5.3 gates remain unmet"
+  ],
+  "hashes": [
+    {
+      "path": "docs/plans/phase5.4-performance.md",
+      "sha256": "14f9bb862fba07e40e8845a444c80aba71e5101289043144a40ade99dd96a6ec"
+    },
+    {
+      "path": "benchmarks/cuda_model_benchmark.cpp",
+      "sha256": "ab6683256e71fd06826cbb85acb3bb91b1b68b29f0485672ff9aa68febe160c9"
+    },
+    {
+      "path": "tools/run_phase54_cuda.py",
+      "sha256": "eba5b1611ce9b8e82de673357acef28de0ce2cc287f51144e490c543809915d5"
+    },
+    {
+      "path": "tools/test_phase54_cuda.py",
+      "sha256": "c188a09de4fc6af8ad4acd6b5bce2a95e4f367bc56cb311a423df1b14a5f14b7"
+    },
+    {
+      "path": "build-phase54-cuda/benchmarks/tinyinfer_cuda_model_benchmark.exe",
+      "sha256": "bdf5bb8b2e73c2e446d5cf99fe3f8b52a4117f4294047d4ba33243f5c61a6943"
+    },
+    {
+      "path": "docs/acceptance/phase5.4-results-rog/summary.json",
+      "sha256": "7b8b2b21bc4de6a7d668df56890dc66a66a3ed98f9adaef5a1b14f4c72ec72f8"
+    },
+    {
+      "path": "docs/acceptance/phase5.4-results-rog/memory.json",
+      "sha256": "a7b8067c1aecd33f1d1df2499f2045f2d922473b0f98b48d66688ea786c54552"
+    }
+  ]
+}

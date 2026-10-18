@@ -179,6 +179,11 @@ add shared constants and independent input/activation contexts, synchronous
 completion-safe runs and explicit whole-model CPU fallback. ROG passes 49/49,
 CPU-only 45/45 and Prepared CUDA memcheck/full leak checks. CUDA model correctness
 is accepted for the initial static FP32 slice; performance acceptance remains open.
+The subsequent [ROG CUDA performance run](../benchmarks/rog-cuda-phase5.4.md)
+passes both rounds' frozen target p50/p95 and CPU-fallback gates, with target
+E2E speedups 10.62x/10.26x. Tiny fixtures remain CPU-favored; memory snapshots are
+not exact per-process VRAM peaks. This accepts the scoped ROG target, not universal
+GPU acceleration; the unmet Mac Metal performance gate still keeps Phase 5 open.
 First deliver one prepared GPU backend and measured host-to-host inference;
 then validate the second backend against the same contract. CPU threading,
 quantization and broader CPU fusion tuning remain separate extensions. GPU

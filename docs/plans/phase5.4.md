@@ -1,8 +1,9 @@
 # Phase 5.4 — CUDA second backend
 
 Date: 2026-10-13 (Asia/Shanghai). Baseline: `d01126a`, Phase 5.3 transfer follow-up.
-Status: Mac preparation, ROG native resource runtime/operators and initial Prepared
-CUDA models implemented and verified; performance remains open. Phase 5.3 Metal
+Status: initial static FP32 ROG CUDA runtime/operators/Prepared models and frozen
+performance gates verified. Memory accounting and device-wide snapshots delivered;
+no exact per-process VRAM peak claim. Phase 5.3 Metal
 performance gates remain unmet and unchanged.
 
 2026-10-16 update: ROG inventory and SDK-free Release baseline are complete
@@ -32,6 +33,13 @@ changed bindings, output ownership and explicit whole-model CPU Auto fallback.
 CUDA ON passes 49/49; CPU-only 45/45; Prepared CUDA memcheck/full leak check clean.
 See [Prepared acceptance](../acceptance/phase5.4-rog-prepared.md). This supersedes
 the pending-model status above; performance and Phase 5.3 Metal gates remain open.
+
+Final 2026-10-18 performance update supersedes the pending-ROG-performance status:
+the [frozen ROG protocol](phase5.4-performance.md) passes both rounds of three
+independent processes, target E2E p50 speedups 10.62x/10.26x, p95 and fallback
+gates passed. Tiny ONNX models remain CPU-favored. See [performance/memory report](../benchmarks/rog-cuda-phase5.4.md).
+Initial ROG model/target scope is accepted, not universal GPU acceleration.
+Mac Phase 5.3 performance remains unmet, so Phase 5 overall is not complete.
 
 ## Goal and sequence
 

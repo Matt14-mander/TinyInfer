@@ -7,6 +7,10 @@ limitations needed to reproduce a result.
 
 ## Baselines
 
+- [ROG CUDA Phase 5.4](rog-cuda-phase5.4.md): six-process fixed-target E2E gates
+  passed, tiny-model CPU controls, preparation/transfer/resident timing and
+  Windows process/device-wide memory snapshots with explicit limitations.
+
 - [Mac CPU v0.3 baseline](mac-cpu-v0.3.md): Model Runtime and MatMul results on
   an Intel Core i5-8257U MacBook Pro.
 - [ROG CPU v0.3 baseline](rog-cpu-v0.3.md): correctness coverage, Model Runtime,
