@@ -1,8 +1,8 @@
 # Phase 5.4 — CUDA second backend
 
 Date: 2026-10-13 (Asia/Shanghai). Baseline: `d01126a`, Phase 5.3 transfer follow-up.
-Status: Mac preparation and first ROG native resource-runtime slice implemented;
-CUDA operator/model integration and performance remain open. Phase 5.3 Metal
+Status: Mac preparation, ROG native resource runtime and initial device operators implemented;
+Prepared CUDA model integration and performance remain open. Phase 5.3 Metal
 performance gates remain unmet and unchanged.
 
 2026-10-16 update: ROG inventory and SDK-free Release baseline are complete
@@ -18,6 +18,13 @@ pass 47/47 full tests; CPU-only passes 45/45. Both native tests pass Compute
 Sanitizer memcheck/full leak checks. Operator/model integration remains pending;
 the standalone NVCC/cuBLAS probe is not a production operator acceptance.
 See [ROG first runtime slice](../acceptance/phase5.4-rog-runtime.md).
+
+2026-10-18 update: native FP32 MatMul/Gemm/FusedGemmActivation (ReLU),
+Add/ReLU/Tanh/Softmax and the device-view capability bridge are implemented.
+ROG passes 1032 numerical/model-chain cases (including the original 773 mapping
+cases on actual GPU), 48/48 full tests, 45/45 CPU-only tests and three native
+memcheck/full leak checks. Prepared CUDA models and performance remain pending.
+See [ROG operator acceptance](../acceptance/phase5.4-rog-operators.md).
 
 ## Goal and sequence
 
@@ -64,16 +71,15 @@ Empty output skips dispatch; zero K must synthesize a positive-zero raw product
 and still run the required user epilogue. The prospective vendor product uses
 alpha=1/beta=0. User alpha/beta/bias/ReLU remain in a separate epilogue so alpha=0
 or beta=0 does not silently remove operand/bias NaN semantics of the CPU contract.
-These policies are preparation decisions, not proof of cuBLAS special-value
-behavior; GPU tests must verify them on ROG.
+Originally these were preparation decisions; the ROG operator acceptance now
+verifies the initial special-value cases on the actual GPU.
 
 cuBLAS documents column-major matrix storage and leading dimensions in its
 [official manual](https://docs.nvidia.com/cuda/cublas/index.html#data-layout).
 The same manual describes [pedantic math mode](https://docs.nvidia.com/cuda/cublas/index.html#cublasmath-t).
-The ROG first implementation will explicitly request prescribed FP32 precision
-and avoid default TF32/reduced-precision substitutions; verify the installed
-Toolkit API before freezing native calls. No new lower-level compiler IR is
-introduced for this metadata.
+The ROG implementation explicitly requests pedantic FP32 precision and avoids
+default TF32/reduced-precision substitutions using the verified Toolkit API.
+No new lower-level compiler IR is introduced for this metadata.
 
 ## ROG handoff
 
@@ -99,11 +105,11 @@ cmake --build build-cuda-contract --config Release
 ctest --test-dir build-cuda-contract -C Release --output-on-failure
 ```
 
-A future executable `TinyInfer::cuda` target will be optional and linked through
+The optional executable `TinyInfer::cuda` target is linked through
 [CMake FindCUDAToolkit](https://cmake.org/cmake/help/v3.29/module/FindCUDAToolkit.html)
-(`CUDA::cudart`, `CUDA::cublas`) with CUDA language enabled for .cu kernels. It
-is not present in this Mac delivery. Do not advertise a working native CUDA
-build option before those sources and device tests exist.
+(`CUDA::cudart`, `CUDA::cublas`) with CUDA language enabled for .cu kernels.
+It was absent in the original Mac delivery and is now verified on ROG through
+`tools/build_cuda_rog.ps1`; CPU-only configurations remain SDK-independent.
 
 ## Native correctness/ownership requirements
 

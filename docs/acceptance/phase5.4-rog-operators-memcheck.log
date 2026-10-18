@@ -1,0 +1,18 @@
+2026-10-18 Asia/Shanghai; baseline cb08b3b + working tree
+runtime: --tool memcheck --leak-check full --error-exitcode 1 tinyinfer_cuda_runtime_tests.exe --require-device
+exit_code=0
+========= COMPUTE-SANITIZER
+========= LEAK SUMMARY: 0 bytes leaked in 0 allocations
+========= ERROR SUMMARY: 0 errors
+
+toolchain: --tool memcheck --leak-check full --error-exitcode 1 tinyinfer_cuda_toolchain_tests.exe --require-device
+exit_code=0
+========= COMPUTE-SANITIZER
+========= LEAK SUMMARY: 0 bytes leaked in 0 allocations
+========= ERROR SUMMARY: 0 errors
+
+kernel: --tool memcheck --leak-check full --error-exitcode 1 tinyinfer_cuda_kernel_tests.exe --require-device
+exit_code=0
+========= COMPUTE-SANITIZER
+========= LEAK SUMMARY: 0 bytes leaked in 0 allocations
+========= ERROR SUMMARY: 0 errors

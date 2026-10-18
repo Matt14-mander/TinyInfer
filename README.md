@@ -43,7 +43,7 @@ validation.
 | v0.2 Graph Runtime | Complete (MVP): graph model, validation, execution context, CPU dispatch, Graph MLP |
 | v0.3 Model Runtime | Complete: protobuf parser, real Gemm MLP fixture, restricted ONNX import, diagnostics, compatibility profile, and Mac/ROG CPU baselines |
 | v0.4 Optimization Engine | Complete for the measured static FP32 CPU slice: graph simplification, lifetime planning, buffer reuse, CPU SIMD MatMul, Gemm + ReLU fusion, and prepared CPU execution; threading and quantization remain deferred |
-| v0.5 Hardware Backends | In progress: Phase 5.0–5.2 initial Metal scope accepted on Mac; Phase 5.3 performance gates unmet; Phase 5.4 Mac CUDA preparation complete, native CUDA pending on ROG |
+| v0.5 Hardware Backends | In progress: Phase 5.0–5.2 initial Metal scope accepted on Mac; Phase 5.3 performance gates unmet; Phase 5.4 ROG CUDA runtime and initial operators verified, Prepared CUDA models/performance pending |
 
 See the [documentation index](docs/README.md) for an overview. The current
 system design lives under `docs/architecture`, learning-oriented walkthroughs
@@ -56,7 +56,8 @@ Subsequent [Phase 5.1](docs/acceptance/phase5.1.md) and
 [Phase 5.2](docs/acceptance/phase5.2.md) add actual Metal operators and prepared
 model execution with Mac device validation. Phase 5.3 performance acceptance
 remains open; [Phase 5.4 Mac preparation](docs/acceptance/phase5.4-mac-preparation.md)
-is delivered, with native CUDA implementation and validation pending on ROG.
+is delivered; ROG native runtime and initial operators are now verified, with
+Prepared CUDA models and performance acceptance still pending.
 
 ## Repository layout
 
@@ -205,17 +206,18 @@ matrix/bias/epilogue cases; both ONNX fixtures have static contract coverage.
 ```
 
 [Mac preparation delivery](docs/acceptance/phase5.4-mac-preparation.md) and the
-[Phase 5.4 plan](docs/plans/phase5.4.md) define the boundary. Native CUDA runtime,
-operators, Prepared models and GPU performance will be developed on ROG after
-collecting its hardware/toolchain inventory. Metal Phase 5.3 remains unaccepted.
+[Phase 5.4 plan](docs/plans/phase5.4.md) define the boundary. The SDK-free library
+remains preparation-only; executable device operators live in the optional native
+target below. Metal Phase 5.3 remains unaccepted.
 
-ROG now has an optional native resource-runtime slice (`TINYINFER_ENABLE_CUDA=ON`):
-device allocations, a non-default stream, pinned transfers and event completion.
-The [ROG acceptance](docs/acceptance/phase5.4-rog-runtime.md) records 47/47 tests
-and native memory checks. Use `tools/build_cuda_rog.ps1` in a separate PowerShell
-process for the verified private CUDA 12.5.1/MSVC 14.29 setup. CUDA production
-operators, Prepared models and performance acceptance are still pending; the
-standalone kernel/cuBLAS smoke test does not establish that model support.
+ROG's optional `TinyInfer::cuda` (`TINYINFER_ENABLE_CUDA=ON`) now provides device
+resources/transfers plus FP32 MatMul/Gemm/FusedGemmActivation (ReLU), Add/ReLU/Tanh
+and Softmax through `CudaTensorView`/`CudaDeviceRuntime::execute`. The
+[operator acceptance](docs/acceptance/phase5.4-rog-operators.md) records 1032
+GPU numerical/model-chain cases, 48/48 full tests and native memory checks.
+Use `tools/build_cuda_rog.ps1` in a separate PowerShell process for the verified
+private CUDA 12.5.1/MSVC 14.29 setup. Prepared CUDA models and performance
+acceptance remain pending; the host Executor deliberately rejects this backend.
 
 ## Serving scheduler learning example
 

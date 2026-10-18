@@ -1,0 +1,120 @@
+{
+  "date": "2026-10-18",
+  "timezone": "Asia/Shanghai",
+  "baseline": "cb08b3ba23acf1065031ace337437ebf5739c17a",
+  "source_state": "baseline plus uncommitted implementation; SHA-256 of workspace bytes (line-ending sensitive)",
+  "scope": "initial FP32 CUDA device operators; no Prepared CUDA model or performance acceptance",
+  "gpu": "NVIDIA GeForce RTX 4070 Laptop GPU",
+  "driver": "555.97",
+  "toolkit": "12.5.1",
+  "nvcc": "12.5.82",
+  "cublas": "12.5.3.2",
+  "host_compiler": "MSVC 14.29.30133 / cl 19.29.30158",
+  "configuration": {
+    "build": "Release",
+    "native": true,
+    "cuda_architecture": "89-real",
+    "require_device": true,
+    "math_mode": "CUBLAS_PEDANTIC_MATH",
+    "atomics": "CUBLAS_ATOMICS_NOT_ALLOWED",
+    "cuda_fmad": false
+  },
+  "tests": {
+    "cuda": {
+      "passed": 48,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 2.49
+    },
+    "cpu_only": {
+      "passed": 45,
+      "failed": 0,
+      "seconds": 3.41,
+      "host_compiler": "MSVC 19.43"
+    },
+    "numerical_and_fixture_cases": 1032,
+    "native_mapping_cases": 773,
+    "main_runtime_counters": {
+      "dispatches": 1033,
+      "cublas_calls": 686,
+      "kernel_launches": 1033
+    },
+    "memcheck": [
+      {
+        "test": "runtime",
+        "exit_code": 0,
+        "errors": 0,
+        "leaked_bytes": 0
+      },
+      {
+        "test": "toolchain",
+        "exit_code": 0,
+        "errors": 0,
+        "leaked_bytes": 0
+      },
+      {
+        "test": "kernel",
+        "exit_code": 0,
+        "errors": 0,
+        "leaked_bytes": 0
+      }
+    ]
+  },
+  "not_tested": [
+    "ROG performance acceptance",
+    "Prepared CUDA model",
+    "ASan/UBSan on ROG",
+    "racecheck",
+    "device loss/hang injection"
+  ],
+  "files": [
+    {
+      "path": "CMakeLists.txt",
+      "sha256": "8c212df27453d3845eb2514366ce61678f791362cdc091b8b95df6887fd07ffc"
+    },
+    {
+      "path": "include/tinyinfer/backend/cuda/cuda_runtime.h",
+      "sha256": "2587f8d9d9471d9956c50288e75e7fc6346d8bbbacff1816b619a2ff217561df"
+    },
+    {
+      "path": "src/backend/cuda/cuda_runtime.cpp",
+      "sha256": "cb9b2a37609348d1d5726d8860921bb7b53c01053319a6a00f57cf1f9499d614"
+    },
+    {
+      "path": "src/backend/cuda/kernels.h",
+      "sha256": "e84a9aaab94702e859e00b22810bc52692b6e0fcc01d654c81cfab46a9487469"
+    },
+    {
+      "path": "src/backend/cuda/kernels.cu",
+      "sha256": "337817ac4d68698d8c2f8ea5a219bd29c77c8090274bad7c67c8e4a5936fa1a2"
+    },
+    {
+      "path": "src/backend/cuda/operator_contract.cpp",
+      "sha256": "d63537b8ca661384733711e14a249a5d7258ef32e5e1306126d728f62b70286c"
+    },
+    {
+      "path": "tests/CMakeLists.txt",
+      "sha256": "23626a4fc40973f0ec1e26a9533c51f294e0717641d9916f696edf2eeb9190e2"
+    },
+    {
+      "path": "tests/cuda_kernel_test.cpp",
+      "sha256": "878cc188cabe89c2f25c71eb536c184a706dbcdec75c917b793011717e84d582"
+    },
+    {
+      "path": "tests/cuda_contract_test.cpp",
+      "sha256": "624f38d741f698e13d3f1bcc778d42d736ef83eb44c8d3db8d196abf9a097a14"
+    },
+    {
+      "path": "build-phase54-cuda/tests/tinyinfer_cuda_kernel_tests.exe",
+      "sha256": "a829e4182d358da8904148bcb118a133d4e8abc1bd90e64205294cccea26f531"
+    },
+    {
+      "path": "build-phase54-cuda/tests/tinyinfer_cuda_runtime_tests.exe",
+      "sha256": "e60f71b862c3ccba0166614e50cb14838343632703f381fa5b5512c1314ba0f2"
+    },
+    {
+      "path": "build-phase54-cuda/tests/tinyinfer_cuda_toolchain_tests.exe",
+      "sha256": "f102b43610426eb400ef6956d08817e7dc6d5de4e70c900e0c1bea30e7d6c38f"
+    }
+  ]
+}

@@ -170,6 +170,10 @@ On 2026-10-16, the [first ROG runtime slice](../acceptance/phase5.4-rog-runtime.
 adds optional CUDA device resources, ordered transfers and event completion,
 with 47/47 CUDA-enabled tests and native memory checks. Production CUDA
 operators/models/performance remain open; the toolchain probe is not their acceptance.
+On 2026-10-18, [ROG initial CUDA operators](../acceptance/phase5.4-rog-operators.md)
+pass 1032 numerical/model-chain cases, 48/48 full tests and native memory checks.
+This supersedes the pending-operators status above; Prepared CUDA models and
+performance acceptance remain open.
 First deliver one prepared GPU backend and measured host-to-host inference;
 then validate the second backend against the same contract. CPU threading,
 quantization and broader CPU fusion tuning remain separate extensions. GPU
