@@ -44,5 +44,6 @@
     "Profiling excluded from acceptance",
     "Cache retains shared staging capacity until runtime destruction",
     "Post-run thermal/process snapshot cannot establish per-sample conditions"
-  ]
+  ],
+  "closeout_follow_up": "phase5.3-closeout-verification.json"
 }

@@ -58,3 +58,6 @@ benchmark arguments.
   12 extra p95 checks; scoped MSVC AVX2 acceptance with explicit fallbacks.
   [All 583 completed diagnostic/final processes](rog-cpu-phase4.5-selection-details.md)
   retain distributions, counters, payload memory and final provenance.
+
+- [Mac Metal Phase 5.3 closeout](mac-metal-phase5.3-closeout.md): original frozen
+  target passes both six-process rounds; small fixtures remain CPU-favored.

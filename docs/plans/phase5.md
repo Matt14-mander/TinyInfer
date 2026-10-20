@@ -1,7 +1,7 @@
 # Phase 5 — Hardware Backends
 
 - 规划日期：2026-10-11（Asia/Shanghai）。
-- 状态：5.0–5.2 初始 Metal 范围已验收，5.3 性能未达标；5.4 ROG 初始静态 FP32 模型正确性和固定目标性能门槛已通过，Phase 5 整体尚未完成。
+- 状态：截至 2026-10-20，5.0–5.4 初始静态 FP32 范围已收口：Mac Metal 与 ROG CUDA 的正确性及各自冻结目标性能门槛均通过。下文保留历史阶段记录。
 - 基线：`924a7e2`，Phase 4.5 静态 FP32 CPU 优化收口。
 
 ## 核心目标
@@ -207,3 +207,14 @@ Strict 直接报告静态原因，正向结果仍须经过真实设备检查。�
 进程 prepare 中位数 34.15 µs；context probe 证明静态回退不激活 primary context。
 全套 51/51、CPU-only 45/45、memcheck 零错误/泄漏；原六进程性能门槛复测通过。
 详见[修复验收](../acceptance/phase5.4-rog-cold-fallback.md)。
+
+## Mac Metal 收尾（2026-10-20）
+
+沿用传输优化后的算子、精度、固定目标和原两轮六进程协议复测。两轮 target
+p50 加速比中位数为 1.226x / 1.234x，p95 GPU/CPU 比为 0.791 / 0.779，
+CPU fallback p50 比为 1.003 / 1.002，全部通过。当前 Release 实机全套 48/48、
+Metal 宿主 ASan/UBSan 3/3 及 CPU-only 回归记录见[收尾验收](../acceptance/phase5.3-closeout.md)。
+
+Phase 5.3 按本机冻结目标通过；结合已验收的 ROG 5.4，Phase 5 初始静态 FP32
+硬件后端范围收口。未覆盖 Apple Silicon、动态 shape、Transformer/Metal KV、
+FP16/Int8、多队列并发、通用图分区或所有模型加速；这些不由本次性能结果推导。

@@ -2,7 +2,7 @@
 
 TinyInfer is a lightweight AI inference runtime built for learning and experimentation. Its long-term scope spans tensors, computation graphs, execution, kernel optimization, quantization, and hardware backends.
 
-TinyInfer has completed the static FP32 CPU optimization slice and is developing **Phase 5 — Hardware Backends**. It can execute the Phase 0 two-layer MLP through both the eager Tensor API and the Graph Runtime, and it can load and execute a documented restricted ONNX model through its format-independent `ModelLoader` and named `Model` interface.
+TinyInfer has completed the static FP32 CPU optimization slice and the initial static FP32 scope of **Phase 5 — Hardware Backends**. It can execute the Phase 0 two-layer MLP through both the eager Tensor API and the Graph Runtime, and it can load and execute a documented restricted ONNX model through its format-independent `ModelLoader` and named `Model` interface.
 
 ## Current development stage
 
@@ -12,7 +12,7 @@ Phase 1  Tensor Runtime           Complete (v0.1 scope)
 Phase 2  Graph Execution Engine   Complete (v0.2 MVP scope)
 Phase 3  Model Runtime            Complete (v0.3 restricted ONNX scope)
 Phase 4  Optimization Engine      Complete (measured static FP32 CPU slice)
-Phase 5  Hardware Backend         In progress (ROG CUDA fixed-target gates passed; Mac Metal gates pending)
+Phase 5  Hardware Backend         Complete (initial static FP32 Metal/CUDA scope; fixed-target gates passed)
 Phase 6  ML Compiler Direction    Not started
 ```
 
@@ -43,7 +43,7 @@ validation.
 | v0.2 Graph Runtime | Complete (MVP): graph model, validation, execution context, CPU dispatch, Graph MLP |
 | v0.3 Model Runtime | Complete: protobuf parser, real Gemm MLP fixture, restricted ONNX import, diagnostics, compatibility profile, and Mac/ROG CPU baselines |
 | v0.4 Optimization Engine | Complete for the measured static FP32 CPU slice: graph simplification, lifetime planning, buffer reuse, CPU SIMD MatMul, Gemm + ReLU fusion, and prepared CPU execution; threading and quantization remain deferred |
-| v0.5 Hardware Backends | In progress: Phase 5.0–5.2 initial Metal scope accepted on Mac; Phase 5.3 performance gates unmet; Phase 5.4 initial ROG CUDA correctness and fixed-target performance gates passed |
+| v0.5 Hardware Backends | Complete for the initial static FP32 scope: Mac Metal and ROG CUDA correctness and frozen-target performance gates passed |
 
 See the [documentation index](docs/README.md) for an overview. The current
 system design lives under `docs/architecture`, learning-oriented walkthroughs
@@ -54,11 +54,11 @@ in both Release configurations and 2/2 targeted sanitizer tests. Device discover
 queue creation and runtime shader compilation are verified, not GPU arithmetic.
 Subsequent [Phase 5.1](docs/acceptance/phase5.1.md) and
 [Phase 5.2](docs/acceptance/phase5.2.md) add actual Metal operators and prepared
-model execution with Mac device validation. Phase 5.3 performance acceptance
-remains open; [Phase 5.4 Mac preparation](docs/acceptance/phase5.4-mac-preparation.md)
+model execution with Mac device validation. [Phase 5.3 closeout](docs/acceptance/phase5.3-closeout.md)
+passes the original Metal performance gates on 2026-10-20; [Phase 5.4 Mac preparation](docs/acceptance/phase5.4-mac-preparation.md)
 is delivered; ROG native runtime, operators and Prepared CUDA models are now
-verified. ROG's fixed-target performance gates now pass; Mac Metal performance
-acceptance remains open.
+verified. Both backends now pass their frozen-target performance gates within
+the documented initial static FP32 scope; tiny models can still favor CPU.
 
 ## Repository layout
 
@@ -191,9 +191,12 @@ CPU fallback. The [model example](examples/metal_model.cpp) loads an ONNX fixtur
 [Phase 5.2 acceptance](docs/acceptance/phase5.2.md) defines the supported scope.
 [Phase 5.3 measurements](docs/benchmarks/mac-metal-phase5.3.md) report completed
 end-to-end analysis and a resolved fallback-copy regression. The frozen target
-performance gates remain unmet; Phase 5.3 is not yet accepted.
+performance gates failed in the initial measurements.
 [Transfer follow-up](docs/benchmarks/mac-metal-phase5.3-transfer.md) reduces
 Buffer copies and reuses staging, with retained p95 diagnostics and failed gates.
+The [2026-10-20 closeout](docs/acceptance/phase5.3-closeout.md) remeasures the same
+implementation: both rounds pass p50, p95 and CPU fallback gates. No kernel,
+workload, tolerance or threshold was changed; this is a device/workload-specific result.
 
 ## CUDA preparation contracts (Phase 5.4, Mac slice)
 
@@ -209,7 +212,8 @@ matrix/bias/epilogue cases; both ONNX fixtures have static contract coverage.
 [Mac preparation delivery](docs/acceptance/phase5.4-mac-preparation.md) and the
 [Phase 5.4 plan](docs/plans/phase5.4.md) define the boundary. The SDK-free library
 remains preparation-only; executable device operators live in the optional native
-target below. Metal Phase 5.3 remains unaccepted.
+target below. Metal Phase 5.3 is accepted within its frozen-target scope; see the
+[latest closeout](docs/acceptance/phase5.3-closeout.md).
 
 ROG's optional `TinyInfer::cuda` (`TINYINFER_ENABLE_CUDA=ON`) now provides device
 resources/transfers plus FP32 MatMul/Gemm/FusedGemmActivation (ReLU), Add/ReLU/Tanh
@@ -246,7 +250,7 @@ two rounds of three independent processes: target M=128/K=N=1024 E2E p50 speedup
 10.62x / 10.26x, with p95 and CPU-fallback gates passed. Tiny fixtures remain
 CPU-favored. Memory includes logical payloads, process working set and device-wide
 snapshots, not exact per-process VRAM peak. These are scoped ROG results, not a
-universal GPU speedup or completion of the unmet Mac Metal Phase 5.3 gate.
+universal GPU speedup. Mac Metal has separate [closeout evidence](docs/acceptance/phase5.3-closeout.md).
 
 The [CPU fallback cold-start fix](docs/acceptance/phase5.4-rog-cold-fallback.md)
 rejects known unsupported models before CUDA initialization. Six isolated prepares

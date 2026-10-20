@@ -1,9 +1,11 @@
-# Metal backend — Phase 5.1
+# Metal backend — Phase 5.1–5.3
 
 The optional `TinyInfer::metal` target now implements owned device allocations,
 staged transfers, completion and initial FP32 device operators on macOS.
 The Mac Intel Iris Plus Graphics 645 passed actual-device operator/transfer tests.
-GPU model preparation and performance acceptance remain Phase 5.2/5.3 work.
+Prepared model execution is accepted in Phase 5.2. The original frozen-target
+performance gates passed on 2026-10-20; see the
+[closeout record](../../../docs/acceptance/phase5.3-closeout.md). Small models still favor CPU.
 
 Include `tinyinfer/backend/metal/metal_runtime.h`, link `TinyInfer::metal`, and
 use explicit MetalTensorView/Completion. The legacy host Executor is rejected.

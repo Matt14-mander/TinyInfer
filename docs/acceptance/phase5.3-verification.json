@@ -34,5 +34,6 @@
   ],
   "report": "../benchmarks/mac-metal-phase5.3.md",
   "transfer_follow_up": "phase5.3-transfer-verification.json",
-  "latest_performance_acceptance": "not_passed"
+  "latest_performance_acceptance": "passed_2026-10-20_frozen_target",
+  "closeout_follow_up": "phase5.3-closeout-verification.json"
 }

@@ -3,8 +3,8 @@
 Date: 2026-10-13 (Asia/Shanghai). Baseline: `d01126a`, Phase 5.3 transfer follow-up.
 Status: initial static FP32 ROG CUDA runtime/operators/Prepared models and frozen
 performance gates verified. Memory accounting and device-wide snapshots delivered;
-no exact per-process VRAM peak claim. Phase 5.3 Metal
-performance gates remain unmet and unchanged.
+no exact per-process VRAM peak claim. The separate Mac Metal Phase 5.3 gates
+subsequently passed on 2026-10-20; see [closeout](../acceptance/phase5.3-closeout.md).
 
 2026-10-16 update: ROG inventory and SDK-free Release baseline are complete
 (45/45 tests, 773 CPU interpretation cases). Native implementation is pending

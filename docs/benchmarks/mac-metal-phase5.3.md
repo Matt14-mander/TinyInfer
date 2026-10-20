@@ -1,5 +1,7 @@
 # Mac Metal Phase 5.3 — end-to-end performance
 
+> 历史报告：2026-10-20 同门槛复测已通过，最新状态见[收尾报告](mac-metal-phase5.3-closeout.md)。本页保留当时失败结果。
+
 Date: 2026-10-13 (Asia/Shanghai). Hardware: Intel Iris Plus Graphics 645, x86_64 Mac, macOS 15.8.1. Release native CPU Prepared Auto baseline.
 
 **Status: measurements and fallback-copy fix delivered; performance acceptance NOT passed.** The frozen target was retained. These measurements do not justify advancing the first Metal performance milestone as accepted.

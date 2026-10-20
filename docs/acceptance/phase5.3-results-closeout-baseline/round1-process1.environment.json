@@ -1,0 +1,24 @@
+{
+  "started_at_utc": "2026-10-20T11:50:49.721044+00:00",
+  "finished_at_utc": "2026-10-20T11:50:56.186885+00:00",
+  "commands": [
+    {
+      "command": [
+        "uptime"
+      ],
+      "returncode": 0,
+      "stdout": "19:50  up 1 day, 1 min, 2 users, load averages: 9.01 6.30 6.65\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "pmset",
+        "-g",
+        "batt"
+      ],
+      "returncode": 0,
+      "stdout": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=6815843)\t100%; charged; 0:00 remaining present: true\n",
+      "stderr": ""
+    }
+  ]
+}

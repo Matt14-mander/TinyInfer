@@ -1,5 +1,7 @@
 # Mac Metal Phase 5.3 — transfer optimization and p95 investigation
 
+> 历史报告：2026-10-20 同门槛复测已通过，最新状态见[收尾报告](mac-metal-phase5.3-closeout.md)。本页保留当时失败结果。
+
 Date: 2026-10-13 (Asia/Shanghai). Baseline source: `bcf2c72`. Same Intel Iris Plus Graphics 645 Mac, Release native Prepared CPU Auto, original frozen workloads and FP32 correctness tolerance.
 
 **Outcome: transfer resource costs reduced; performance gates remain unmet.** No workload, threshold, sample count or outlier policy was changed.

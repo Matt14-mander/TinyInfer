@@ -142,6 +142,10 @@ shape coverage are deferred extensions, not accepted performance claims.
 
 ## Phase 5 — Hardware Backends
 
+Current status (2026-10-20): complete for the initial static FP32 Metal/CUDA
+scope. [Mac closeout](../acceptance/phase5.3-closeout.md) passes the remaining
+frozen-target gates. The dated development history below retains earlier failures.
+
 Stabilize capability and buffer interfaces, then add Metal and CUDA with explicit fallback behavior and cross-backend tests.
 
 The [Phase 5 plan](../plans/phase5.md), defined on 2026-10-11, targets the same
@@ -183,7 +187,8 @@ The subsequent [ROG CUDA performance run](../benchmarks/rog-cuda-phase5.4.md)
 passes both rounds' frozen target p50/p95 and CPU-fallback gates, with target
 E2E speedups 10.62x/10.26x. Tiny fixtures remain CPU-favored; memory snapshots are
 not exact per-process VRAM peaks. This accepts the scoped ROG target, not universal
-GPU acceleration; the unmet Mac Metal performance gate still keeps Phase 5 open.
+GPU acceleration. At that date the Mac Metal gate still kept Phase 5 open; the
+2026-10-20 closeout above supersedes that status.
 First deliver one prepared GPU backend and measured host-to-host inference;
 then validate the second backend against the same contract. CPU threading,
 quantization and broader CPU fusion tuning remain separate extensions. GPU

@@ -1,6 +1,8 @@
 # Phase 5.3 — Metal performance acceptance
 
 Date: 2026-10-13 (Asia/Shanghai). Baseline: Phase 5.2 `8c919c9`.
+Current status (2026-10-20): accepted for the original frozen Intel Mac target;
+see [closeout](../acceptance/phase5.3-closeout.md). Dated outcomes below are historical.
 This stage measures the existing implementation; it does not change its kernels
 or completion/arena reuse semantics.
 
@@ -103,3 +105,13 @@ intervals include blits and compute, and cannot isolate scheduling, thermal or o
 GPU-client causes. CPU time/context switches describe the benchmark process, not
 whole-system load. The normal runner records load averages and power source before
 and between processes; these snapshots do not prove within-sample causes.
+
+## Closeout — 2026-10-20
+
+The original six-process protocol now passes all three gates with the unchanged
+transfer-version kernels: target p50 speedups 1.226x / 1.234x, target p95 ratios
+0.791 / 0.779, fallback p50 ratios 1.003 / 1.002. Phase 5.3 is accepted for the
+frozen Intel Mac workload. Earlier failures above remain historical evidence.
+See [closeout acceptance](../acceptance/phase5.3-closeout.md) and
+[performance report](../benchmarks/mac-metal-phase5.3-closeout.md). This does not
+establish universal GPU acceleration or identify a single cause of prior tails.

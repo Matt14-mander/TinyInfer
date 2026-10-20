@@ -29,3 +29,8 @@ Each document should answer one primary question:
 When behavior changes, update the architecture document. When a decision is
 reconsidered, preserve the original decision record and mark its status rather
 than rewriting its history.
+
+## Latest hardware backend acceptance
+
+[Mac Metal Phase 5.3 closeout](acceptance/phase5.3-closeout.md) records the
+2026-10-20 original-gate pass, full tests and retained measurement evidence.

@@ -3,7 +3,10 @@
 The optional `TinyInfer::metal` target implements device allocation/copies,
 completion and individual FP32 operators. It consumes the Phase 5.0 contracts;
 CPU-only builds remain independent of Objective-C++ and Apple frameworks.
-Prepared GPU model/context APIs remain Phase 5.2 work.
+Prepared model/context APIs are implemented in Phase 5.2 (described below).
+The frozen Intel Mac performance target is accepted in the
+[Phase 5.3 closeout](../acceptance/phase5.3-closeout.md); it does not imply that
+every supported model is faster on Metal.
 
 ## Entry point
 

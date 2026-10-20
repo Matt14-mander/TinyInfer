@@ -42,13 +42,13 @@ def main():
     if a.samples<31 or a.warmup<5:p.error('acceptance requires samples >=31 and warmup >=5')
     output=pathlib.Path(a.output);output.mkdir(parents=True,exist_ok=False)
     # Capture configured SDK/host state; no GPU validation layer during performance runs.
-    metadata={'date':'2026-10-13 Asia/Shanghai','started_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    metadata={'date':datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).strftime('%Y-%m-%d Asia/Shanghai'),'started_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
               'host':platform.platform(),'samples':a.samples,'warmup':a.warmup,'rounds':2,'processes_per_round':3,
               'target':{'M':128,'K':1024,'N':1024,'operation':'Gemm vector bias ReLU','p50_speedup_min':1.2,'p95_ratio_max':1.05,'fallback_ratio_max':1.05},
               'commands':[command(args) for args in (["git","rev-parse","HEAD"],["git","status","--short"],["git","diff"],["sw_vers"],["system_profiler","SPDisplaysDataType"],["xcrun","--show-sdk-version"],["c++","--version"],["cmake","--version"],["uptime"],["pmset","-g","batt"],["sysctl","machdep.cpu.brand_string"]) ]}
     metadata['binary_sha256']=hashlib.sha256(pathlib.Path(a.binary).read_bytes()).hexdigest()
     metadata['source_sha256']={str(f):hashlib.sha256(f.read_bytes()).hexdigest() for f in
-        [pathlib.Path('benchmarks/metal_model_benchmark.cpp'),pathlib.Path('tools/run_phase53.py'),pathlib.Path('src/backend/metal/execution_plan.cpp'),pathlib.Path('src/backend/metal/metal_runtime.mm')]}
+        [pathlib.Path('benchmarks/metal_model_benchmark.cpp'),pathlib.Path('tools/run_phase53.py'),pathlib.Path('src/backend/metal/execution_plan.cpp'),pathlib.Path('src/backend/metal/metal_runtime.mm'),pathlib.Path('src/backend/metal/kernels.h')]}
     cache=pathlib.Path(a.binary).resolve().parents[1]/'CMakeCache.txt'
     metadata['cmake_cache']=cache.read_text()
     (output/'metadata.json').write_text(json.dumps(metadata,indent=2)+'\n')
