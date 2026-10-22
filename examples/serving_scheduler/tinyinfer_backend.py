@@ -12,16 +12,36 @@ class TinyInferBackend:
     real_backend = True
     hardware_batched = True  # CPU tensor batching; ragged attention is per query.
 
-    def __init__(self, executable, block_size=1):
+    def __init__(self, executable, block_size=1, kv_layout="contiguous",
+                 kv_capacity_blocks=None, attention_mode="direct"):
         if type(block_size) is not int or block_size < 1:
             raise ValueError("block size must be positive")
+        if kv_layout not in ("contiguous", "paged"):
+            raise ValueError("kv_layout must be contiguous or paged")
+        if attention_mode not in ("direct", "gather") or (attention_mode == "gather" and kv_layout != "paged"):
+            raise ValueError("gather attention requires paged KV")
+        if kv_layout == "paged":
+            if type(kv_capacity_blocks) is not int or kv_capacity_blocks < 0:
+                raise ValueError("paged KV requires a nonnegative integer capacity")
+            if block_size > 4096:
+                raise ValueError("paged block size must be at most 4096")
+        elif kv_capacity_blocks is not None:
+            raise ValueError("physical capacity is only configured for paged KV")
         self.block_size = block_size
+        self.kv_layout, self.kv_capacity_blocks = kv_layout, kv_capacity_blocks
+        self.attention_mode = attention_mode
         self.handles, self.outputs = {}, {}
         self.process = subprocess.Popen([str(Path(executable).resolve())], stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE, text=True, bufsize=1)
-        if self.process.stdout.readline().strip() != "READY 16 32 4096 BATCHED 1":
+        if self.process.stdout.readline().strip() != "READY 16 32 4096 BATCHED 1 PAGED 1":
             self.close()
             raise RuntimeError("invalid worker handshake")
+        if kv_layout == "paged":
+            try:
+                self._command(["CONFIG_PAGED", kv_capacity_blocks, block_size, int(attention_mode == "gather")])
+            except BaseException:
+                self.close()
+                raise
 
     def _command(self, values, convert=int):
         if self.process.poll() is not None:
@@ -88,6 +108,12 @@ class TinyInferBackend:
             raise RuntimeError("worker logits arity")
         return [values[i:i + 32] for i in range(0, len(values), 32)]
 
+    def block_table(self, request_id):
+        """Diagnostic logical-to-physical block mapping; query outside timing."""
+        if self.kv_layout != "paged":
+            raise ValueError("block table requires paged KV")
+        return self._command(["BLOCK_TABLE", self.handles[request_id]])
+
     def synchronize(self):
         # CPU worker replies only after computation and token publication finish.
         pass
@@ -110,7 +136,9 @@ class TinyInferBackend:
     def stats(self):
         values = self._command(["STATS"])
         names = ("live_requests", "live_kv_bytes", "peak_kv_bytes", "peak_cached_tokens", "forward_tokens",
-                 "batch_steps", "linear_matmul_calls", "linear_matmul_rows", "peak_batch_requests", "peak_batch_tokens")
+                 "batch_steps", "linear_matmul_calls", "linear_matmul_rows", "peak_batch_requests", "peak_batch_tokens",
+                 "pool_capacity_blocks", "live_physical_blocks", "peak_physical_blocks", "pool_kv_bytes",
+                 "free_physical_blocks", "paged_attention_queries", "gather_attention_queries")
         if len(values) != len(names):
             raise RuntimeError("worker stats arity")
         return dict(zip(names, values))

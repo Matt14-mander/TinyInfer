@@ -246,6 +246,9 @@ endforeach()
 
 # Optional Python example integration; no Python dependency for core-only builds.
 if(TARGET tinyinfer_serving_worker)
+    add_executable(tinyinfer_paged_attention_tests paged_attention_test.cpp)
+    target_link_libraries(tinyinfer_paged_attention_tests PRIVATE TinyInfer::tinyinfer)
+    add_test(NAME tinyinfer_paged_attention_tests COMMAND tinyinfer_paged_attention_tests)
     find_package(Python3 3.7 COMPONENTS Interpreter QUIET)
     if(Python3_Interpreter_FOUND)
         add_test(NAME tinyinfer_serving_scheduler_tests

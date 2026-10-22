@@ -3,6 +3,9 @@
 日期：2026-10-22。复用既有 Static/Continuous 调度、KV 最大预算准入、Chunked Prefill
 和墙钟驱动，在真实 C++ worker 中增加跨请求计算合并。
 
+后续已加入可选 [CPU PagedAttention](PAGED_ATTENTION.md)，分页模式替换本文的连续 KV
+存储和 attention 步骤，共享投影不变；本文 49 项测试与基准记录保留为 batching 阶段历史。
+
 ## 计算路径
 
 每次 STEP 先解析完整 batch，检查请求 ID 唯一性、状态进度、输入 token 和容量，

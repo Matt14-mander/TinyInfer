@@ -28,6 +28,9 @@ def serve(requests, backend, mode="continuous", max_batch_size=4,
         raise ValueError("serve requires a completed real inference backend")
     if getattr(backend, "block_size", kv_block_size) != kv_block_size:
         raise ValueError("backend allocation block size must match scheduler KV block size")
+    if (getattr(backend, "kv_layout", None) == "paged"
+            and kv_capacity_blocks != backend.kv_capacity_blocks):
+        raise ValueError("paged physical capacity must match scheduler KV capacity")
     # Model startup and reset are outside the request latency window.
     backend.reset()
     try:

@@ -1,0 +1,109 @@
+{
+  "date": "2026-10-22",
+  "scope": "single-layer single-head FP32 CPU paged KV and direct online-softmax attention",
+  "environment": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.3",
+    "worker_sha256": "0a0a3e4e3366650ee54aadf902c239320aa80e007dc0354fccc51a556d6d6770",
+    "source_sha256": {
+      "tinyinfer_worker.cpp": "ba61c022f268a1843f627592fcd22e20f1b24a2453d5bde9e0f840c8638ca819",
+      "native/paged_kv_cache.h": "aff1988559c8406e7c0a4e55c6b4a0c69e5c3f6c0380036146a3564d89e0a687",
+      "tinyinfer_backend.py": "a612a06955f166e64a0cbde5eb896c7a31abe9c0ebecd0f03de9e7d0630561a8",
+      "scheduler.py": "8f9a05706f649268301060bbccb3a09850f12347b0d0ac55462e12f1db80628a",
+      "realtime.py": "7c4e512e414a8f2df52b2212332e431363206ff8b312fd7d0829167511bb1e60",
+      "real_benchmark.py": "19a24c200196a8b25f86a72861dbd3f9a36ace6a866ded3a6a90647fdd2ef8c2"
+    }
+  },
+  "build": "MSVC 14.43 / Release / native CPU enabled",
+  "python_tests": 56,
+  "python_skips": 0,
+  "ctest_targets": [
+    "tinyinfer_serving_scheduler_tests",
+    "tinyinfer_paged_attention_tests"
+  ],
+  "numeric_tolerance": "abs(a-b) <= 2e-5 + 2e-5*abs(b); identical greedy tokens",
+  "benchmarks": [
+    {
+      "raw_report": "benchmark-results/serving-paged-attention.json",
+      "layout": "paged",
+      "attention_mode": "direct",
+      "independent_workers": 3,
+      "configurations_per_worker": 4,
+      "reports": 12,
+      "completed_requests": 360.0,
+      "all_reference_correct": true,
+      "final_live_blocks": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "worker_sha256": "0a0a3e4e3366650ee54aadf902c239320aa80e007dc0354fccc51a556d6d6770"
+    },
+    {
+      "raw_report": "benchmark-results/serving-paged-gather.json",
+      "layout": "paged",
+      "attention_mode": "gather",
+      "independent_workers": 3,
+      "configurations_per_worker": 4,
+      "reports": 12,
+      "completed_requests": 360.0,
+      "all_reference_correct": true,
+      "final_live_blocks": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "worker_sha256": "0a0a3e4e3366650ee54aadf902c239320aa80e007dc0354fccc51a556d6d6770"
+    },
+    {
+      "raw_report": "benchmark-results/serving-contiguous-kv.json",
+      "layout": "contiguous",
+      "attention_mode": "direct",
+      "independent_workers": 3,
+      "configurations_per_worker": 4,
+      "reports": 12,
+      "completed_requests": 360.0,
+      "all_reference_correct": true,
+      "final_live_blocks": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "worker_sha256": "0a0a3e4e3366650ee54aadf902c239320aa80e007dc0354fccc51a556d6d6770"
+    }
+  ],
+  "performance_claim": false,
+  "limits": [
+    "maximum-budget admission retained",
+    "no prefix sharing/COW",
+    "no preemption or dynamic over-admission",
+    "no GPU kernel"
+  ]
+}

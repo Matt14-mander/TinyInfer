@@ -273,3 +273,6 @@ The worker now packs token rows across requests for CPU Q/K/V projections,
 output projection, FFN and vocabulary projection; ragged causal attention remains
 per query. See [tensor batching validation](examples/serving_scheduler/BATCHING.md).
 The model uses random weights and the example provides local CPU inference only.
+An optional [CPU PagedAttention path](examples/serving_scheduler/PAGED_ATTENTION.md)
+uses a physical KV block pool, per-request block tables and direct block-wise
+online softmax, with contiguous and gather reference paths for validation.
