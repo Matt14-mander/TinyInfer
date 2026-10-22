@@ -50,6 +50,10 @@ def run(executable, runs=3):
                     raise RuntimeError("KV resources leaked")
                 if stats["forward_tokens"] != report["prefill_input_tokens"] + report["decode_input_tokens"]:
                     raise RuntimeError("real forward/token accounting differs")
+                if (stats["batch_steps"] != len(result.trace)
+                        or stats["linear_matmul_calls"] != 7 * stats["batch_steps"]
+                        or stats["linear_matmul_rows"] != 7 * stats["forward_tokens"]):
+                    raise RuntimeError("packed linear batching accounting differs")
                 if stats["peak_kv_bytes"] > 32 * 4 * 2 * 16 * 4:
                     raise RuntimeError("native KV exceeded logical capacity")
                 report["reference_correct"] = True
@@ -60,8 +64,9 @@ def run(executable, runs=3):
         aggregates[name] = {key: statistics.median(r[key] for r in group) for key in
                             ("ttft_p50_ms", "ttft_p95_ms", "tpot_mean_ms", "request_latency_p95_ms",
                              "output_tokens_per_second", "requests_per_second", "max_inter_token_ms")}
-    return {"stage": 4, "clock": "wall_ms", "backend": "tinyinfer_cpu_single_layer_decoder",
-            "real_backend": True, "pretrained": False, "hardware_batched": False,
+    return {"stage": 4, "revision": "tensor_batching", "clock": "wall_ms", "backend": "tinyinfer_cpu_single_layer_decoder",
+            "real_backend": True, "pretrained": False, "hardware_batched": True,
+            "batching": "packed CPU token rows for projections/FFN/head; per-query causal attention",
             "model": {"seed": 20261015, "dimension": 16, "vocabulary": 32, "layers": 1,
                       "attention_heads": 1, "ff_dimension": 32, "dtype": "float32", "max_context": 4096},
             "measurement": "controller arrival to completed batch token publication, includes IPC/scheduling; worker preparation and warmup excluded",

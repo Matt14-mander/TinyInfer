@@ -3,10 +3,12 @@
 #include <cmath>
 #include <cstdint>
 #include <iostream>
+#include <iomanip>
 #include <map>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
+#include <set>
 using namespace tinyinfer;
 namespace {
 constexpr int D=16,V=32,F=32,MAX_CONTEXT=4096;
@@ -19,17 +21,23 @@ struct State {
     State(int capacity,int p,int b):keys({capacity,D}),values({capacity,D}),prompt(p),budget(b){}
     std::size_t bytes() const {return keys.size_bytes()+values.size_bytes();}
 };
+struct BatchItem {
+    int id, generated, start, count, prompt, budget, capacity;
+    std::vector<int> input;
+};
 class TinyDecoder {
     Tensor embedding=weights({V,D}),wq=weights({D,D}),wk=weights({D,D}),wv=weights({D,D});
     Tensor wo=weights({D,D}),w1=weights({D,F}),w2=weights({F,D}),head=weights({D,V});
 public:
     std::size_t forwards=0,peak_bytes=0,peak_tokens=0;std::map<int,std::unique_ptr<State>> states;
+    std::size_t batch_steps=0,linear_calls=0,linear_rows=0,peak_batch_requests=0,peak_batch_tokens=0;
+    std::vector<float> last_logits;
     Tensor forward(State& state,int token) {
         if(token<0||token>=V||state.used>=state.keys.shape()[0])throw std::invalid_argument("invalid context/token");
         Tensor x({1,D});for(int d=0;d<D;++d)x.at(d)=embedding.at(std::size_t(token)*D+d)+0.1F*std::sin(float(state.used+1)*float(d+1)/17.F);
         auto q=ops::matmul(x,wq),k=ops::matmul(x,wk),v=ops::matmul(x,wv);
         for(int d=0;d<D;++d){state.keys.at(std::size_t(state.used)*D+d)=k.at(d);state.values.at(std::size_t(state.used)*D+d)=v.at(d);}
-        ++state.used;++forwards;
+        ++state.used; // Serial reference work is excluded from serving counters.
         auto keys=state.keys.narrow(0,0,state.used);keys.transpose(0,1);
         auto scores=ops::matmul(q,keys);for(std::size_t i=0;i<scores.numel();++i)scores.at(i)/=std::sqrt(float(D));
         auto probabilities=ops::softmax(scores,-1);
@@ -40,49 +48,116 @@ public:
     }
     static int greedy(const Tensor& logits){int best=0;for(int i=0;i<V;++i){if(!std::isfinite(logits.at(i)))throw std::runtime_error("nonfinite logits");if(logits.at(i)>logits.at(best))best=i;}return best;}
     void observe(){std::size_t bytes=0,tokens=0;for(const auto& p:states){bytes+=p.second->bytes();tokens+=p.second->used;}peak_bytes=std::max(peak_bytes,bytes);peak_tokens=std::max(peak_tokens,tokens);}
-    int step(int id,int generated,int start,int count,int prompt,int budget,int capacity,const std::vector<int>& input) {
-        if(id<1||generated<0||start<0||prompt<1||prompt>MAX_CONTEXT||budget<1||budget>MAX_CONTEXT||prompt>MAX_CONTEXT-budget||capacity<prompt+budget||capacity>MAX_CONTEXT||int(input.size())!=count)throw std::invalid_argument("context limits");
+    State& prepare(const BatchItem& item) {
+        const auto& input=item.input;
+        const auto id=item.id,generated=item.generated,start=item.start,count=item.count,
+                   prompt=item.prompt,budget=item.budget,capacity=item.capacity;
+        if(id<1||generated<0||start<0||prompt<1||prompt>MAX_CONTEXT||start>prompt||budget<1||budget>MAX_CONTEXT||prompt>MAX_CONTEXT-budget||capacity<prompt+budget||capacity>MAX_CONTEXT||int(input.size())!=count)throw std::invalid_argument("context limits");
         auto found=states.find(id);
         if(found==states.end()) {
             if(generated||start)throw std::invalid_argument("unknown request state");
             found=states.emplace(id,std::make_unique<State>(capacity,prompt,budget)).first;
         }
         auto& s=*found->second;
-        if(s.generated!=generated||s.prompt!=prompt||s.budget!=budget||generated>=budget)throw std::invalid_argument("generation state mismatch");
+        if(s.generated!=generated||s.prompt!=prompt||s.budget!=budget||generated>=budget||s.keys.shape()[0]!=capacity)throw std::invalid_argument("generation state mismatch");
         if(generated==0) {
             if(start!=s.used||count<1||start+count>prompt)throw std::invalid_argument("prefill progress mismatch");
         } else if(count!=1||input[0]!=s.last||s.used!=prompt+generated-1)throw std::invalid_argument("decode input mismatch");
-        Tensor logits;
-        for(int token:input)logits=forward(s,token);
-        observe();
-        if(generated==0 && s.used<prompt)return -1;
-        s.last=greedy(logits);++s.generated;return s.last;
+        if(count<1||s.used+count>capacity)throw std::invalid_argument("context overflow");
+        for(int token:input)if(token<0||token>=V)throw std::invalid_argument("invalid token");
+        return s;
+    }
+    Tensor linear(const Tensor& x,const Tensor& weight) {
+        auto result=ops::matmul(x,weight);
+        ++linear_calls;linear_rows+=std::size_t(x.shape()[0]);return result;
+    }
+    std::vector<int> step(const std::vector<BatchItem>& batch) {
+        // Pack all real input tokens, with no padding. Each row retains its
+        // request and absolute KV position; item order is also output order.
+        std::set<int> ids;
+        std::vector<State*> owners;
+        std::vector<int> positions;
+        std::vector<std::size_t> ends;
+        for(const auto& item:batch) {
+            if(!ids.insert(item.id).second)throw std::invalid_argument("duplicate batch request");
+            auto& state=prepare(item);
+            for(int i=0;i<item.count;++i){owners.push_back(&state);positions.push_back(state.used+i);}
+            ends.push_back(owners.size());
+        }
+        const auto rows=static_cast<std::int64_t>(owners.size());
+        Tensor x({rows,D});std::size_t row=0;
+        for(const auto& item:batch)for(int token:item.input) {
+            for(int d=0;d<D;++d)x.at(row*D+d)=embedding.at(std::size_t(token)*D+d)+0.1F*std::sin(float(positions[row]+1)*float(d+1)/17.F);
+            ++row;
+        }
+        auto q=linear(x,wq),k=linear(x,wk),v=linear(x,wv);
+        for(row=0;row<owners.size();++row) {
+            auto& s=*owners[row];
+            for(int d=0;d<D;++d){s.keys.at(std::size_t(positions[row])*D+d)=k.at(row*D+d);s.values.at(std::size_t(positions[row])*D+d)=v.at(row*D+d);}
+        }
+        Tensor contexts({rows,D});
+        // Ragged attention stays per query. Limit every query to its own
+        // causal prefix, even though later rows' K/V have already been written.
+        for(row=0;row<owners.size();++row) {
+            auto& s=*owners[row];const int length=positions[row]+1;
+            auto keys=s.keys.narrow(0,0,length);keys.transpose(0,1);
+            auto scores=ops::matmul(q.narrow(0,static_cast<std::int64_t>(row),1),keys);
+            for(std::size_t j=0;j<scores.numel();++j)scores.at(j)/=std::sqrt(float(D));
+            auto context=ops::matmul(ops::softmax(scores,-1),s.values.narrow(0,0,length));
+            for(int d=0;d<D;++d)contexts.at(row*D+d)=context.at(d);
+        }
+        auto residual=ops::add(x,linear(contexts,wo));
+        auto ff=linear(ops::relu(linear(ops::layer_norm(residual),w1)),w2);
+        auto logits=linear(ops::layer_norm(ops::add(residual,ff)),head);
+        std::vector<int> result;last_logits.clear();
+        for(std::size_t i=0;i<batch.size();++i) {
+            auto& s=*owners[ends[i]-1];s.used+=batch[i].count;
+            const auto last=logits.narrow(0,static_cast<std::int64_t>(ends[i]-1),1);
+            for(int j=0;j<V;++j)last_logits.push_back(last.at(j));
+            if(batch[i].generated==0&&s.used<s.prompt)result.push_back(-1);
+            else{s.last=greedy(last);++s.generated;result.push_back(s.last);}
+        }
+        forwards+=owners.size();++batch_steps;
+        peak_batch_requests=std::max(peak_batch_requests,batch.size());
+        peak_batch_tokens=std::max(peak_batch_tokens,owners.size());observe();
+        return result;
+    }
+    Tensor reference_logits(const std::vector<int>& prefix) {
+        if(prefix.empty()||prefix.size()>MAX_CONTEXT)throw std::invalid_argument("reference limits");
+        State fresh(int(prefix.size()),int(prefix.size()),1);Tensor logits;
+        for(int token:prefix)logits=forward(fresh,token);
+        return logits;
     }
     // Independent no-KV-reuse oracle: rebuild each full prefix for every token.
     std::vector<int> reference(std::vector<int> prefix,int outputs) {
         if(prefix.empty()||outputs<1||prefix.size()+outputs>MAX_CONTEXT)throw std::invalid_argument("reference limits");
         std::vector<int> result;
-        for(int i=0;i<outputs;++i){State fresh(int(prefix.size())+1,int(prefix.size()),1);Tensor logits;for(int t:prefix)logits=forward(fresh,t);auto next=greedy(logits);result.push_back(next);prefix.push_back(next);}return result;
+        for(int i=0;i<outputs;++i){auto next=greedy(reference_logits(prefix));result.push_back(next);prefix.push_back(next);}return result;
     }
 };
 int integer(std::istringstream& in){int v;if(!(in>>v))throw std::invalid_argument("missing integer");return v;}
 }
 int main(){
-    TinyDecoder model;std::cout<<"READY 16 32 4096\n"<<std::flush;std::string line;
+    TinyDecoder model;std::cout<<"READY 16 32 4096 BATCHED 1\n"<<std::flush;std::string line;
     while(std::getline(std::cin,line))try{
         std::istringstream in(line);std::string op;in>>op;
         if(op=="STEP"){
-            int n=integer(in);if(n<1||n>1024)throw std::invalid_argument("batch size");std::vector<int> result;
-            for(int i=0;i<n;++i){int id=integer(in),g=integer(in),s=integer(in),c=integer(in),p=integer(in),b=integer(in),cap=integer(in);if(c<1||c>MAX_CONTEXT)throw std::invalid_argument("input count");std::vector<int> tokens;for(int j=0;j<c;++j)tokens.push_back(integer(in));result.push_back(model.step(id,g,s,c,p,b,cap,tokens));}
+            int n=integer(in);if(n<1||n>1024)throw std::invalid_argument("batch size");std::vector<BatchItem> batch;
+            for(int i=0;i<n;++i){BatchItem item;item.id=integer(in);item.generated=integer(in);item.start=integer(in);item.count=integer(in);item.prompt=integer(in);item.budget=integer(in);item.capacity=integer(in);if(item.count<1||item.count>MAX_CONTEXT)throw std::invalid_argument("input count");for(int j=0;j<item.count;++j)item.input.push_back(integer(in));batch.push_back(std::move(item));}
+            auto result=model.step(batch);
             std::cout<<"OK";for(int t:result)std::cout<<' '<<t;std::cout<<'\n';
+        }else if(op=="LOGITS"){
+            std::cout<<"OK"<<std::setprecision(9);for(float v:model.last_logits)std::cout<<' '<<v;std::cout<<'\n';
+        }else if(op=="REFERENCE_LOGITS"){
+            int p=integer(in);if(p<1||p>MAX_CONTEXT)throw std::invalid_argument("prompt size");std::vector<int> tokens;for(int i=0;i<p;++i)tokens.push_back(integer(in));auto logits=model.reference_logits(tokens);std::cout<<"OK"<<std::setprecision(9);for(int j=0;j<V;++j)std::cout<<' '<<logits.at(j);std::cout<<'\n';
         }else if(op=="REFERENCE"){
             int p=integer(in),b=integer(in);if(p<1||p>MAX_CONTEXT)throw std::invalid_argument("prompt size");std::vector<int> tokens;for(int i=0;i<p;++i)tokens.push_back(integer(in));auto result=model.reference(tokens,b);std::cout<<"OK";for(int t:result)std::cout<<' '<<t;std::cout<<'\n';
         }else if(op=="RELEASE"){if(model.states.erase(integer(in))!=1)throw std::invalid_argument("unknown release");std::cout<<"OK\n";
-        }else if(op=="RESET"){model.states.clear();model.forwards=model.peak_bytes=model.peak_tokens=0;std::cout<<"OK\n";
-        }else if(op=="CLEAR"){model.states.clear();std::cout<<"OK\n";
-        }else if(op=="STATS"){std::size_t bytes=0;for(const auto& p:model.states)bytes+=p.second->bytes();std::cout<<"OK "<<model.states.size()<<' '<<bytes<<' '<<model.peak_bytes<<' '<<model.peak_tokens<<' '<<model.forwards<<'\n';
+        }else if(op=="RESET"){model.states.clear();model.last_logits.clear();model.forwards=model.peak_bytes=model.peak_tokens=0;model.batch_steps=model.linear_calls=model.linear_rows=model.peak_batch_requests=model.peak_batch_tokens=0;std::cout<<"OK\n";
+        }else if(op=="CLEAR"){model.states.clear();model.last_logits.clear();std::cout<<"OK\n";
+        }else if(op=="STATS"){std::size_t bytes=0;for(const auto& p:model.states)bytes+=p.second->bytes();std::cout<<"OK "<<model.states.size()<<' '<<bytes<<' '<<model.peak_bytes<<' '<<model.peak_tokens<<' '<<model.forwards<<' '<<model.batch_steps<<' '<<model.linear_calls<<' '<<model.linear_rows<<' '<<model.peak_batch_requests<<' '<<model.peak_batch_tokens<<'\n';
         }else if(op=="QUIT"){std::cout<<"OK\n"<<std::flush;return 0;
         }else throw std::invalid_argument("unknown command");
         std::cout<<std::flush;
-    }catch(const std::exception& e){model.states.clear();std::cout<<"ERROR "<<e.what()<<'\n'<<std::flush;}
+    }catch(const std::exception& e){model.states.clear();model.last_logits.clear();std::cout<<"ERROR "<<e.what()<<'\n'<<std::flush;}
 }

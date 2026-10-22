@@ -10,7 +10,7 @@ except ImportError:
 
 class TinyInferBackend:
     real_backend = True
-    hardware_batched = False  # Work items are computed serially inside the worker.
+    hardware_batched = True  # CPU tensor batching; ragged attention is per query.
 
     def __init__(self, executable, block_size=1):
         if type(block_size) is not int or block_size < 1:
@@ -19,11 +19,11 @@ class TinyInferBackend:
         self.handles, self.outputs = {}, {}
         self.process = subprocess.Popen([str(Path(executable).resolve())], stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE, text=True, bufsize=1)
-        if self.process.stdout.readline().strip() != "READY 16 32 4096":
+        if self.process.stdout.readline().strip() != "READY 16 32 4096 BATCHED 1":
             self.close()
             raise RuntimeError("invalid worker handshake")
 
-    def _command(self, values):
+    def _command(self, values, convert=int):
         if self.process.poll() is not None:
             raise RuntimeError("TinyInfer worker exited")
         try:
@@ -41,7 +41,7 @@ class TinyInferBackend:
             self.close()
             raise RuntimeError("invalid TinyInfer worker response: " + line)
         try:
-            return [int(x) for x in line.split()[1:]]
+            return [convert(x) for x in line.split()[1:]]
         except ValueError:
             self.close()
             raise
@@ -77,6 +77,17 @@ class TinyInferBackend:
     def reference(self, request):
         return self._command(["REFERENCE", request.prompt_tokens, request.output_tokens] + self.prompt(request))
 
+    def reference_logits(self, prefix):
+        """Diagnostic full-prefix serial oracle, outside benchmark timing."""
+        return self._command(["REFERENCE_LOGITS", len(prefix)] + list(prefix), float)
+
+    def last_step_logits(self):
+        """Final input row per work item, including unfinished prefill chunks."""
+        values = self._command(["LOGITS"], float)
+        if len(values) % 32:
+            raise RuntimeError("worker logits arity")
+        return [values[i:i + 32] for i in range(0, len(values), 32)]
+
     def synchronize(self):
         # CPU worker replies only after computation and token publication finish.
         pass
@@ -98,7 +109,11 @@ class TinyInferBackend:
 
     def stats(self):
         values = self._command(["STATS"])
-        return dict(zip(("live_requests", "live_kv_bytes", "peak_kv_bytes", "peak_cached_tokens", "forward_tokens"), values))
+        names = ("live_requests", "live_kv_bytes", "peak_kv_bytes", "peak_cached_tokens", "forward_tokens",
+                 "batch_steps", "linear_matmul_calls", "linear_matmul_rows", "peak_batch_requests", "peak_batch_tokens")
+        if len(values) != len(names):
+            raise RuntimeError("worker stats arity")
+        return dict(zip(names, values))
 
     def close(self):
         if getattr(self, "process", None) is not None:

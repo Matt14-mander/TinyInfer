@@ -269,4 +269,7 @@ prefill is implemented in stage three with per-step token budgets, decode priori
 round-robin prefill progress and simulated latency/throughput tradeoffs. Stage four adds a local random-weight single-layer decoder using actual TinyInfer
 CPU attention/logits/KV operations, a wall-clock driver and measured request
 metrics; see the [engineering acceptance](examples/serving_scheduler/STAGE4.md).
-It is neither a pretrained LLM nor hardware-batched or production network serving.
+The worker now packs token rows across requests for CPU Q/K/V projections,
+output projection, FFN and vocabulary projection; ragged causal attention remains
+per query. See [tensor batching validation](examples/serving_scheduler/BATCHING.md).
+The model uses random weights and the example provides local CPU inference only.

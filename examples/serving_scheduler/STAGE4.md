@@ -3,6 +3,9 @@
 日期：2026-10-15。按用户确认，采用本地微型随机权重 Transformer 完成工程验证。
 **本阶段已完成本地真实数值推理、实际 K/V 存储、墙钟调度与指标测量；不是预训练大模型服务。**
 
+2026-10-22 更新：当前 worker 已增加跨请求 CPU 张量 batching，见 [BATCHING.md](BATCHING.md)。
+本文的串行实现描述、44 项测试和 results/stage4 性能数据均保留为历史第四阶段记录。
+
 ## 后端具体是什么
 
 `tinyinfer_serving_worker` 是链接 TinyInfer C++ core 的持久 CPU 子进程。模型有单层、

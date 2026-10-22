@@ -2,7 +2,7 @@
 
 **四个学习阶段已完成：前三阶段模拟调度，以及微型 Transformer 的真实 TinyInfer CPU 工程验收。**
 前三阶段使用 Python 3.7+ 标准库、确定性模拟后端和虚拟时钟；第四阶段编译 C++ worker，
-执行实际数值推理并使用墙钟。无需下载模型或 GPU。
+执行实际数值推理并使用墙钟。后续已补齐跨请求 CPU 张量 batching，详见 [BATCHING.md](BATCHING.md)。无需下载模型或 GPU。
 本例独立于 TinyInfer C++ Runtime，不改变 Phase 5.4 CUDA 开发状态。
 
 ## 四阶段计划
@@ -15,8 +15,9 @@
 | 4 | 真实后端及性能测量 | 已完成微型随机权重 Transformer CPU 验收：真实 logits/KV、墙钟、44 项测试与三轮测量 |
 
 前三阶段 KV 是账本模拟；第四阶段在独立 TinyInfer C++ worker 中实际分配 CPU K/V Tensor。
-真实入口是 real_benchmark.py，模型未训练且逐请求串行计算，不代表预训练大模型或硬件
-batching 性能。构建、计时边界与验收详见 [STAGE4.md](STAGE4.md)。本例不提供生产网络服务。
+真实入口是 real_benchmark.py，模型未训练；当前 Q/K/V、输出投影、FFN 与词表投影按打包
+token 行合并计算，变长 attention 仍逐 query 执行。历史第四阶段构建、计时边界与验收详见
+[STAGE4.md](STAGE4.md)，其中原始性能数据属于旧串行 worker。本例不提供生产网络服务。
 
 ## 运行
 
@@ -220,6 +221,7 @@ A 在 0 ms 到达，prompt=1/output=4；B 在 2 ms 到达，prompt=6/output=1。
 | realtime.py | 真实到达等待、完成后 token 交付与墙钟驱动 |
 | tinyinfer_worker.cpp / tinyinfer_backend.py | 真实 attention/logits/KV 数值后端及持久进程适配 |
 | real_benchmark.py / test_real_backend.py | 真实计时、完整前缀参考、5 项集成测试 |
+| test_tensor_batching.py | 5 项真实张量 batching 测试：logits、因果边界、混合阶段、请求映射、算子计数与异常清理 |
 | results/ | 保留模拟历史；stage4/ 含 44 项测试、ASan、真实指标与构建环境 |
 
 第四阶段已保留模型/精度、环境、固定到达/长度分布、warmup、独立 worker 次数、
