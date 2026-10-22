@@ -1,6 +1,10 @@
 #include "../examples/serving_scheduler/native/paged_kv_cache.h"
 #include <iostream>
 #include <string>
+#ifdef TINYINFER_SERVING_CUDA
+#include "../examples/serving_scheduler/native/cuda_paged_attention.h"
+#include <cuda_runtime.h>
+#endif
 
 namespace {
 void require(bool condition, const char* message) {
@@ -49,6 +53,10 @@ void causal_tail_and_stability() {
     for (int length = 1; length <= 5; ++length) {
         const auto direct = pool.attention(1, length, query);
         close(direct, pool.gather_attention(1, length, query));
+#ifdef TINYINFER_SERVING_CUDA
+        serving::CudaPagedAttention cuda;
+        close(cuda.run(pool, query, {1}, {length}), direct);
+#endif
         const double maximum = double(*std::max_element(key_values, key_values + length)) * 4;
         double denom = 0, numerator = 0;
         for (int t = 0; t < length; ++t) {
@@ -68,6 +76,15 @@ void causal_tail_and_stability() {
     key.fill(123);value.fill(-77);pool.write(3, 0, key.data(), value.data());
     close(pool.attention(1, 5, query), pool.gather_attention(1, 5, query));
     for (int d = 0; d < 16; ++d) require(pool.attention(3, 1, query).at(d) == -77, "request contamination");
+#ifdef TINYINFER_SERVING_CUDA
+    tinyinfer::Tensor queries({2,16});
+    for(int row=0;row<2;++row)for(int d=0;d<16;++d)queries.at(row*16+d)=query.at(d);
+    serving::CudaPagedAttention cuda;
+    const auto outputs=cuda.run(pool,queries,{1,3},{5,1});
+    close(outputs.narrow(0,0,1),pool.attention(1,5,query));
+    close(outputs.narrow(0,1,1),pool.attention(3,1,query));
+    require(cuda.launches()==1&&cuda.uploaded_bytes()>0,"CUDA diagnostics missing");
+#endif
 }
 
 void lifecycle_and_validation() {
@@ -91,11 +108,56 @@ void lifecycle_and_validation() {
     pool.clear(true);
     require(pool.peak_blocks() == 0 && pool.pool_bytes() == bytes, "reset must retain pool only");
 }
+
+void shared_prefix_and_cow() {
+    serving::PagedKVCache pool(8, 4);
+    pool.prepare_append({{1, 3}});
+    std::array<float,16> key{},value{};
+    tinyinfer::Tensor query({1,16});
+    for(int d=0;d<16;++d)query.at(d)=0.1F;
+    for(int token=0;token<3;++token){key.fill(float(token));value.fill(float(token));pool.write(1,token,key.data(),value.data());}
+    pool.publish_prefix(1,{1,2,3});
+    require(pool.reuse_prefix(2,{1,2,3,9},3)==3,"exact prefix not shared");
+    require(pool.table(1)==pool.table(2),"prefix blocks not physically shared");
+    require(pool.reuse_prefix(3,{2,1,3,9},3)==0,"different causal prefix incorrectly shared");
+    const auto original=pool.attention(1,3,query);
+    pool.prepare_append({{1,4},{2,4}});
+    require(pool.table(1)!=pool.table(2)&&pool.cow_copies()==2,"partial shared block not copied");
+    key.fill(0);value.fill(100);pool.write(1,3,key.data(),value.data());
+    value.fill(-100);pool.write(2,3,key.data(),value.data());
+    close(original,pool.attention(1,3,query));close(original,pool.attention(2,3,query));
+    require(pool.attention(1,4,query).at(0)>pool.attention(2,4,query).at(0),"COW outputs contaminated");
+    require(pool.reuse_prefix(4,{1,2,3,8},3)==3,"cached prefix invalidated by writer");
+    close(original,pool.attention(4,3,query));
+    pool.release(1);pool.release(2);pool.release(4);
+    require(pool.used_blocks()==1,"cache ownership not retained");
+    pool.clear();require(pool.used_blocks()==0,"cache clear leaked blocks");
+
+    serving::PagedKVCache tight(1,4);
+    tight.prepare_append({{1,3}});
+    for(int token=0;token<3;++token)tight.write(1,token,key.data(),value.data());
+    tight.publish_prefix(1,{1,2,3});tight.reuse_prefix(2,{1,2,3,9},3);
+    require(!tight.can_append({{1,4},{2,4}}),"shared live COW should exceed capacity");
+    require(tight.cache_entries()>0&&tight.table(1)==tight.table(2),"dry plan mutated snapshots");
+    rejects([&]{tight.prepare_append({{1,4},{2,4}});});
+    require(tight.cache_entries()>0&&tight.used_blocks()==1,"failed COW mutated cache");
+    tight.release(1);tight.prepare_append({{2,4}});
+    require(tight.cache_entries()==0&&tight.used_blocks()==1,"cache should evict to permit in-place append");
+}
 } // namespace
 
-int main() {
+int main(int argc, char** argv) {
+#ifdef TINYINFER_SERVING_CUDA
+    int count=0;
+    if(cudaGetDeviceCount(&count)!=cudaSuccess||count==0) {
+        std::cerr<<"CUDA device unavailable\n";
+        return argc>1&&std::string(argv[1])=="--require-device"?1:77;
+    }
+#else
+    (void)argc;(void)argv;
+#endif
     try {
-        allocation_transaction();causal_tail_and_stability();lifecycle_and_validation();
+        allocation_transaction();causal_tail_and_stability();lifecycle_and_validation();shared_prefix_and_cow();
         std::cout << "Paged KV allocation, attention and lifecycle checks passed\n";
         return 0;
     } catch (const std::exception& error) {

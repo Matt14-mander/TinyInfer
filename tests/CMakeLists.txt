@@ -249,11 +249,27 @@ if(TARGET tinyinfer_serving_worker)
     add_executable(tinyinfer_paged_attention_tests paged_attention_test.cpp)
     target_link_libraries(tinyinfer_paged_attention_tests PRIVATE TinyInfer::tinyinfer)
     add_test(NAME tinyinfer_paged_attention_tests COMMAND tinyinfer_paged_attention_tests)
+    if(TARGET tinyinfer_serving_paged_cuda)
+        add_executable(tinyinfer_cuda_paged_attention_tests paged_attention_test.cpp)
+        target_compile_definitions(tinyinfer_cuda_paged_attention_tests PRIVATE TINYINFER_SERVING_CUDA=1)
+        target_link_libraries(tinyinfer_cuda_paged_attention_tests PRIVATE tinyinfer_serving_paged_cuda CUDA::cudart)
+        if(TINYINFER_CUDA_REQUIRE_DEVICE)
+            add_test(NAME tinyinfer_cuda_paged_attention_tests COMMAND tinyinfer_cuda_paged_attention_tests --require-device)
+        else()
+            add_test(NAME tinyinfer_cuda_paged_attention_tests COMMAND tinyinfer_cuda_paged_attention_tests)
+        endif()
+        set_tests_properties(tinyinfer_cuda_paged_attention_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 180)
+    endif()
     find_package(Python3 3.7 COMPONENTS Interpreter QUIET)
     if(Python3_Interpreter_FOUND)
+        set(TINYINFER_SERVING_CUDA_ENV)
+        if(TARGET tinyinfer_serving_cuda_worker)
+            list(APPEND TINYINFER_SERVING_CUDA_ENV "TINYINFER_SERVING_CUDA_WORKER=$<TARGET_FILE:tinyinfer_serving_cuda_worker>")
+        endif()
         add_test(NAME tinyinfer_serving_scheduler_tests
             COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
                 "TINYINFER_SERVING_WORKER=$<TARGET_FILE:tinyinfer_serving_worker>"
+                ${TINYINFER_SERVING_CUDA_ENV}
                 ${Python3_EXECUTABLE} -m unittest discover
                 -s ${PROJECT_SOURCE_DIR}/examples/serving_scheduler -v)
         set_tests_properties(tinyinfer_serving_scheduler_tests PROPERTIES TIMEOUT 180)

@@ -4,6 +4,7 @@
 前三阶段使用 Python 3.7+ 标准库、确定性模拟后端和虚拟时钟；第四阶段编译 C++ worker，
 执行实际数值推理并使用墙钟。后续已补齐跨请求 CPU 张量 batching，详见 [BATCHING.md](BATCHING.md)。无需下载模型或 GPU。
 可选物理分页 KV 与直接 CPU PagedAttention 已实现，运行与验收见 [PAGED_ATTENTION.md](PAGED_ATTENTION.md)。
+可选动态准入/抢占重算、精确前缀共享/COW 与 CUDA 分页 kernel 见 [ADVANCED_SERVING.md](ADVANCED_SERVING.md)。
 本例独立于 TinyInfer C++ Runtime，不改变 Phase 5.4 CUDA 开发状态。
 
 ## 四阶段计划
@@ -224,6 +225,8 @@ A 在 0 ms 到达，prompt=1/output=4；B 在 2 ms 到达，prompt=6/output=1。
 | real_benchmark.py / test_real_backend.py | 真实计时、完整前缀参考、5 项集成测试 |
 | test_tensor_batching.py | 5 项真实张量 batching 测试：logits、因果边界、混合阶段、请求映射、算子计数与异常清理 |
 | native/paged_kv_cache.h / test_paged_attention.py | KV pool、block table、直接分页 online softmax、gather 对照与 7 项集成测试 |
+| dynamic_scheduler.py / test_advanced_serving.py | 按需容量与分块重算、共享/COW、5 项 CPU 和 2 项真实 CUDA 集成测试 |
+| native/cuda_paged_attention.h/.cu | 可选真实 GPU 分页 attention、stream/缓冲复用与传输/launch 计数 |
 | results/ | 保留模拟历史；stage4/ 含 44 项测试、ASan、真实指标与构建环境 |
 
 第四阶段已保留模型/精度、环境、固定到达/长度分布、warmup、独立 worker 次数、

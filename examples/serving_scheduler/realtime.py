@@ -23,7 +23,7 @@ class WallClock:
 
 def serve(requests, backend, mode="continuous", max_batch_size=4,
           kv_capacity_blocks=None, kv_block_size=1, kv_policy="wait",
-          token_budget=None, prefill_chunk_size=None):
+          token_budget=None, prefill_chunk_size=None, kv_allocation="reserved"):
     if not getattr(backend, "real_backend", False):
         raise ValueError("serve requires a completed real inference backend")
     if getattr(backend, "block_size", kv_block_size) != kv_block_size:
@@ -31,9 +31,23 @@ def serve(requests, backend, mode="continuous", max_batch_size=4,
     if (getattr(backend, "kv_layout", None) == "paged"
             and kv_capacity_blocks != backend.kv_capacity_blocks):
         raise ValueError("paged physical capacity must match scheduler KV capacity")
+    if kv_allocation not in ("reserved", "dynamic"):
+        raise ValueError("kv_allocation must be reserved or dynamic")
+    if kv_allocation == "dynamic" and (mode != "continuous" or kv_policy != "wait"
+                                       or getattr(backend, "kv_layout", None) != "paged"):
+        raise ValueError("dynamic allocation requires continuous paged serving with wait policy")
+    if kv_allocation == "dynamic" and (type(kv_capacity_blocks) is not int or type(kv_block_size) is not int):
+        raise ValueError("dynamic capacity and block size must be integers")
     # Model startup and reset are outside the request latency window.
     backend.reset()
     try:
+        if kv_allocation == "dynamic":
+            try:
+                from .dynamic_scheduler import schedule_dynamic
+            except ImportError:
+                from dynamic_scheduler import schedule_dynamic
+            return schedule_dynamic(requests, backend, max_batch_size, kv_capacity_blocks,
+                                    kv_block_size, token_budget, prefill_chunk_size, WallClock())
         return _schedule(requests, backend, mode, max_batch_size, kv_capacity_blocks,
                          kv_block_size, kv_policy, token_budget, prefill_chunk_size, WallClock())
     except BaseException:

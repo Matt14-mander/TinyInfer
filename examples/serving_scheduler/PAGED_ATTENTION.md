@@ -2,6 +2,9 @@
 
 日期：2026-10-22。已在跨请求张量 batching 后端中加入物理分页 KV 与直接分页 attention。
 适用模型仍为单层、单头、D=16、FP32 的随机权重 Transformer。
+后续已实现可选抢占重算、精确前缀共享/COW 和真实 CUDA attention kernel，见
+[ADVANCED_SERVING.md](ADVANCED_SERVING.md)。本文描述默认关闭共享的首版 CPU 路径；
+当前协议版本为 `PAGED 2`，下方 56 项测试与验收记录保留为首版历史。
 
 ## 使用
 
@@ -128,5 +131,5 @@ C++ 原生测试验证 batch 分配事务、物理碎片、double precision soft
 `benchmark-results/serving-{paged-attention,paged-gather,contiguous-kv}.json`。
 这些运行用于正确性与资源验收，未作为隔离的配对性能实验，不声明加速比。
 
-首版保留最大预算准入；动态超额准入、抢占重算、prefix sharing/COW、多头/GQA、
-GPU kernel 尚未实现。
+默认保留最大预算准入；动态准入、抢占重算、prefix sharing/COW 和 GPU kernel 可按
+[高级能力说明](ADVANCED_SERVING.md) 开启。多层、多头/GQA 尚未实现。

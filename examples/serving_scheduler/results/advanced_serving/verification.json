@@ -1,0 +1,103 @@
+{
+  "date": "2026-10-22",
+  "scope": "budgeted preempt/recompute, exact prefix sharing/COW, real hybrid CPU/CUDA paged attention",
+  "environment": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.3",
+    "worker_sha256": "af739c4e5a53d998ea9d96a23395cdd3b364c5927a51b3491d269a6fc4978ca9",
+    "source_sha256": {
+      "tinyinfer_worker.cpp": "086466cdcb8104f10b645a0ba54e366fb8e3358a2945693bd7f4eaa341555b61",
+      "native/paged_kv_cache.h": "90f0fa6e1d9e3be538e2c996dd76212fef3ca9cfddd1cfc0e71b2b406eddec31",
+      "native/cuda_paged_attention.cu": "cbb6c895b050f56a087fe8c8dda18f1507b1990d5d5de7c85ac189c7a6b5806c",
+      "native/cuda_paged_attention.h": "f20abbc24cbbde25586a87b5f76c2c467306330f52470d1b0ebade493c3c47ab",
+      "tinyinfer_backend.py": "a5fae0b3e0d70aa29afd53abdc6b9bedf1be844fc5e815ee666ea0756bc09f69",
+      "scheduler.py": "8f9a05706f649268301060bbccb3a09850f12347b0d0ac55462e12f1db80628a",
+      "dynamic_scheduler.py": "5507d42ef5c96395fb5b67290bad88348f992ec801620b3c5f93615a14373cf0",
+      "realtime.py": "24deea9469ee653f4c29e8986a60991f53c800e3a57e09a14ba92a931951ffd8",
+      "real_benchmark.py": "0fd435b2e465fe9053f60e7701d7d4afd54889a4f364fde165dd60a59b34dddd"
+    }
+  },
+  "gpu": "NVIDIA GeForce RTX 4070 Laptop GPU",
+  "driver": "555.97",
+  "cuda_toolkit": "12.5.1",
+  "build": "MSVC 14.29 / Release / native CPU / sm_89",
+  "python_tests": 63,
+  "python_skips": 0,
+  "ctest_targets": [
+    "tinyinfer_serving_scheduler_tests",
+    "tinyinfer_paged_attention_tests",
+    "tinyinfer_cuda_paged_attention_tests"
+  ],
+  "cpu_only_build": "MSVC 14.43 / SDK-free CPU targets passed; optional CUDA class skipped",
+  "numeric_tolerance": "abs(a-b) <= 2e-5 + 2e-5*abs(b); identical greedy tokens",
+  "benchmarks": [
+    {
+      "profile": "cpu-dynamic-shared",
+      "raw_report": "benchmark-results/serving-cpu-dynamic-shared.json",
+      "reports": 6,
+      "independent_workers": 3,
+      "completed_requests": 180,
+      "all_reference_correct": true,
+      "preemptions": 33,
+      "recompute_tokens": 263,
+      "prefix_reused_tokens": 29,
+      "cow_block_copies": 310,
+      "cuda_kernel_launches": 0,
+      "all_pools_clear": true,
+      "worker_sha256": "7d876d6bd70a84e55d3b69475f5e1dd5ac82de761be6cf5afef93ca1f9e25664"
+    },
+    {
+      "profile": "cpu-dynamic",
+      "raw_report": "benchmark-results/serving-cpu-dynamic.json",
+      "reports": 6,
+      "independent_workers": 3,
+      "completed_requests": 180,
+      "all_reference_correct": true,
+      "preemptions": 33,
+      "recompute_tokens": 253,
+      "prefix_reused_tokens": 0,
+      "cow_block_copies": 0,
+      "cuda_kernel_launches": 0,
+      "all_pools_clear": true,
+      "worker_sha256": "7d876d6bd70a84e55d3b69475f5e1dd5ac82de761be6cf5afef93ca1f9e25664"
+    },
+    {
+      "profile": "cuda-dynamic-shared",
+      "raw_report": "benchmark-results/serving-cuda-dynamic-shared.json",
+      "reports": 6,
+      "independent_workers": 3,
+      "completed_requests": 180,
+      "all_reference_correct": true,
+      "preemptions": 37,
+      "recompute_tokens": 330,
+      "prefix_reused_tokens": 27,
+      "cow_block_copies": 274,
+      "cuda_kernel_launches": 325,
+      "all_pools_clear": true,
+      "worker_sha256": "af739c4e5a53d998ea9d96a23395cdd3b364c5927a51b3491d269a6fc4978ca9"
+    },
+    {
+      "profile": "cuda-shared",
+      "raw_report": "benchmark-results/serving-cuda-shared.json",
+      "reports": 12,
+      "independent_workers": 3,
+      "completed_requests": 360,
+      "all_reference_correct": true,
+      "preemptions": 0,
+      "recompute_tokens": 0,
+      "prefix_reused_tokens": 121,
+      "cow_block_copies": 604,
+      "cuda_kernel_launches": 679,
+      "all_pools_clear": true,
+      "worker_sha256": "af739c4e5a53d998ea9d96a23395cdd3b364c5927a51b3491d269a6fc4978ca9"
+    }
+  ],
+  "performance_claim": false,
+  "limits": [
+    "single layer/head, dimension=16 FP32",
+    "projections/FFN/head remain CPU",
+    "full KV pool H2D each STEP",
+    "dynamic mode continuous/wait only",
+    "finite workload progress, no online fairness bound"
+  ]
+}

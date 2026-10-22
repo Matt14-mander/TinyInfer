@@ -43,6 +43,7 @@ def summarize(run):
             "token_budget": run.token_budget, "prefill_chunk_size": run.prefill_chunk_size,
             "prefill_input_tokens": sum(s["prefill_tokens"] for s in run.trace),
             "decode_input_tokens": sum(s["decode_tokens"] for s in run.trace),
+            "recompute_input_tokens": sum(s.get("recompute_tokens", 0) for s in run.trace),
             "peak_step_input_tokens": max((s["input_tokens"] for s in run.trace), default=0),
             "inter_token_p95_ms": percentile(gaps, .95), "max_inter_token_ms": max(gaps, default=None),
             "scheduled_slot_utilization": scheduled / (duration * run.max_batch_size) if duration else 0.0,

@@ -13,13 +13,15 @@ class TinyInferBackend:
     hardware_batched = True  # CPU tensor batching; ragged attention is per query.
 
     def __init__(self, executable, block_size=1, kv_layout="contiguous",
-                 kv_capacity_blocks=None, attention_mode="direct"):
+                 kv_capacity_blocks=None, attention_mode="direct", prefix_sharing=False):
         if type(block_size) is not int or block_size < 1:
             raise ValueError("block size must be positive")
         if kv_layout not in ("contiguous", "paged"):
             raise ValueError("kv_layout must be contiguous or paged")
-        if attention_mode not in ("direct", "gather") or (attention_mode == "gather" and kv_layout != "paged"):
-            raise ValueError("gather attention requires paged KV")
+        if attention_mode not in ("direct", "gather", "cuda") or (attention_mode != "direct" and kv_layout != "paged"):
+            raise ValueError("gather/CUDA attention requires paged KV")
+        if type(prefix_sharing) is not bool or (prefix_sharing and kv_layout != "paged"):
+            raise ValueError("prefix sharing requires paged KV")
         if kv_layout == "paged":
             if type(kv_capacity_blocks) is not int or kv_capacity_blocks < 0:
                 raise ValueError("paged KV requires a nonnegative integer capacity")
@@ -30,15 +32,18 @@ class TinyInferBackend:
         self.block_size = block_size
         self.kv_layout, self.kv_capacity_blocks = kv_layout, kv_capacity_blocks
         self.attention_mode = attention_mode
+        self.prefix_sharing = prefix_sharing
         self.handles, self.outputs = {}, {}
         self.process = subprocess.Popen([str(Path(executable).resolve())], stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE, text=True, bufsize=1)
-        if self.process.stdout.readline().strip() != "READY 16 32 4096 BATCHED 1 PAGED 1":
+        if self.process.stdout.readline().strip() != "READY 16 32 4096 BATCHED 1 PAGED 2":
             self.close()
             raise RuntimeError("invalid worker handshake")
         if kv_layout == "paged":
             try:
-                self._command(["CONFIG_PAGED", kv_capacity_blocks, block_size, int(attention_mode == "gather")])
+                self._command(["CONFIG_PAGED", kv_capacity_blocks, block_size, {"direct": 0, "gather": 1, "cuda": 2}[attention_mode]])
+                if prefix_sharing:
+                    self._command(["PREFIX_SHARING", 1])
             except BaseException:
                 self.close()
                 raise
@@ -73,7 +78,8 @@ class TinyInferBackend:
 
     def step(self, batch):
         start = time.perf_counter_ns()
-        command = ["STEP", len(batch)]
+        mixed = any(getattr(item, "is_replay", False) for item in batch)
+        command = ["MIXED" if mixed else "STEP", len(batch)]
         for item in batch:
             r = item.request
             key = r.request_id
@@ -81,10 +87,20 @@ class TinyInferBackend:
                 self.handles[key] = len(self.handles) + 1
                 self.outputs[key] = []
             capacity = ((r.prompt_tokens + r.output_tokens + self.block_size - 1) // self.block_size) * self.block_size
-            tokens = (self.prompt(r)[item.prefill_start:item.prefill_start + item.input_tokens]
-                      if item.is_prefill else [self.outputs[key][-1]])
-            command.extend([self.handles[key], item.generated, item.prefill_start, item.input_tokens,
-                            r.prompt_tokens, r.output_tokens, capacity] + tokens)
+            replay = getattr(item, "is_replay", False)
+            if mixed:
+                command.append(int(replay))
+                if replay:
+                    command.extend([r.prompt_tokens, r.output_tokens, len(self.outputs[key]),
+                                    self.outputs[key][-1] if self.outputs[key] else -1])
+            if replay:
+                prefix = self.prompt(r) + self.outputs[key][:-1]
+                tokens = prefix[item.prefill_start:item.prefill_start + item.input_tokens]
+            else:
+                tokens = (self.prompt(r)[item.prefill_start:item.prefill_start + item.input_tokens]
+                          if item.is_prefill else [self.outputs[key][-1]])
+            command.extend([self.handles[key], 0 if replay else item.generated, item.prefill_start, item.input_tokens,
+                            item.prefix_length if replay else r.prompt_tokens, 1 if replay else r.output_tokens, capacity] + tokens)
         result = self._command(command)
         if len(result) != len(batch):
             raise RuntimeError("worker result arity")
@@ -93,6 +109,24 @@ class TinyInferBackend:
                 self.outputs[item.request.request_id].append(token)
         return StepResult((time.perf_counter_ns() - start) / 1000000.0,
                           [None if t == -1 else t for t in result])
+
+    def can_step(self, batch):
+        if not batch:
+            return True
+        command = ["CAN_APPEND", len(batch)]
+        for item in batch:
+            key = item.request.request_id
+            if key not in self.handles:
+                self.handles[key] = len(self.handles) + 1
+                self.outputs[key] = []
+            length = (item.prefill_start + item.input_tokens
+                      if item.is_prefill or getattr(item, "is_replay", False)
+                      else item.request.prompt_tokens + item.generated)
+            command.extend([self.handles[key], length])
+        values = self._command(command)
+        if values not in ([0], [1]):
+            raise RuntimeError("invalid capacity plan response")
+        return values == [1]
 
     def reference(self, request):
         return self._command(["REFERENCE", request.prompt_tokens, request.output_tokens] + self.prompt(request))
@@ -138,7 +172,9 @@ class TinyInferBackend:
         names = ("live_requests", "live_kv_bytes", "peak_kv_bytes", "peak_cached_tokens", "forward_tokens",
                  "batch_steps", "linear_matmul_calls", "linear_matmul_rows", "peak_batch_requests", "peak_batch_tokens",
                  "pool_capacity_blocks", "live_physical_blocks", "peak_physical_blocks", "pool_kv_bytes",
-                 "free_physical_blocks", "paged_attention_queries", "gather_attention_queries")
+                 "free_physical_blocks", "paged_attention_queries", "gather_attention_queries",
+                 "prefix_cache_hits", "prefix_reused_tokens", "cow_block_copies", "prefix_cache_entries",
+                 "prefix_cache_evictions", "recompute_tokens", "cuda_attention_queries", "cuda_kernel_launches", "cuda_uploaded_bytes")
         if len(values) != len(names):
             raise RuntimeError("worker stats arity")
         return dict(zip(names, values))

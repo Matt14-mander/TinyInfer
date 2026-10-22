@@ -24,3 +24,13 @@ endif()
 
 add_executable(tinyinfer_serving_worker serving_scheduler/tinyinfer_worker.cpp)
 target_link_libraries(tinyinfer_serving_worker PRIVATE TinyInfer::tinyinfer)
+
+if(TINYINFER_ENABLE_CUDA)
+    add_library(tinyinfer_serving_paged_cuda serving_scheduler/native/cuda_paged_attention.cu)
+    target_link_libraries(tinyinfer_serving_paged_cuda PUBLIC TinyInfer::tinyinfer PRIVATE CUDA::cudart)
+    set_target_properties(tinyinfer_serving_paged_cuda PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED YES CUDA_RUNTIME_LIBRARY Shared)
+    target_compile_options(tinyinfer_serving_paged_cuda PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:--fmad=false>)
+    add_executable(tinyinfer_serving_cuda_worker serving_scheduler/tinyinfer_worker.cpp)
+    target_compile_definitions(tinyinfer_serving_cuda_worker PRIVATE TINYINFER_SERVING_CUDA=1)
+    target_link_libraries(tinyinfer_serving_cuda_worker PRIVATE tinyinfer_serving_paged_cuda)
+endif()

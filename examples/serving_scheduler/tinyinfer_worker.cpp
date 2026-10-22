@@ -1,6 +1,9 @@
 // Local CPU reference decoder. Random weights; no pretrained language ability.
 #include "tinyinfer/tinyinfer.h"
 #include "native/paged_kv_cache.h"
+#ifdef TINYINFER_SERVING_CUDA
+#include "native/cuda_paged_attention.h"
+#endif
 #include <cmath>
 #include <cstdint>
 #include <iostream>
@@ -19,6 +22,7 @@ Tensor weights(Shape shape) {
 }
 struct State {
     Tensor keys,values;int used=0,generated=0,prompt=0,budget=0,last=-1,capacity=0,id=0;
+    std::vector<int> history;
     State(int cap,int p,int b,bool paged=false)
         :keys(paged?Tensor():Tensor({cap,D})),values(paged?Tensor():Tensor({cap,D})),prompt(p),budget(b),capacity(cap){}
     std::size_t bytes() const {return keys.size_bytes()+values.size_bytes();}
@@ -26,6 +30,8 @@ struct State {
 struct BatchItem {
     int id, generated, start, count, prompt, budget, capacity;
     std::vector<int> input;
+    bool replay=false;
+    int original_prompt=0,original_budget=0,original_generated=0,expected_last=-1;
 };
 class TinyDecoder {
     Tensor embedding=weights({V,D}),wq=weights({D,D}),wk=weights({D,D}),wv=weights({D,D});
@@ -35,6 +41,11 @@ public:
     std::size_t batch_steps=0,linear_calls=0,linear_rows=0,peak_batch_requests=0,peak_batch_tokens=0;
     std::unique_ptr<serving::PagedKVCache> pool;
     bool gather_attention=false;
+    bool prefix_sharing=false,use_cuda=false;
+    std::size_t recompute_tokens=0,cuda_queries=0;
+#ifdef TINYINFER_SERVING_CUDA
+    std::unique_ptr<serving::CudaPagedAttention> cuda;
+#endif
     std::size_t paged_queries=0,gather_queries=0;
     std::vector<float> last_logits;
     Tensor forward(State& state,int token) {
@@ -59,7 +70,10 @@ public:
     void observe(){std::size_t tokens=0;for(const auto& p:states)tokens+=p.second->used;peak_bytes=std::max(peak_bytes,live_bytes());peak_tokens=std::max(peak_tokens,tokens);}
     void clear(bool reset=false) {
         states.clear();last_logits.clear();if(pool)pool->clear(reset);
-        if(reset){forwards=peak_bytes=peak_tokens=0;batch_steps=linear_calls=linear_rows=peak_batch_requests=peak_batch_tokens=0;paged_queries=gather_queries=0;}
+        if(reset){forwards=peak_bytes=peak_tokens=0;batch_steps=linear_calls=linear_rows=peak_batch_requests=peak_batch_tokens=0;paged_queries=gather_queries=recompute_tokens=cuda_queries=0;}
+#ifdef TINYINFER_SERVING_CUDA
+        if(reset&&cuda)cuda->reset_statistics();
+#endif
     }
     void release(int id) {
         if(states.find(id)==states.end())throw std::invalid_argument("unknown release");
@@ -99,17 +113,25 @@ public:
         std::vector<int> positions;
         std::vector<std::size_t> ends;
         std::vector<std::pair<int,int>> targets;
+        std::vector<int> skipped;
         for(const auto& item:batch) {
             if(!ids.insert(item.id).second)throw std::invalid_argument("duplicate batch request");
             auto& state=prepare(item);
-            targets.emplace_back(item.id,state.used+item.count);
-            for(int i=0;i<item.count;++i){owners.push_back(&state);positions.push_back(state.used+i);}
+            int skip=0;
+            if(pool&&prefix_sharing&&state.used==0&&item.generated==0&&item.start==0) {
+                skip=pool->reuse_prefix(item.id,item.input,item.count-1);
+                state.used=skip;state.history.assign(item.input.begin(),item.input.begin()+skip);
+            }
+            skipped.push_back(skip);
+            targets.emplace_back(item.id,state.used+item.count-skip);
+            for(int i=0;i<item.count-skip;++i){owners.push_back(&state);positions.push_back(state.used+i);}
             ends.push_back(owners.size());
         }
         if(pool)pool->prepare_append(targets);
         const auto rows=static_cast<std::int64_t>(owners.size());
         Tensor x({rows,D});std::size_t row=0;
-        for(const auto& item:batch)for(int token:item.input) {
+        for(std::size_t index=0;index<batch.size();++index)for(int i=skipped[index];i<batch[index].count;++i) {
+            const int token=batch[index].input[i];
             for(int d=0;d<D;++d)x.at(row*D+d)=embedding.at(std::size_t(token)*D+d)+0.1F*std::sin(float(positions[row]+1)*float(d+1)/17.F);
             ++row;
         }
@@ -120,9 +142,17 @@ public:
             else for(int d=0;d<D;++d){s.keys.at(std::size_t(positions[row])*D+d)=k.at(row*D+d);s.values.at(std::size_t(positions[row])*D+d)=v.at(row*D+d);}
         }
         Tensor contexts({rows,D});
+#ifdef TINYINFER_SERVING_CUDA
+        if(use_cuda) {
+            std::vector<int> ids,lengths;
+            for(row=0;row<owners.size();++row){ids.push_back(owners[row]->id);lengths.push_back(positions[row]+1);}
+            contexts=cuda->run(*pool,q,ids,lengths);
+        }
+#endif
         // Ragged attention stays per query. Limit every query to its own
         // causal prefix, even though later rows' K/V have already been written.
         for(row=0;row<owners.size();++row) {
+            if(use_cuda)break;
             auto& s=*owners[row];const int length=positions[row]+1;
             if(pool) {
                 auto query=q.narrow(0,static_cast<std::int64_t>(row),1);
@@ -141,14 +171,26 @@ public:
         auto logits=linear(ops::layer_norm(ops::add(residual,ff)),head);
         std::vector<int> result;last_logits.clear();
         for(std::size_t i=0;i<batch.size();++i) {
-            auto& s=*owners[ends[i]-1];s.used+=batch[i].count;
+            auto& s=*owners[ends[i]-1];s.used+=batch[i].count-skipped[i];
+            s.history.insert(s.history.end(),batch[i].input.begin()+skipped[i],batch[i].input.end());
             const auto last=logits.narrow(0,static_cast<std::int64_t>(ends[i]-1),1);
             for(int j=0;j<V;++j)last_logits.push_back(last.at(j));
             if(batch[i].generated==0&&s.used<s.prompt)result.push_back(-1);
             else{s.last=greedy(last);++s.generated;result.push_back(s.last);}
+            if(batch[i].replay) {
+                recompute_tokens+=batch[i].count-skipped[i];
+                if(s.used==s.prompt) {
+                    if(batch[i].original_generated>0&&s.last!=batch[i].expected_last)
+                        throw std::runtime_error("recomputed token mismatch");
+                    s.prompt=batch[i].original_prompt;s.budget=batch[i].original_budget;
+                    s.generated=batch[i].original_generated;s.last=batch[i].expected_last;
+                }
+                result.back()=-1;
+            }
+            if(pool&&prefix_sharing)pool->publish_prefix(s.id,s.history);
         }
         forwards+=owners.size();++batch_steps;
-        if(pool){if(gather_attention)gather_queries+=owners.size();else paged_queries+=owners.size();}
+        if(pool){if(use_cuda)cuda_queries+=owners.size();else if(gather_attention)gather_queries+=owners.size();else paged_queries+=owners.size();}
         peak_batch_requests=std::max(peak_batch_requests,batch.size());
         peak_batch_tokens=std::max(peak_batch_tokens,owners.size());observe();
         return result;
@@ -169,19 +211,43 @@ public:
 int integer(std::istringstream& in){int v;if(!(in>>v))throw std::invalid_argument("missing integer");return v;}
 }
 int main(){
-    TinyDecoder model;std::cout<<"READY 16 32 4096 BATCHED 1 PAGED 1\n"<<std::flush;std::string line;
+    TinyDecoder model;std::cout<<"READY 16 32 4096 BATCHED 1 PAGED 2\n"<<std::flush;std::string line;
     while(std::getline(std::cin,line))try{
         std::istringstream in(line);std::string op;in>>op;
         if(op=="CONFIG_PAGED"){
             int blocks=integer(in),size=integer(in),gather=integer(in);
-            if(model.pool||!model.states.empty()||model.forwards|| (gather!=0&&gather!=1))throw std::invalid_argument("invalid paged configuration");
-            model.pool=std::make_unique<serving::PagedKVCache>(blocks,size);model.gather_attention=gather!=0;std::cout<<"OK\n";
+            if(model.pool||!model.states.empty()||model.forwards||gather<0||gather>2)throw std::invalid_argument("invalid paged configuration");
+#ifndef TINYINFER_SERVING_CUDA
+            if(gather==2)throw std::invalid_argument("CUDA paged attention not built in this worker");
+#else
+            if(gather==2)model.cuda=std::make_unique<serving::CudaPagedAttention>();
+#endif
+            model.pool=std::make_unique<serving::PagedKVCache>(blocks,size);model.gather_attention=gather==1;model.use_cuda=gather==2;std::cout<<"OK\n";
+        }else if(op=="PREFIX_SHARING"){
+            int enabled=integer(in);if(!model.pool||model.forwards||(enabled!=0&&enabled!=1))throw std::invalid_argument("invalid prefix configuration");
+            model.prefix_sharing=enabled!=0;std::cout<<"OK\n";
+        }else if(op=="CAN_APPEND"){
+            if(!model.pool)throw std::invalid_argument("paged mode required");
+            int count=integer(in);if(count<1||count>1024)throw std::invalid_argument("plan batch size");
+            std::vector<std::pair<int,int>> targets;std::set<int> ids;
+            for(int i=0;i<count;++i){int id=integer(in),length=integer(in);if(!ids.insert(id).second)throw std::invalid_argument("duplicate plan request");targets.emplace_back(id,length);}
+            const bool fits=model.pool->can_append(targets);std::cout<<"OK "<<int(fits)<<'\n';
         }else if(op=="BLOCK_TABLE"){
             if(!model.pool)throw std::invalid_argument("paged mode required");
             const auto& table=model.pool->table(integer(in));std::cout<<"OK";for(int block:table)std::cout<<' '<<block;std::cout<<'\n';
-        }else if(op=="STEP"){
+        }else if(op=="STEP"||op=="MIXED"){
             int n=integer(in);if(n<1||n>1024)throw std::invalid_argument("batch size");std::vector<BatchItem> batch;
-            for(int i=0;i<n;++i){BatchItem item;item.id=integer(in);item.generated=integer(in);item.start=integer(in);item.count=integer(in);item.prompt=integer(in);item.budget=integer(in);item.capacity=integer(in);if(item.count<1||item.count>MAX_CONTEXT)throw std::invalid_argument("input count");for(int j=0;j<item.count;++j)item.input.push_back(integer(in));batch.push_back(std::move(item));}
+            for(int i=0;i<n;++i){BatchItem item;
+                if(op=="MIXED") {
+                    int replay=integer(in);if(replay!=0&&replay!=1)throw std::invalid_argument("invalid replay flag");item.replay=replay!=0;
+                    if(item.replay){item.original_prompt=integer(in);item.original_budget=integer(in);item.original_generated=integer(in);item.expected_last=integer(in);}
+                }
+                item.id=integer(in);item.generated=integer(in);item.start=integer(in);item.count=integer(in);item.prompt=integer(in);item.budget=integer(in);item.capacity=integer(in);
+                if(item.count<1||item.count>MAX_CONTEXT)throw std::invalid_argument("input count");
+                if(item.replay&&(item.original_prompt<1||item.original_budget<1||item.original_generated<0||item.original_generated>=item.original_budget||item.original_prompt>MAX_CONTEXT-item.original_budget||item.original_prompt+item.original_budget>item.capacity||item.generated!=0||item.budget!=1||
+                   (item.original_generated>0&&(item.prompt!=item.original_prompt+item.original_generated-1||item.expected_last<0||item.expected_last>=V))||
+                   (item.original_generated==0&&(item.prompt>item.original_prompt||item.expected_last!=-1))))throw std::invalid_argument("invalid replay metadata");
+                for(int j=0;j<item.count;++j)item.input.push_back(integer(in));batch.push_back(std::move(item));}
             auto result=model.step(batch);
             std::cout<<"OK";for(int t:result)std::cout<<' '<<t;std::cout<<'\n';
         }else if(op=="LOGITS"){
@@ -196,7 +262,14 @@ int main(){
         }else if(op=="STATS"){
             auto* pool=model.pool.get();
             std::cout<<"OK "<<model.states.size()<<' '<<model.live_bytes()<<' '<<model.peak_bytes<<' '<<model.peak_tokens<<' '<<model.forwards<<' '<<model.batch_steps<<' '<<model.linear_calls<<' '<<model.linear_rows<<' '<<model.peak_batch_requests<<' '<<model.peak_batch_tokens
-                     <<' '<<(pool?pool->capacity():0)<<' '<<(pool?pool->used_blocks():0)<<' '<<(pool?pool->peak_blocks():0)<<' '<<(pool?pool->pool_bytes():0)<<' '<<(pool?pool->capacity()-pool->used_blocks():0)<<' '<<model.paged_queries<<' '<<model.gather_queries<<'\n';
+                     <<' '<<(pool?pool->capacity():0)<<' '<<(pool?pool->used_blocks():0)<<' '<<(pool?pool->peak_blocks():0)<<' '<<(pool?pool->pool_bytes():0)<<' '<<(pool?pool->capacity()-pool->used_blocks():0)<<' '<<model.paged_queries<<' '<<model.gather_queries
+                     <<' '<<(pool?pool->prefix_hits():0)<<' '<<(pool?pool->prefix_tokens():0)<<' '<<(pool?pool->cow_copies():0)<<' '<<(pool?pool->cache_entries():0)<<' '<<(pool?pool->cache_evictions():0)<<' '<<model.recompute_tokens<<' '<<model.cuda_queries;
+#ifdef TINYINFER_SERVING_CUDA
+            std::cout<<' '<<(model.cuda?model.cuda->launches():0)<<' '<<(model.cuda?model.cuda->uploaded_bytes():0);
+#else
+            std::cout<<" 0 0";
+#endif
+            std::cout<<'\n';
         }else if(op=="QUIT"){std::cout<<"OK\n"<<std::flush;return 0;
         }else throw std::invalid_argument("unknown command");
         std::cout<<std::flush;
