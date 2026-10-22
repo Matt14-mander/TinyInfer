@@ -6,6 +6,8 @@
 可选物理分页 KV 与直接 CPU PagedAttention 已实现，运行与验收见 [PAGED_ATTENTION.md](PAGED_ATTENTION.md)。
 可选动态准入/抢占重算、精确前缀共享/COW 与 CUDA 分页 kernel 见 [ADVANCED_SERVING.md](ADVANCED_SERVING.md)。
 本例独立于 TinyInfer C++ Runtime，不改变 Phase 5.4 CUDA 开发状态。
+后续引擎的独立目录与迁移路线已建立于 [MiniPrefix](../../miniprefix/README.md)；
+当前仅为架构骨架，本例继续作为可运行参考与回归入口。
 
 ## 四阶段计划
 

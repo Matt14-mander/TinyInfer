@@ -72,6 +72,7 @@ src/runtime/         Execution and scheduling
 src/backend/         CPU and future accelerator backends
 src/compiler/        Future IR and fusion passes
 examples/            Small end-to-end programs
+miniprefix/          Experimental prefix-aware LLM engine architecture scaffold
 tests/               Unit and smoke tests
 benchmarks/          Performance harnesses
 cmake/               CMake helpers
@@ -79,6 +80,11 @@ docs/                Architecture and roadmap notes
 ```
 
 ## Build
+
+[MiniPrefix](miniprefix/README.md) has an independent architecture scaffold and
+milestone plan. It has no runnable engine yet; existing serving examples remain
+the executable references. The optional `TINYINFER_BUILD_MINIPREFIX` switch
+exposes SDK-free request contracts only and is OFF by default.
 
 Requirements: a C++17 compiler and CMake 3.20 or newer.
 
