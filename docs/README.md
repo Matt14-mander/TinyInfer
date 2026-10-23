@@ -9,7 +9,7 @@ design rationale.
 | Area | Purpose | Start here |
 | --- | --- | --- |
 | [Architecture](architecture/README.md) | Describes how the current system is structured and behaves. | [System architecture](architecture/architecture.md) |
-| [MiniPrefix](../miniprefix/README.md) | Experimental LLM serving engine scaffold; implementation not started. | [Architecture](../miniprefix/docs/architecture.md), [milestones](../miniprefix/docs/roadmap.md) |
+| [MiniPrefix](../miniprefix/README.md) | Experimental real-model LLM engine and measured CPU/CUDA baseline. | [Real model](../miniprefix/docs/real_model.md), [baseline](../miniprefix/docs/baseline.md), [milestones](../miniprefix/docs/roadmap.md) |
 | [Tutorials](tutorials/README.md) | Builds runtime concepts step by step with code, tests, and experiments. | [Tutorial plan](tutorials/README.md) |
 | [Design decisions](decisions/README.md) | Records why important architectural choices were made and their tradeoffs. | [ADR-0001](decisions/0001-separate-buffer-storage-and-tensor-layout.md) |
 | [Benchmarks](benchmarks/README.md) | Records reviewed, reproducible performance baselines and their limitations. | [Mac CPU v0.3](benchmarks/mac-cpu-v0.3.md), [ROG CPU v0.3](benchmarks/rog-cpu-v0.3.md), [ROG Phase 4.3](benchmarks/rog-cpu-phase4.3.md), [ROG Phase 4.4](benchmarks/rog-cpu-phase4.4.md), [ROG Phase 4.5 selection](benchmarks/rog-cpu-phase4.5-selection.md) |

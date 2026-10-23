@@ -34,7 +34,7 @@ int main(int argc,char** argv){try{
             if(!created.count(key)){r.create(key);created.insert(key);}
             auto logits=r.append(key,input);std::cout<<"OK"<<std::setprecision(9);for(float v:logits)std::cout<<' '<<v;std::cout<<'\n';
         }else if(op=="RELEASE"){auto id=integer(in);auto key="reference/"+std::to_string(id);engine.runner().release(key);created.erase(key);std::cout<<"OK\n";
-        }else if(op=="STATS"){auto s=engine.runner().stats();std::cout<<"OK "<<s.live_sequences<<' '<<s.live_kv_bytes<<' '<<s.peak_kv_bytes<<' '<<s.forward_tokens<<' '<<s.device_weight_bytes<<' '<<s.weight_uploaded_bytes<<' '<<s.token_uploaded_bytes<<' '<<s.kv_uploaded_bytes<<' '<<s.logits_downloaded_bytes<<' '<<s.device_allocations<<'\n';
+        }else if(op=="STATS"){auto s=engine.runner().stats();std::cout<<"OK "<<s.live_sequences<<' '<<s.live_kv_bytes<<' '<<s.peak_kv_bytes<<' '<<s.forward_tokens<<' '<<s.device_weight_bytes<<' '<<s.weight_uploaded_bytes<<' '<<s.token_uploaded_bytes<<' '<<s.kv_uploaded_bytes<<' '<<s.logits_downloaded_bytes<<' '<<s.device_allocations<<' '<<s.device_workspace_bytes<<'\n';
         }else if(op=="QUIT"){engine.shutdown();std::cout<<"OK\n"<<std::flush;return 0;
         }else throw std::invalid_argument("unknown command");
     }catch(const std::exception& e){std::cout<<"ERROR "<<e.what()<<'\n';}std::cout<<std::flush;}

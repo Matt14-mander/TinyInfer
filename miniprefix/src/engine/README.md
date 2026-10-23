@@ -1,6 +1,7 @@
 # Engine
 
-状态：规划目录，尚无执行实现。
+状态：engine.cpp 已有 submit/step/poll_events/cancel/shutdown、decode 优先与分块 prefill、
+EOS/长度/错误终态。active 请求的 runner 调用仍逐个执行；高级调度与重算迁移待完成。
 
 负责 RequestState、事件队列、生成迭代、Greedy 采样、EOS/长度结束、取消、失败与
 shutdown。持有请求已提交 token 与时间戳，协调 Scheduler、KVManager 和 ModelRunner。

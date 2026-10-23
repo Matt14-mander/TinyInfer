@@ -1,6 +1,10 @@
 # 开发路线与验收
 
-M0 架构骨架已建立；M1-M5 均未开始。阶段完成以验收证据为准，不以空类或 feature flag 为准。
+2026-10-23：M0 已完成；M1 已有请求生命周期/配置/原生 runner，调度与高级 KV 提取未完成；
+M2 已完成首个 SmolLM2-135M-Instruct CPU/CUDA 正确性闭环；M3 已有 dense KV/权重常驻
+GPU 与完整 forward，分页/COW 设备迁移未完成；M4 已建立首个无缓存 FP32 基线，
+缓存 ablation 待真实模型接入共享后进行；M5 未开始。验收边界见 [真实模型](real_model.md)
+和 [基线协议](baseline.md)，不把局部实现当整个阶段全部完成。
 
 | 阶段 | 交付 | 验收门槛 |
 |---|---|---|
@@ -22,5 +26,6 @@ M2/M3 保留这些机制的开关，以便隔离模型与设备问题。M5 优�
 CUDA Graph、CPU/GPU 异步重叠、量化、真实推测解码、HTTP、multi-GPU、PD 分离、
 多模态与 MoE 均在 M4 基线之后按实际瓶颈安排，不纳入第一版承诺。
 
-下一项具体工作：M1 的 ModelConfig 与 ModelRunner 契约，再将固定 D=16 的微型模型
-改造成配置驱动参考 runner；期间保留旧 worker 作差分 oracle。
+下一项具体工作：在真实多层/GQA ModelRunner 上引入统一 KVManager 和设备分页追加，
+随后迁入 prefix/COW 与抢占恢复。保留当前 dense runner 与独立框架 oracle，复用基线
+对照正确性、实际跳过计算量、显存和端到端收益。

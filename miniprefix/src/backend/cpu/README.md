@@ -1,6 +1,7 @@
 # CPU Backend
 
-状态：规划目录，复用 TinyInfer eager CPU 算子与原微型模型 oracle。
+状态：llama_runner.cpp 已实现配置驱动的多层/GQA/RoPE/RMSNorm/SwiGLU CPU forward，
+复用 TinyInfer Tensor、持久 packed RHS 和算子；通过真实权重的独立框架 logits/Greedy 对照。
 
 负责参考 forward、attention 和必要 KV payload 操作。保持 FP32 参考与清楚的因果边界，
 验证完整前缀、增量 KV、分块、共享/COW、重算和打包计算的一致性。

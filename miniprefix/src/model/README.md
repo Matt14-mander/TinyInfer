@@ -1,6 +1,7 @@
 # Model 与 ModelRunner
 
-状态：规划目录，尚无真实模型加载器。
+状态：model.cpp 已实现 MPFX0001 FP32 权重加载与 ModelConfig 校验，真实 Llama 类模型
+CPU/CUDA runner 已接入；已验收 checkpoint 为 SmolLM2-135M-Instruct，见 docs/real_model.md。
 
 负责 ModelConfig、权重加载/映射、tokenizer adapter 和模型 forward。配置包含层数、
 hidden/FFN 维度、query/KV head 数、head dimension、词表、上下文和位置编码参数；

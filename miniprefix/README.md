@@ -3,10 +3,13 @@
 MiniPrefix 是建立在 TinyInfer 之上的最小 LLM 生成引擎，目标是在单机单 GPU 上运行
 一个真实的小型预训练模型，以 GPU 常驻 KV、持续批处理和前缀复用获得可验证的端到端表现。
 
-**当前状态：只有架构骨架、初始数据契约和开发路线，尚无可运行的 MiniPrefix 引擎。**
-现有可运行实现仍在 [serving_scheduler](../examples/serving_scheduler/README.md)，
-包括 batching、分页 KV、重算、共享/COW 和混合 CPU/CUDA attention 的参考实现。
-本次建目录不移动或复制这些算法，不改变其入口和验收记录。
+**当前状态：已运行真实 SmolLM2-135M-Instruct 的原生 CPU/CUDA 推理闭环，并建立首个
+FP32 端到端性能基线。** 入口、权重准备与数值验收见 [真实模型](docs/real_model.md)，
+测量口径见 [基线协议](docs/baseline.md)，结果见 [报告](docs/acceptance/baseline-smollm2-fp32.md)。
+
+当前 KV 为逐层连续布局，CUDA 权重/KV 常驻；runner 按 sequence 顺序执行。原
+[serving_scheduler](../examples/serving_scheduler/README.md) 的分页、重算、共享/COW 和
+跨请求矩阵 batching 仍是独立可运行参考，尚未全部迁入真实模型路径。
 
 ## 定位与边界
 
@@ -22,7 +25,7 @@ KV 常驻 → 可信端到端基线 → 前缀索引和复用优化。已有 ser
 
 ```text
 miniprefix/
-├── CMakeLists.txt                 # 默认关闭，仅提供 contracts INTERFACE target
+├── CMakeLists.txt                 # 默认关闭；contracts、engine、CPU/可选 CUDA worker
 ├── include/miniprefix/           # 对外数据契约；引擎 API 随实现增加
 ├── src/
 │   ├── engine/                   # 请求生命周期、迭代协调、事件与采样
@@ -46,19 +49,20 @@ miniprefix/
     └── roadmap.md                # 阶段交付与验收门槛
 ```
 
-每个模块 README 说明职责和首批交付，空实现目录通过这些文件被 Git 跟踪。
-规划中的类/target 不是已实现 API；没有占位 forward、伪输出或假的服务入口。
+每个模块 README 说明职责。engine、model、backend 已有实现；独立 scheduler/kv/prefix
+提取和高级策略迁移仍在路线中。真实推理由原生 worker 执行，不在 Python 中调用模型代跑。
 
 ## 构建入口
 
-仓库根目录配置 `-DTINYINFER_BUILD_MINIPREFIX=ON` 可暴露 `MiniPrefix::contracts`，
-供后续 target 引用初始请求类型。当前它是 header-only INTERFACE library，不能通过
-`cmake --build --target miniprefix_cli` 运行；CLI 尚未实现。
+仓库根目录配置 `-DTINYINFER_BUILD_MINIPREFIX=ON` 提供 `MiniPrefix::contracts`、
+`MiniPrefix::engine` 和 `miniprefix_worker`。启用既有 `TINYINFER_ENABLE_CUDA` 时增加
+`miniprefix_cuda_worker`。文本 CLI 为 `python -m miniprefix.apps.generate`，需显式
+提供本地模型目录与 worker；尚无 miniprefix_cli 原生 tokenizer 或 HTTP server。
 
 此开关默认 OFF，不要求 CUDA、Python、模型下载或其他第三方依赖。CUDA 实现后继续
 受现有 `TINYINFER_ENABLE_CUDA` 约束，不创建第二套 CUDA SDK 配置。
 
-开发从 [路线图 M1](docs/roadmap.md) 开始，按 [迁移规则](docs/migration.md) 保留数值参考。
+下一步按 [路线图](docs/roadmap.md) 迁移真实模型的分页/前缀能力，并用冻结基线评估改动。
 
 M0 检查：MSVC 19.43 / C++17 / Release / CUDA OFF 的独立 CMake consumer 已成功链接
 `MiniPrefix::contracts` 并编译初始请求类型；18 份 Markdown 的本地链接检查通过。

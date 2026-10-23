@@ -14,7 +14,7 @@ class NativeEngine:
         ready = self.process.stdout.readline().strip().split()
         if len(ready) != 7 or ready[:3] != ["READY", "MINIPREFIX", "1"]:
             self.close(force=True)
-            raise RuntimeError("native worker failed to initialize: " + self.process.stderr.read())
+            raise RuntimeError("native worker failed to initialize: " + getattr(self, "last_stderr", ""))
         self.vocabulary, self.eos, self.context = map(int, ready[3:6])
         self.backend = ready[6]
 
@@ -94,7 +94,7 @@ class NativeEngine:
 
     def stats(self):
         names = ("live_sequences", "live_kv_bytes", "peak_kv_bytes", "forward_tokens", "device_weight_bytes",
-                 "weight_uploaded_bytes", "token_uploaded_bytes", "kv_uploaded_bytes", "logits_downloaded_bytes", "device_allocations")
+            "weight_uploaded_bytes", "token_uploaded_bytes", "kv_uploaded_bytes", "logits_downloaded_bytes", "device_allocations", "device_workspace_bytes")
         values = self._command(["STATS"])
         if len(values) != len(names):
             raise RuntimeError("invalid native stats")
@@ -102,7 +102,14 @@ class NativeEngine:
 
     def close(self, force=False):
         process = getattr(self, "process", None)
-        if process is None or process.poll() is not None:
+        if process is None:
+            return
+        if process.poll() is not None:
+            for stream in (process.stdin, process.stdout, process.stderr):
+                if stream and not stream.closed:
+                    if stream is process.stderr:
+                        self.last_stderr = stream.read()
+                    stream.close()
             return
         try:
             if not force:
@@ -115,6 +122,12 @@ class NativeEngine:
             process.wait()
             if not force:
                 raise
+        finally:
+            if not process.stderr.closed:
+                self.last_stderr = process.stderr.read()
+            for stream in (process.stdin, process.stdout, process.stderr):
+                if stream and not stream.closed:
+                    stream.close()
 
     def __enter__(self):
         return self

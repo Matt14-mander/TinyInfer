@@ -1,6 +1,8 @@
 # CUDA Backend
 
-状态：规划目录；原示例已有可运行的混合 CPU/CUDA 分页 attention 基线。
+状态：llama_runner.cu 已实现 FP32 全模型 GPU forward、dense KV 与权重常驻。
+当前使用私有 RAII/cuBLAS/stream，尚未统一到 core 设备 API，尚无设备分页/COW/前缀共享。
+真实模型与基线边界见 docs/real_model.md、docs/baseline.md。
 
 目标是完整 GPU 模型执行、GPU 常驻权重/KV、packed/ragged attention、追加、COW 与
 table 的增量更新。设备资源与 completion 优先复用 TinyInfer::cuda；模型专用 kernel

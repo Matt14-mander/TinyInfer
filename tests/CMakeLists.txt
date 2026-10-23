@@ -199,6 +199,19 @@ if(TINYINFER_ENABLE_METAL)
     endforeach()
 endif()
 
+# Metric definitions run without model downloads or Python ML dependencies.
+if(TARGET miniprefix_engine)
+    find_package(Python3 3.7 COMPONENTS Interpreter QUIET)
+    if(Python3_Interpreter_FOUND)
+        add_test(NAME miniprefix_baseline_metrics_tests
+            COMMAND ${Python3_EXECUTABLE} -m unittest discover
+                -s ${PROJECT_SOURCE_DIR}/miniprefix/tests -v)
+        set_tests_properties(miniprefix_baseline_metrics_tests PROPERTIES
+            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+            ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1" TIMEOUT 60)
+    endif()
+endif()
+
 if(TINYINFER_ENABLE_CUDA)
     add_executable(tinyinfer_cuda_runtime_tests cuda_runtime_test.cpp)
     target_link_libraries(tinyinfer_cuda_runtime_tests PRIVATE TinyInfer::cuda)

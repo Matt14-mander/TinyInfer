@@ -72,7 +72,7 @@ src/runtime/         Execution and scheduling
 src/backend/         CPU and future accelerator backends
 src/compiler/        Future IR and fusion passes
 examples/            Small end-to-end programs
-miniprefix/          Experimental prefix-aware LLM engine architecture scaffold
+miniprefix/          Experimental real-model CPU/CUDA LLM engine and baselines
 tests/               Unit and smoke tests
 benchmarks/          Performance harnesses
 cmake/               CMake helpers
@@ -81,10 +81,11 @@ docs/                Architecture and roadmap notes
 
 ## Build
 
-[MiniPrefix](miniprefix/README.md) has an independent architecture scaffold and
-milestone plan. It has no runnable engine yet; existing serving examples remain
-the executable references. The optional `TINYINFER_BUILD_MINIPREFIX` switch
-exposes SDK-free request contracts only and is OFF by default.
+[MiniPrefix](miniprefix/README.md) runs a documented SmolLM2-135M-Instruct FP32
+CPU/CUDA path with GPU-resident dense KV and an independent-reference-checked
+[end-to-end baseline](miniprefix/docs/baseline.md). Its existing serving examples
+remain advanced algorithm references; paged/prefix/recompute migration to the
+real-model runner is pending. `TINYINFER_BUILD_MINIPREFIX` remains OFF by default.
 
 Requirements: a C++17 compiler and CMake 3.20 or newer.
 

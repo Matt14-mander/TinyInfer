@@ -23,6 +23,7 @@ struct RunnerStats {
     std::size_t live_sequences=0, live_kv_bytes=0, peak_kv_bytes=0, forward_tokens=0;
     std::size_t device_weight_bytes=0, weight_uploaded_bytes=0, token_uploaded_bytes=0;
     std::size_t kv_uploaded_bytes=0, logits_downloaded_bytes=0, device_allocations=0;
+    std::size_t device_workspace_bytes=0;
 };
 class ModelRunner {
 public:

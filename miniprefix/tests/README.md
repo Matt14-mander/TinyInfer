@@ -1,6 +1,8 @@
 # 验证布局
 
-状态：验收规划，当前没有新的引擎测试 target。
+状态：test_baseline.py 验证手算计时、单 token TPOT、分位数与错误样本拒绝；
+tools/verify_real_model.py 提供实际 checkpoint 的 CPU/CUDA 数值与生命周期验收。
+后续原生引擎更细的单元与故障隔离覆盖继续按下述布局补齐。
 
 后续按 unit / integration / differential / cuda 分类组织：
 

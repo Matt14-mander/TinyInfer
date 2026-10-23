@@ -1,6 +1,8 @@
 # 架构与模块所有权
 
-状态：2026-10-22 的目标架构，当前仅 request.h 为代码数据契约；各执行模块尚待实现。
+本文是目标架构。2026-10-23 已有 Engine、ModelConfig、CPU/CUDA Llama runner 和本地
+tokenizer/IPC 入口；独立 Scheduler/KVManager/PrefixIndex 仍待从现有机制中提取。
+当前实现与目标架构的差异、真实模型和设备边界见 [real_model.md](real_model.md)。
 MiniPrefix 是 TinyInfer 的上层生成引擎，不创建第二套 Tensor、通用 allocator 或设备 runtime。
 
 ## 依赖与执行流

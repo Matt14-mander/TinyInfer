@@ -1,7 +1,7 @@
 # 接口契约与不变量
 
-本文为后续实现约束。除 include/miniprefix/request.h 外，以下名称是目标接口描述，
-尚未提供可调用 Engine/ModelRunner/KVManager API。
+本文为接口演进约束。Engine 与 ModelRunner 已有首版代码接口，见 include/miniprefix/；
+KVManager、PrefixIndex 与 SchedulePlan 仍是目标接口，尚未成为真实模型的可调用 API。
 
 ## 公共边界
 

@@ -1,6 +1,7 @@
 # 与 serving_scheduler 的增量迁移
 
-现有 examples/serving_scheduler 是可运行参考，MiniPrefix 是待实现的新模块边界。
+现有 examples/serving_scheduler 是可运行参考，MiniPrefix 已有真实模型 CPU/CUDA 闭环与
+独立性能基线；paged KV、prefix cache 和抢占重算仍待按下表迁移。
 迁移必须产生单一的通用实现，不在两个目录长期维护同一算法的副本。
 
 | 现有来源 | 目标位置 | 迁移方式 |
@@ -14,7 +15,8 @@
 | test_* 与原生 paged_attention_test.cpp | tests + 原示例回归 | 复用场景和 oracle，增加独立框架数值/真实设备检查 |
 
 每次提取先补齐行为边界与回归，再修改旧入口引用新模块；只有同时保留两条路径用于
-明确的差分验证时才暂留旧实现，并在文档注明退出条件。当前 M0 不执行任何算法迁移。
+明确的差分验证时才暂留旧实现，并在文档注明退出条件。当前真实模型使用 dense KV，
+尚未执行上表中 paged/prefix 算法的通用化迁移。
 
 原 examples 的 Phase/Stage 验收保持历史含义，新结果写入 MiniPrefix 专属输出目录。
 原 speculative_decoding 也是独立模拟参考，未经真实 runner/KV 接入不能作为 MiniPrefix

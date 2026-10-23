@@ -125,7 +125,9 @@ public:
     void release(const RequestId& id) override{check(cudaStreamSynchronize(stream_),"release completion");
         if(!sequences_.erase(id))throw std::invalid_argument("unknown sequence");stats_.live_sequences=sequences_.size();stats_.live_kv_bytes=sequences_.size()*std::size_t(config().layers)*context_*config().kv_width()*8;}
     void clear() override{check(cudaStreamSynchronize(stream_),"clear completion");sequences_.clear();stats_.live_sequences=stats_.live_kv_bytes=0;}
-    RunnerStats stats() const override{return stats_;}
+    RunnerStats stats() const override{auto result=stats_;
+        result.device_workspace_bytes=x_.bytes+norm_.bytes+q_.bytes+k_.bytes+v_.bytes+attention_.bytes+projection_.bytes+gate_.bytes+up_.bytes+logits_.bytes+tokens_.bytes;
+        return result;}
 };
 }
 std::unique_ptr<ModelRunner> make_cuda_runner(std::shared_ptr<ModelWeights> weights,int context){return std::make_unique<CudaRunner>(std::move(weights),context);}
