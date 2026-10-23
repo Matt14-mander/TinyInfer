@@ -4,6 +4,7 @@ All checks are outside performance windows. No CPU fallback counts as CUDA
 acceptance. Model/tokenizer must already exist locally.
 """
 import argparse
+from datetime import date
 import hashlib
 import json
 import platform
@@ -34,7 +35,7 @@ def verify(model_dir, workers, output=None):
     tokenizer = AutoTokenizer.from_pretrained(root, local_files_only=True)
     model = AutoModelForCausalLM.from_pretrained(root, local_files_only=True, torch_dtype=torch.float32,
                                                attn_implementation="eager").eval()
-    records, transcripts, residency = [], [], []
+    records, transcripts, residency, paged_checks = [], [], [], []
     def reference(prefix):
         with torch.inference_mode():
             ids = torch.tensor([prefix], dtype=torch.long)
@@ -76,8 +77,11 @@ def verify(model_dir, workers, output=None):
                                 or after["token_uploaded_bytes"] - before["token_uploaded_bytes"] != 4
                                 or before["device_allocations"] != after["device_allocations"]):
                             raise AssertionError("warm CUDA decode violates residency/allocation contract")
+                        expected_table_bytes=4 if (len(growing)-1)%before["kv_block_tokens"]==0 else 0
+                        if after["block_table_uploaded_bytes"]-before["block_table_uploaded_bytes"]!=expected_table_bytes:
+                            raise AssertionError("decode block table uploaded more than new entries")
                         residency.append({"case": case, "step": step, "token_h2d_delta": 4, "kv_h2d_delta": 0,
-                                          "weight_h2d_delta": 0, "allocation_delta": 0})
+                                          "weight_h2d_delta": 0, "allocation_delta": 0,"block_table_h2d_delta":expected_table_bytes})
                 engine.release(sequence)
             prompt = tokenizer.apply_chat_template([{"role": "user", "content": "What is the capital of France?"}], add_generation_prompt=True)
             expected, growing = [], list(prompt)
@@ -121,12 +125,66 @@ def verify(model_dir, workers, output=None):
             stats = engine.stats()
             if stats["live_sequences"] or stats["live_kv_bytes"]:
                 raise AssertionError("native KV leaked")
-    report = {"date": "2026-10-23", "model": json.loads((root / "manifest.json").read_text()),
+        # Interleave owners so A spans non-contiguous physical pages. Release B,
+        # reuse its pages for C, then cross more boundaries without repacking KV.
+        with NativeEngine(worker, root / "model.mpf", backend, 64, 2, 8, 4,
+                          block_tokens=3, kv_blocks=12) as engine:
+            a,b,c=[1,504,3575],[28,21781,198,504],[1,28,504,3575,282,30]
+            close(engine.forward("a",a),reference(a),backend+"/paged/a-first")
+            close(engine.forward("b",b),reference(b),backend+"/paged/b")
+            tail=[4649,314,7042,30,2,28,198]
+            close(engine.forward("a",tail),reference(a+tail),backend+"/paged/a-fragmented")
+            a+=tail
+            if engine.stats()["kv_live_blocks"]!=6:
+                raise AssertionError("page rounding/interleaved ownership")
+            engine.release("b")
+            close(engine.forward("c",c),reference(c),backend+"/paged/reused-pages")
+            close(engine.forward("a",tail),reference(a+tail),backend+"/paged/a-cross-again")
+            a+=tail
+            before=engine.stats()
+            for key,tokens in (("exhausted",[1]*40),("a",[1]*48),("a",[engine.vocabulary])):
+                try:
+                    engine.forward(key,tokens)
+                except RuntimeError:
+                    pass
+                else:
+                    raise AssertionError("invalid/capacity append accepted")
+                after=engine.stats()
+                if (after["kv_live_blocks"]!=before["kv_live_blocks"] or
+                        after["forward_tokens"]!=before["forward_tokens"]):
+                    raise AssertionError("failed append changed committed pages/tokens")
+            engine.release("exhausted")
+            close(engine.forward("a",[504]),reference(a+[504]),backend+"/paged/retry-after-failure")
+            for key in ("a","c"):
+                engine.release(key)
+            stats=engine.stats()
+            if stats["kv_live_blocks"] or stats["live_sequences"] or stats["block_table_device_bytes"]:
+                raise AssertionError("pages/block tables leaked")
+            if stats["kv_total_blocks"]!=12 or stats["kv_block_tokens"]!=3:
+                raise AssertionError("paged configuration not honored")
+            paged_checks.append({"backend":backend,"case":"fragmentation/reuse/cross-page/atomic-rejection/retry",
+                                 "stats":stats})
+        # Resource exhaustion is explicit: current engine fails all unfinished
+        # requests and releases every page. Preemption/admission is a later step.
+        with NativeEngine(worker, root / "model.mpf", backend, 64, 2, 8, 4,
+                          block_tokens=4, kv_blocks=1) as engine:
+            for key in ("first","second","waiting"):
+                engine.submit(key,[1]*9,2,None)
+            events=list(engine.events())
+            if len(events)!=3 or any(e["finish_reason"]!="error" or e["token_id"] is not None for e in events):
+                raise AssertionError("exhaustion must terminalize all unfinished requests once")
+            stats=engine.stats()
+            if stats["kv_live_blocks"] or stats["live_sequences"] or stats["block_table_device_bytes"]:
+                raise AssertionError("exhaustion cleanup leaked pages")
+            paged_checks.append({"backend":backend,"case":"engine-pool-exhaustion-cleanup","stats":stats})
+    report = {"date": date.today().isoformat(), "model": json.loads((root / "manifest.json").read_text()),
               "native_model_sha256": sha256(root / "model.mpf"), "dtype": "float32", "reference": "Transformers eager full-prefix CPU",
               "torch": torch.__version__, "transformers": transformers.__version__, "platform": platform.platform(),
               "tolerance": "abs(a-b) <= 2e-3 + 2e-4*abs(b); identical argmax", "logit_checks": records,
               "checked_logits": sum(r["checked_logits"] for r in records), "cuda_residency_checks": residency,
-              "transcripts": transcripts, "worker_sha256": {k: sha256(v) for k, v in workers.items()}, "passed": True}
+              "transcripts": transcripts, "paged_checks":paged_checks,
+              "kv_layout":"paged, exclusive block ownership; no prefix cache",
+              "worker_sha256": {k: sha256(v) for k, v in workers.items()}, "passed": True}
     if output:
         Path(output).parent.mkdir(parents=True, exist_ok=True)
         Path(output).write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

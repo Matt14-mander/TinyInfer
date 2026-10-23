@@ -12,7 +12,8 @@
 | cuda_b1 | 全模型 CUDA | 1 | 32 | 16 | 256 |
 | cuda_b2 | 全模型 CUDA | 2 | 32 | 16 | 256 |
 
-全部 FP32、Greedy、dense KV、无 prefix cache。batch 上限表示调度并存请求数，runner
+全部 FP32、Greedy、无 prefix cache。历史首轮为 dense KV；当前脚本使用分页 KV，
+16 token/页、128 页，并将结果写入独立的 paged 文件。batch 上限表示调度并存请求数，runner
 仍逐 sequence 调用；cuda_b2 不代表已经跨请求合并 cuBLAS 或 attention。
 
 四种 chat prompt 重复两遍，共 8 请求，到达时间为 0/0/10/10/20/20/30/30 ms，
@@ -47,10 +48,13 @@
 allocation 次数、权重/token/KV H2D 和 logits D2H。它们不包括 cuBLAS/驱动内部内存，
 不等于进程 RSS 或设备总 VRAM 峰值。tied head 当前有单独的 device 矩阵副本，权重
 payload 因此大于 model.mpf 中唯一权重的 payload。
+分页版额外报告物理池预留量、live/peak block 数、设备页表与页号 H2D；不能将
+live KV 下降解读为整个预留池显存下降。字段口径见 [分页 KV](paged_kv.md)。
 
 warm window 必须满足：实际输入 token 数 = prompt + 每请求输出数−1；最终 KV 归零；
-CUDA 权重/KV H2D 为零增量，token H2D 为输入数×4；仅允许每序列两次 K/V buffer
-分配，workspace 不增长。违反计数或输出错误会中止，不输出伪成功基线。
+CUDA 权重/KV H2D 为零增量，token H2D 为输入数×4；分页版仅允许每序列一次设备页表
+分配，物理池与 workspace 不增长，结束后 live 页数和设备页表归零。
+历史 dense 版为每序列两次 K/V buffer 分配。违反计数或输出错误会中止。
 
 ## 重现
 
@@ -60,10 +64,12 @@ CUDA 权重/KV H2D 为零增量，token H2D 为输入数×4；仅允许每序列
 $py = 'build-miniprefix-env/Scripts/python.exe'
 $env:HF_HOME = "$PWD/build-miniprefix-models/hf-cache"
 # 沿用 ROG 工具链的 CUDA bin PATH。
-& $py miniprefix/benchmarks/baseline.py --model-dir build-miniprefix-models/smollm2-135m-instruct --cpu-worker build-phase54-cuda/miniprefix/miniprefix_worker.exe --cuda-worker build-phase54-cuda/miniprefix/miniprefix_cuda_worker.exe --verification benchmark-results/miniprefix/real-model-verification.json --runs 5 --output benchmark-results/miniprefix/baseline-smollm2-fp32.json
+& $py miniprefix/tools/verify_real_model.py --model-dir build-miniprefix-models/smollm2-135m-instruct --cpu-worker build-phase54-cuda/miniprefix/miniprefix_worker.exe --cuda-worker build-phase54-cuda/miniprefix/miniprefix_cuda_worker.exe --output benchmark-results/miniprefix/paged-kv-verification.json
+& $py miniprefix/benchmarks/baseline.py --model-dir build-miniprefix-models/smollm2-135m-instruct --cpu-worker build-phase54-cuda/miniprefix/miniprefix_worker.exe --cuda-worker build-phase54-cuda/miniprefix/miniprefix_cuda_worker.exe --verification benchmark-results/miniprefix/paged-kv-verification.json --runs 5 --output benchmark-results/miniprefix/baseline-smollm2-paged-fp32.json
 ```
 
 原始运行输出保留在 Git 忽略的 benchmark-results/miniprefix；冻结基线和验收副本存于
 docs/acceptance/，不包含模型权重。手算 timestamp/TPOT、nearest rank 和错误输出拒绝
 由 tests/test_baseline.py 验证，运行 `python -m unittest discover -s miniprefix/tests -v`。
-当前结果解释见 [基线报告](acceptance/baseline-smollm2-fp32.md)。
+结果解释见 [历史 dense 报告](acceptance/baseline-smollm2-fp32.md) 和
+[paged 报告](acceptance/paged-kv-smollm2-fp32.md)。历史 JSON 不覆盖；当前脚本拒绝 dense 验收。

@@ -1,5 +1,6 @@
 #pragma once
 #include "request.h"
+#include "paged_kv.h"
 #include "tinyinfer/core/tensor.h"
 #include <map>
 #include <memory>
@@ -24,6 +25,8 @@ struct RunnerStats {
     std::size_t device_weight_bytes=0, weight_uploaded_bytes=0, token_uploaded_bytes=0;
     std::size_t kv_uploaded_bytes=0, logits_downloaded_bytes=0, device_allocations=0;
     std::size_t device_workspace_bytes=0;
+    std::size_t kv_block_tokens=0,kv_total_blocks=0,kv_live_blocks=0,kv_peak_blocks=0;
+    std::size_t kv_reserved_bytes=0,block_table_uploaded_bytes=0,block_table_device_bytes=0;
 };
 class ModelRunner {
 public:
@@ -35,8 +38,8 @@ public:
     virtual void clear()=0;
     virtual RunnerStats stats() const=0;
 };
-std::unique_ptr<ModelRunner> make_cpu_runner(std::shared_ptr<ModelWeights>,int context);
+std::unique_ptr<ModelRunner> make_cpu_runner(std::shared_ptr<ModelWeights>,int context,KvCacheConfig kv={});
 #ifdef MINIPREFIX_ENABLE_CUDA
-std::unique_ptr<ModelRunner> make_cuda_runner(std::shared_ptr<ModelWeights>,int context);
+std::unique_ptr<ModelRunner> make_cuda_runner(std::shared_ptr<ModelWeights>,int context,KvCacheConfig kv={});
 #endif
 } // namespace miniprefix

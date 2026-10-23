@@ -201,6 +201,14 @@ endif()
 
 # Metric definitions run without model downloads or Python ML dependencies.
 if(TARGET miniprefix_engine)
+    add_executable(miniprefix_paged_kv_tests ${PROJECT_SOURCE_DIR}/miniprefix/tests/paged_kv_test.cpp)
+    target_link_libraries(miniprefix_paged_kv_tests PRIVATE MiniPrefix::contracts)
+    if(MSVC)
+        target_compile_options(miniprefix_paged_kv_tests PRIVATE /UNDEBUG)
+    else()
+        target_compile_options(miniprefix_paged_kv_tests PRIVATE -UNDEBUG)
+    endif()
+    add_test(NAME miniprefix_paged_kv_tests COMMAND miniprefix_paged_kv_tests)
     find_package(Python3 3.7 COMPONENTS Interpreter QUIET)
     if(Python3_Interpreter_FOUND)
         add_test(NAME miniprefix_baseline_metrics_tests

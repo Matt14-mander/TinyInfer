@@ -1,8 +1,8 @@
 # 开发路线与验收
 
 2026-10-23：M0 已完成；M1 已有请求生命周期/配置/原生 runner，调度与高级 KV 提取未完成；
-M2 已完成首个 SmolLM2-135M-Instruct CPU/CUDA 正确性闭环；M3 已有 dense KV/权重常驻
-GPU 与完整 forward，分页/COW 设备迁移未完成；M4 已建立首个无缓存 FP32 基线，
+M2 已完成首个 SmolLM2-135M-Instruct CPU/CUDA 正确性闭环；M3 已有分页 KV/权重常驻
+GPU、完整 forward 与设备增量页表更新，COW 尚未实现；M4 已建立无缓存 dense/paged FP32 基线，
 缓存 ablation 待真实模型接入共享后进行；M5 未开始。验收边界见 [真实模型](real_model.md)
 和 [基线协议](baseline.md)，不把局部实现当整个阶段全部完成。
 
@@ -19,13 +19,13 @@ M1 可分批迁入现有 continuous batching、chunked prefill、共享/COW 和�
 M2/M3 保留这些机制的开关，以便隔离模型与设备问题。M5 优化已有前缀能力，不意味着
 此前阶段要重复实现一套索引或禁用所有缓存验证。
 
-首个真实模型及权重格式在 M2 开始前，根据算子覆盖、许可证、独立参考可用性和本机
-显存确定；当前不下载权重、不锁定某个未经验证的模型/版本。首版只实现一种架构。
+首个真实模型已选定 SmolLM2-135M-Instruct 和 MPFX0001 FP32 权重格式，模型 revision
+与数值结果固定于验收文档。首版只实现一种架构，模型准备工具需显式调用。
 低精度执行按硬件和数值验证选择，FP32 CPU oracle 保留；量化不作为 M0/M1 的依赖。
 
 CUDA Graph、CPU/GPU 异步重叠、量化、真实推测解码、HTTP、multi-GPU、PD 分离、
 多模态与 MoE 均在 M4 基线之后按实际瓶颈安排，不纳入第一版承诺。
 
-下一项具体工作：在真实多层/GQA ModelRunner 上引入统一 KVManager 和设备分页追加，
-随后迁入 prefix/COW 与抢占恢复。保留当前 dense runner 与独立框架 oracle，复用基线
+下一项具体工作：基于真实多层/GQA ModelRunner 的 KvBlockPool 引入引用计数和精确
+prefix/COW，随后迁入容量准入与抢占恢复。保留历史 dense 基线与独立框架 oracle，复用基线
 对照正确性、实际跳过计算量、显存和端到端收益。

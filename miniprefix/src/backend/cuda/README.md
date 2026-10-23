@@ -1,7 +1,8 @@
 # CUDA Backend
 
-状态：llama_runner.cu 已实现 FP32 全模型 GPU forward、dense KV 与权重常驻。
-当前使用私有 RAII/cuBLAS/stream，尚未统一到 core 设备 API，尚无设备分页/COW/前缀共享。
+状态：llama_runner.cu 已实现 FP32 全模型 GPU forward、分页 KV 与权重常驻，append 和
+attention kernel 直接使用 block table 寻址。只上传新增页号，不上传 KV payload。
+当前使用私有 RAII/cuBLAS/stream，尚未统一到 core 设备 API，尚无 COW/前缀共享。
 真实模型与基线边界见 docs/real_model.md、docs/baseline.md。
 
 目标是完整 GPU 模型执行、GPU 常驻权重/KV、packed/ragged attention、追加、COW 与

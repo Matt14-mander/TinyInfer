@@ -18,6 +18,8 @@ def main():
     parser.add_argument("--max-new-tokens", type=int, default=32)
     parser.add_argument("--context", type=int, default=512)
     parser.add_argument("--chunk-size", type=int, default=16)
+    parser.add_argument("--block-tokens", type=int, default=16)
+    parser.add_argument("--kv-blocks", type=int, default=128)
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
     if hasattr(sys.stdout, "reconfigure"):
@@ -27,7 +29,7 @@ def main():
     prompt = (tokenizer.encode(args.prompt, add_special_tokens=False) if args.raw else
               tokenizer.apply_chat_template([{"role": "user", "content": args.prompt}], add_generation_prompt=True))
     with NativeEngine(args.worker, args.model_dir / "model.mpf", args.backend, args.context,
-                      chunk_size=args.chunk_size) as engine:
+                      chunk_size=args.chunk_size, block_tokens=args.block_tokens, kv_blocks=args.kv_blocks) as engine:
         preparation_ms = (time.perf_counter_ns() - prepare) / 1e6
         start = time.perf_counter_ns()
         engine.submit("request", prompt, args.max_new_tokens)

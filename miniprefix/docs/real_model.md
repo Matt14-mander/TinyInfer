@@ -12,12 +12,12 @@ CPU、CUDA 和独立 Transformers 参考都执行 FP32。固定 revision：
 - ModelConfig 与严格的 MPFX0001 权重加载，校验名称、形状、字节数和有限数值。
 - CPU 使用 TinyInfer Tensor、持久 RHS packing/MatMul 和模型专用参考计算。
 - CUDA 的 embedding、投影、RMSNorm、RoPE、GQA attention、SwiGLU、FFN、head 都在 GPU。
-  权重上传一次，每序列逐层 K/V 常驻设备，warm append 只上传输入 token、下载 logits。
+  权重上传一次，分页 K/V 常驻设备，warm append 上传输入 token 和新增页号、下载 logits。
 - C++ Engine 管理等待/活跃队列，轮间补位、decode 优先、chunked prefill、token budget、
   Greedy、EOS/长度结束、排队/活跃取消与失败终态。Python 只做 tokenizer、IPC 和展示。
 - 原生 runner 每次处理一个 sequence 的 chunk，同轮请求依次执行；没有跨请求矩阵合并。
-- KV 为每序列连续布局，没有把原 serving_scheduler 的分页、前缀共享/COW、抢占重算
-  迁入真实模型路径。不能用旧示例的 feature flag 宣称新 runner 已支持这些能力。
+- CPU/CUDA KV 使用共享物理 block 池与序列页表，直接分页寻址，见 [分页 KV](paged_kv.md)。
+  前缀共享/COW、抢占重算尚未迁入真实模型路径，不能用旧示例的 feature flag 宣称支持。
 
 CUDA 使用 MiniPrefix 私有 RAII allocation、cuBLAS handle 和一个 stream，复用项目既有
 CUDA SDK 配置。core 当前没有模型所需 RMSNorm/RoPE/GQA 执行接口，因此暂未统一到
@@ -63,10 +63,11 @@ JSON 输出加 `--json`；`--raw` 跳过 chat template。CLI 统计模型准备�
 ```
 
 参考为 Transformers 4.46.3 / PyTorch 2.5.1 CPU FP32 eager，每次从完整前缀重算，
-不共享 native 模型代码或 KV。42 次 logits 检查共覆盖 2064384 个值，固定容差
-`2e-3 + 2e-4*abs(reference)`，要求 argmax 完全相同；实际最大绝对误差约 9.87e-5。
+不共享 native 模型代码或 KV。当前 54 次 logits 检查共覆盖 2654208 个值，固定容差
+`2e-3 + 2e-4*abs(reference)`，要求 argmax 完全相同；当前最大绝对误差约 1.14e-4。
 覆盖完整/分块 prefill、增量 decode、Unicode tokenization、两个 backend、自然/强制 EOS、
-固定长度、轮间调度、排队/活跃取消、非法输入与最终 KV 归零。
+固定长度、轮间调度、排队/活跃取消、非法输入与最终 KV 归零；另有跨页、碎片页复用、
+失败重试和池耗尽清理检查。历史 dense 验收 JSON 保留 42 次检查，属于旧二进制。
 
 9 次实际 CUDA warm decode 检查：每次输入 H2D 增加 4 bytes，KV/权重 H2D 不增加，
 device allocation 不增加。检查的是 native 拥有的资源，不能据此声称 cuBLAS/驱动没有

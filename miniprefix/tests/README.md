@@ -2,6 +2,8 @@
 
 状态：test_baseline.py 验证手算计时、单 token TPOT、分位数与错误样本拒绝；
 tools/verify_real_model.py 提供实际 checkpoint 的 CPU/CUDA 数值与生命周期验收。
+新增 C++ paged_kv_test.cpp 验证页面所有权、跨页地址、容量失败原子性与回收复用，
+CTest 入口为 miniprefix_paged_kv_tests。真实分页测试和配置见 ../docs/paged_kv.md。
 后续原生引擎更细的单元与故障隔离覆盖继续按下述布局补齐。
 
 后续按 unit / integration / differential / cuda 分类组织：

@@ -2,10 +2,12 @@
 
 The timed endpoint is tokenized scheduled arrival -> controller token event.
 Tokenizer, model startup, warmup, stats, reference and JSON are outside warm
-windows. This is a dense-KV, serial-per-sequence runner baseline, not a prefix
-cache or cross-request matrix-batching speedup claim.
+windows. This is a paged-KV, serial-per-sequence runner baseline, not a prefix
+cache or cross-request matrix-batching speedup claim. KV is paged; the earlier
+dense-KV artifact remains an immutable historical control.
 """
 import argparse
+from datetime import date
 import gc
 import hashlib
 import json
@@ -142,6 +144,8 @@ def run(model_dir, workers, verification_path, runs=5):
     fingerprint = sha256(root / "model.mpf")
     if not verified.get("passed") or verified.get("native_model_sha256") != fingerprint:
         raise ValueError("a passing verification of this exact model is required")
+    if not verified.get("kv_layout", "").startswith("paged"):
+        raise ValueError("this benchmark requires paged KV verification; dense artifacts are historical controls")
     worker_hashes = {backend: sha256(path) for backend,path in workers.items()}
     if any(verified["worker_sha256"].get(k) != v for k,v in worker_hashes.items()):
         raise ValueError("worker changed since correctness verification")
@@ -177,10 +181,14 @@ def run(model_dir, workers, verification_path, runs=5):
                 expected_inputs = sum(len(r["prompt_tokens"]) + r["max_new_tokens"] - 1 for r in workload)
                 if after["live_sequences"] or after["live_kv_bytes"] or delta["forward_tokens"] != expected_inputs:
                     raise RuntimeError("KV lifecycle or token accounting failure")
+                if (after["kv_live_blocks"] or after["block_table_device_bytes"] or delta["kv_reserved_bytes"]
+                        or after["kv_block_tokens"]!=16 or after["kv_total_blocks"]!=128):
+                    raise RuntimeError("paged KV configuration/lifecycle failure")
                 if backend == "cuda":
                     if (delta["weight_uploaded_bytes"] or delta["kv_uploaded_bytes"]
                             or delta["token_uploaded_bytes"] != expected_inputs * 4
-                            or delta["device_allocations"] != 2 * len(workload)
+                            or delta["device_allocations"] != len(workload)
+                            or delta["kv_reserved_bytes"] or after["kv_live_blocks"]
                             or before["device_workspace_bytes"] != after["device_workspace_bytes"]):
                         raise RuntimeError("warm CUDA residency/allocation regression")
                 report.update(profile=name, backend=backend, batch_size=batch_size, run=run_index + 1,
@@ -205,12 +213,12 @@ def run(model_dir, workers, verification_path, runs=5):
                       "TINYINFER_ENABLE_NATIVE_ARCH", "CMAKE_CUDA_COMPILER", "CMAKE_CUDA_ARCHITECTURES", "CMAKE_CUDA_FLAGS")
             build[backend] = {"cache_sha256": sha256(cache), "flags": {line.split(":",1)[0]: line.split("=",1)[1]
                               for line in cache.read_text().splitlines() if ":" in line and "=" in line and line.split(":",1)[0] in wanted}}
-    return {"date": "2026-10-23", "dtype": "float32", "model": json.loads((root / "manifest.json").read_text()),
+    return {"date": date.today().isoformat(), "dtype": "float32", "model": json.loads((root / "manifest.json").read_text()),
             "command": sys.argv, "build": build,
             "native_model_sha256": fingerprint, "worker_sha256": worker_hashes, "correctness_sha256": sha256(verification_path),
             "source_sha256": {str(p.relative_to(source)): sha256(p) for p in source.rglob("*") if p.suffix in (".py", ".cpp", ".cu", ".h")},
             "environment": {"platform": platform.platform(), "python": sys.version, "gpu_before": before_gpu, "gpu_after": gpu_snapshot()},
-            "reference": reference, "execution": "serial per sequence; native continuous scheduling; dense per-layer KV; no prefix cache",
+            "reference": reference, "execution": "serial per sequence; native continuous scheduling; paged KV (16 tokens/block, 128 blocks); no prefix cache",
             "measurement": "scheduled tokenized arrival to controller token-event delivery; includes queue, IPC, forward, sampling and native KV release",
             "excluded": "tokenizer/model startup, warmup, stats, oracle, decoding and JSON IO; startup is reported separately",
             "startup_semantics": "new process per sample, OS file cache and driver caches are not flushed",

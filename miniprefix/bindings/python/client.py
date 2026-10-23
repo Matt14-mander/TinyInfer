@@ -5,14 +5,15 @@ import time
 
 
 class NativeEngine:
-    def __init__(self, worker, model, backend="cpu", context=512, batch_size=2, token_budget=32, chunk_size=16):
+    def __init__(self, worker, model, backend="cpu", context=512, batch_size=2, token_budget=32, chunk_size=16,
+                 block_tokens=16, kv_blocks=128):
         self.process = subprocess.Popen([str(Path(worker).resolve()), str(Path(model).resolve()), backend,
-                                         str(context), str(batch_size), str(token_budget), str(chunk_size)],
+                                         str(context), str(batch_size), str(token_budget), str(chunk_size), str(block_tokens), str(kv_blocks)],
                                         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                         text=True, bufsize=1)
         self.ids, self.diagnostics, self.pending = {}, {}, set()
         ready = self.process.stdout.readline().strip().split()
-        if len(ready) != 7 or ready[:3] != ["READY", "MINIPREFIX", "1"]:
+        if len(ready) != 7 or ready[:3] != ["READY", "MINIPREFIX", "2"]:
             self.close(force=True)
             raise RuntimeError("native worker failed to initialize: " + getattr(self, "last_stderr", ""))
         self.vocabulary, self.eos, self.context = map(int, ready[3:6])
@@ -94,7 +95,9 @@ class NativeEngine:
 
     def stats(self):
         names = ("live_sequences", "live_kv_bytes", "peak_kv_bytes", "forward_tokens", "device_weight_bytes",
-            "weight_uploaded_bytes", "token_uploaded_bytes", "kv_uploaded_bytes", "logits_downloaded_bytes", "device_allocations", "device_workspace_bytes")
+            "weight_uploaded_bytes", "token_uploaded_bytes", "kv_uploaded_bytes", "logits_downloaded_bytes", "device_allocations", "device_workspace_bytes",
+            "kv_block_tokens", "kv_total_blocks", "kv_live_blocks", "kv_peak_blocks", "kv_reserved_bytes",
+            "block_table_uploaded_bytes", "block_table_device_bytes")
         values = self._command(["STATS"])
         if len(values) != len(names):
             raise RuntimeError("invalid native stats")

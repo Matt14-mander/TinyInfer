@@ -1,7 +1,8 @@
 # 架构与模块所有权
 
 本文是目标架构。2026-10-23 已有 Engine、ModelConfig、CPU/CUDA Llama runner 和本地
-tokenizer/IPC 入口；独立 Scheduler/KVManager/PrefixIndex 仍待从现有机制中提取。
+tokenizer/IPC 入口，以及 CPU/CUDA 共用 KvBlockPool 与序列页表；独立 Scheduler、完整
+KVManager 的引用/COW、PrefixIndex 仍待提取或实现。
 当前实现与目标架构的差异、真实模型和设备边界见 [real_model.md](real_model.md)。
 MiniPrefix 是 TinyInfer 的上层生成引擎，不创建第二套 Tensor、通用 allocator 或设备 runtime。
 

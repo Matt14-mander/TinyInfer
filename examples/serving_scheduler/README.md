@@ -7,7 +7,7 @@
 可选动态准入/抢占重算、精确前缀共享/COW 与 CUDA 分页 kernel 见 [ADVANCED_SERVING.md](ADVANCED_SERVING.md)。
 本例独立于 TinyInfer C++ Runtime，不改变 Phase 5.4 CUDA 开发状态。
 后续引擎的独立目录与迁移路线已建立于 [MiniPrefix](../../miniprefix/README.md)；
-MiniPrefix 已有真实 SmolLM2 CPU/CUDA 推理闭环与 FP32 性能基线，仍使用 dense KV；
+MiniPrefix 已有真实 SmolLM2 CPU/CUDA 推理闭环、独占分页 KV 与 FP32 性能基线；
 本例继续作为 paged/prefix 等算法的可运行参考与回归入口。
 
 ## 四阶段计划
