@@ -1,0 +1,7 @@
+# Workspace-only preparation/tokenizer/reference environment; native core needs none.
+# Install torch==2.5.1 from https://download.pytorch.org/whl/cpu first.
+transformers==4.46.3
+tokenizers==0.20.3
+numpy==2.1.3
+safetensors==0.4.5
+huggingface-hub==0.26.5
