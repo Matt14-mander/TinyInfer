@@ -4,7 +4,12 @@
 tools/verify_real_model.py 提供实际 checkpoint 的 CPU/CUDA 数值与生命周期验收。
 新增 C++ paged_kv_test.cpp 验证页面所有权、跨页地址、容量失败原子性与回收复用，
 CTest 入口为 miniprefix_paged_kv_tests。真实分页测试和配置见 ../docs/paged_kv.md。
+prefix_cache_test.cpp / miniprefix_prefix_cache_tests 验证精确因果 key、共享引用、对齐
+logits 边界、LRU 和活跃 lease。tools/verify_prefix_cache.py 验证真实 CPU/CUDA 共享
+与 cold/warm compute counter；口径见 ../docs/prefix_cache.md。
 后续原生引擎更细的单元与故障隔离覆盖继续按下述布局补齐。
+engine_prefill_test.cpp / miniprefix_engine_prefill_tests 验证命中后逐 chunk token/绝对位置、
+budget、首事件边界、取消与失败清理；verify_incremental_prefill.py 提供真实 CPU/CUDA 对照。
 
 后续按 unit / integration / differential / cuda 分类组织：
 

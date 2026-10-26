@@ -1,9 +1,10 @@
 # 开发路线与验收
 
-2026-10-23：M0 已完成；M1 已有请求生命周期/配置/原生 runner，调度与高级 KV 提取未完成；
+2026-10-25：M0 已完成；M1 已有请求生命周期/配置/原生 runner，调度与高级 KV 提取未完成；
 M2 已完成首个 SmolLM2-135M-Instruct CPU/CUDA 正确性闭环；M3 已有分页 KV/权重常驻
 GPU、完整 forward 与设备增量页表更新，COW 尚未实现；M4 已建立无缓存 dense/paged FP32 基线，
-缓存 ablation 待真实模型接入共享后进行；M5 未开始。验收边界见 [真实模型](real_model.md)
+已接入最小精确前缀缓存与冷/热 paired 实验；M5 的完整页面共享、页面 LRU 已开始，
+索引优化和更大负载未完成。验收边界见 [精确前缀缓存](prefix_cache.md)、[真实模型](real_model.md)
 和 [基线协议](baseline.md)，不把局部实现当整个阶段全部完成。
 
 | 阶段 | 交付 | 验收门槛 |
@@ -26,6 +27,6 @@ M2/M3 保留这些机制的开关，以便隔离模型与设备问题。M5 优�
 CUDA Graph、CPU/GPU 异步重叠、量化、真实推测解码、HTTP、multi-GPU、PD 分离、
 多模态与 MoE 均在 M4 基线之后按实际瓶颈安排，不纳入第一版承诺。
 
-下一项具体工作：基于真实多层/GQA ModelRunner 的 KvBlockPool 引入引用计数和精确
-prefix/COW，随后迁入容量准入与抢占恢复。保留历史 dense 基线与独立框架 oracle，复用基线
+下一项具体工作：扩展共享 system prefix/多轮负载，测量索引成本，随后引入部分页 COW、
+容量准入与抢占恢复。保留历史 dense/paged 基线与独立框架 oracle，复用基线
 对照正确性、实际跳过计算量、显存和端到端收益。

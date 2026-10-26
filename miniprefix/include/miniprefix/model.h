@@ -1,6 +1,7 @@
 #pragma once
 #include "request.h"
 #include "paged_kv.h"
+#include "prefix_cache.h"
 #include "tinyinfer/core/tensor.h"
 #include <map>
 #include <memory>
@@ -27,12 +28,17 @@ struct RunnerStats {
     std::size_t device_workspace_bytes=0;
     std::size_t kv_block_tokens=0,kv_total_blocks=0,kv_live_blocks=0,kv_peak_blocks=0;
     std::size_t kv_reserved_bytes=0,block_table_uploaded_bytes=0,block_table_device_bytes=0;
+    std::size_t prefix_cache_capacity=0,kv_cached_blocks=0,kv_cache_only_blocks=0;
+    std::size_t prefix_hits=0,prefix_misses=0,prefix_reused_tokens=0,prefix_evictions=0;
 };
 class ModelRunner {
 public:
     virtual ~ModelRunner()=default;
     virtual const ModelConfig& config() const=0;
     virtual void create(const RequestId&)=0;
+    virtual std::size_t reuse_prefix(const RequestId&,const std::vector<TokenId>&){return 0;}
+    virtual void cache_prefix(const RequestId&){}
+    virtual void clear_prefix_cache(){}
     virtual std::vector<float> append(const RequestId&,const std::vector<TokenId>&)=0;
     virtual void release(const RequestId&)=0;
     virtual void clear()=0;

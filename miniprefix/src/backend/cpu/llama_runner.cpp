@@ -23,6 +23,7 @@ void rope(Tensor& x,int heads,int dim,int start,float theta){
 class CpuRunner final:public ModelRunner {
     std::shared_ptr<ModelWeights> weights_;int context_;
     KvBlockPool pool_;
+    ExactPrefixCache prefix_;
     std::vector<float> keys_,values_;
     std::map<std::string,std::unique_ptr<tinyinfer::cpu::PackedMatMulRhs>> packed_;
     std::map<RequestId,PagedSequence> sequences_;RunnerStats stats_;
@@ -35,7 +36,7 @@ class CpuRunner final:public ModelRunner {
     }
 public:
     CpuRunner(std::shared_ptr<ModelWeights> w,int context,KvCacheConfig kv):weights_(std::move(w)),context_(context),
-        pool_(kv,config().layers,config().kv_width()){
+        pool_(kv,config().layers,config().kv_width()),prefix_(pool_){
         if(context<1||context>config().context)throw std::invalid_argument("invalid runner context");
         keys_.resize(pool_.block_elements()*kv.max_blocks);values_.resize(keys_.size());}
     const ModelConfig& config() const override{return weights_->config;}
@@ -43,13 +44,21 @@ public:
         if(sequences_.count(id))throw std::invalid_argument("sequence already exists");
         sequences_.emplace(id,PagedSequence{});
     }
+    std::size_t reuse_prefix(const RequestId& id,const std::vector<TokenId>& prompt) override{
+        if(prompt.empty()||prompt.size()>std::size_t(context_))throw std::invalid_argument("invalid prefix context");
+        for(auto token:prompt)if(token<0||token>=config().vocabulary)throw std::invalid_argument("invalid prefix token");
+        return prefix_.reuse(sequences_.at(id),prompt);
+    }
+    void cache_prefix(const RequestId& id) override{prefix_.publish(sequences_.at(id));}
+    void clear_prefix_cache() override{prefix_.clear();}
     std::vector<float> append(const RequestId& id,const std::vector<TokenId>& tokens) override{
         auto& s=sequences_.at(id);const auto& c=config();const int n=static_cast<int>(tokens.size()),dim=c.head_dimension(),kv=c.kv_width();
         if(n<1||n>context_-s.used)throw std::invalid_argument("context overflow/empty input");
         Tensor x({n,c.hidden});const auto& embedding=weights_->get("model.embed_tokens.weight");
         for(int row=0;row<n;++row){if(tokens[row]<0||tokens[row]>=c.vocabulary)throw std::invalid_argument("invalid token");
             std::copy_n(embedding.data<float>()+std::size_t(tokens[row])*c.hidden,c.hidden,x.data<float>()+row*c.hidden);}
-        const auto original_blocks=s.blocks.size();pool_.reserve(s,s.used+n);
+        s.tokens.reserve(s.used+n);
+        const auto original_blocks=s.blocks.size();prefix_.reserve(s,s.used+n);
         try{
         for(int l=0;l<c.layers;++l){auto p="model.layers."+std::to_string(l)+".";
             auto normalized=rms(x,weights_->get(p+"input_layernorm.weight"),c.rms_epsilon);
@@ -77,18 +86,21 @@ public:
         auto normalized=rms(x.narrow(0,n-1,1),weights_->get("model.norm.weight"),c.rms_epsilon);
         auto logits=linear(normalized,"lm_head.weight");std::vector<float> result(logits.data<float>(),logits.data<float>()+c.vocabulary);
         for(float v:result)if(!std::isfinite(v))throw std::runtime_error("nonfinite logits");
-        s.used+=n;stats_.forward_tokens+=n;return result;
+        s.tokens.insert(s.tokens.end(),tokens.begin(),tokens.end());s.used+=n;stats_.forward_tokens+=n;return result;
         }catch(...){pool_.rollback(s,original_blocks);throw;}
     }
     void release(const RequestId& id) override{
         auto it=sequences_.find(id);if(it==sequences_.end())throw std::invalid_argument("unknown sequence");
         pool_.release(it->second);sequences_.erase(it);}
-    void clear() override{for(auto& item:sequences_)pool_.release(item.second);sequences_.clear();}
+    void clear() override{for(auto& item:sequences_)pool_.release(item.second);sequences_.clear();prefix_.clear();}
     RunnerStats stats() const override{auto result=stats_;result.live_sequences=sequences_.size();
         result.kv_block_tokens=pool_.config().block_tokens;result.kv_total_blocks=pool_.config().max_blocks;
         result.kv_live_blocks=pool_.live_blocks();result.kv_peak_blocks=pool_.peak_blocks();
         result.kv_reserved_bytes=pool_.reserved_bytes();result.live_kv_bytes=pool_.live_blocks()*pool_.block_bytes();
-        result.peak_kv_bytes=pool_.peak_blocks()*pool_.block_bytes();return result;}
+        result.peak_kv_bytes=pool_.peak_blocks()*pool_.block_bytes();
+        result.prefix_cache_capacity=pool_.config().prefix_cache_blocks;result.kv_cached_blocks=prefix_.size();
+        result.kv_cache_only_blocks=prefix_.cache_only_blocks();result.prefix_hits=prefix_.hits();result.prefix_misses=prefix_.misses();
+        result.prefix_reused_tokens=prefix_.reused_tokens();result.prefix_evictions=prefix_.evictions();return result;}
 };
 }
 std::unique_ptr<ModelRunner> make_cpu_runner(std::shared_ptr<ModelWeights> weights,int context,KvCacheConfig kv){return std::make_unique<CpuRunner>(std::move(weights),context,kv);}

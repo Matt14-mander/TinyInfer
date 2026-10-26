@@ -21,7 +21,20 @@ void Engine::terminal(State& state,FinishReason reason,const std::string& error)
     if(state.resident){runner_->release(state.request.id);state.resident=false;}
     events_.push_back({state.request.id,std::nullopt,reason,error});
 }
+void Engine::restore_prefix(State& state){
+    auto& request=state.request;
+    runner_->create(request.id);state.resident=true;
+    const auto reused=runner_->reuse_prefix(request.id,request.prompt_token_ids);
+    // No cached logits are returned by ModelRunner: at least one prompt token
+    // must remain. Reject a broken runner contract before forming a suffix or
+    // executing an empty append. Reused positions must end at a full page.
+    const auto block_tokens=runner_->stats().kv_block_tokens;
+    if(reused>=request.prompt_token_ids.size()||(reused&&(!block_tokens||reused%block_tokens)))
+        throw std::runtime_error("invalid reusable prefix range");
+    state.prefilled=reused;step_stats_.prefix_reused_tokens+=reused;
+}
 bool Engine::step(){
+    step_stats_={};
     if(failed_)throw std::runtime_error("engine failed");
     while(!waiting_.empty()&&active_.size()<std::size_t(config_.max_batch_size)){
         active_.push_back(std::move(waiting_.front()));waiting_.pop_front();}
@@ -33,16 +46,19 @@ bool Engine::step(){
         for(std::size_t i=0;i<active_.size();++i)if(!active_[i].output.empty())order.push_back(i);
         for(std::size_t i=0;i<active_.size();++i)if(active_[i].output.empty())order.push_back(i);
         for(auto index:order){if(!remaining)break;auto& s=active_[index];auto& r=s.request;
+            if(!s.resident)restore_prefix(s);
+            const bool prefilling=s.output.empty();
             std::vector<TokenId> input;
-            if(!s.output.empty())input={s.output.back()};
+            if(!prefilling)input={s.output.back()};
             else{auto count=std::min({r.prompt_token_ids.size()-s.prefilled,std::size_t(config_.prefill_chunk),std::size_t(remaining)});
                 input.assign(r.prompt_token_ids.begin()+s.prefilled,r.prompt_token_ids.begin()+s.prefilled+count);}
-            if(!s.resident){runner_->create(r.id);s.resident=true;}
             auto logits=runner_->append(r.id,input);remaining-=static_cast<int>(input.size());
-            if(s.output.empty())s.prefilled+=input.size();
+            if(prefilling){s.prefilled+=input.size();step_stats_.prefill_tokens+=input.size();}
+            else step_stats_.decode_tokens+=input.size();
             if(s.prefilled<r.prompt_token_ids.size())continue;
             if(logits.size()!=std::size_t(runner_->config().vocabulary))throw std::runtime_error("invalid logits arity");
             for(float v:logits)if(!std::isfinite(v))throw std::runtime_error("nonfinite model result");
+            if(prefilling)runner_->cache_prefix(r.id);
             auto token=static_cast<TokenId>(std::max_element(logits.begin(),logits.end())-logits.begin());
             s.output.push_back(token);std::optional<FinishReason> finish;
             if(r.generation.eos_token_id&&token==*r.generation.eos_token_id)finish=FinishReason::Eos;

@@ -58,6 +58,7 @@ struct Sequence: PagedSequence{Allocation table;};
 class CudaRunner final:public ModelRunner {
     std::shared_ptr<ModelWeights> weights_;int context_;RunnerStats stats_;
     KvBlockPool pool_;
+    ExactPrefixCache prefix_;
     Allocation keys_,values_;
     cudaStream_t stream_=nullptr;cublasHandle_t blas_=nullptr;
     std::map<std::string,std::unique_ptr<Allocation>> parameters_;
@@ -79,7 +80,7 @@ class CudaRunner final:public ModelRunner {
         logits_.ensure(std::size_t(c.vocabulary)*4,stats_);tokens_.ensure(std::size_t(rows)*sizeof(int),stats_);}
 public:
     CudaRunner(std::shared_ptr<ModelWeights> weights,int context,KvCacheConfig kv):weights_(std::move(weights)),context_(context),
-        pool_(kv,config().layers,config().kv_width()){
+        pool_(kv,config().layers,config().kv_width()),prefix_(pool_){
         if(context<1||context>config().context)throw std::invalid_argument("invalid runner context");
         check(cudaStreamCreateWithFlags(&stream_,cudaStreamNonBlocking),"create model stream");
         try{blas(cublasCreate(&blas_));blas(cublasSetStream(blas_,stream_));blas(cublasSetMathMode(blas_,CUBLAS_PEDANTIC_MATH));blas(cublasSetAtomicsMode(blas_,CUBLAS_ATOMICS_NOT_ALLOWED));
@@ -95,12 +96,25 @@ public:
         auto state=std::make_unique<Sequence>();
         state->table.ensure(std::size_t(context_/pool_.config().block_tokens+(context_%pool_.config().block_tokens!=0))*sizeof(int),stats_);
         sequences_.emplace(id,std::move(state));}
+    std::size_t reuse_prefix(const RequestId& id,const std::vector<TokenId>& prompt) override{
+        if(prompt.empty()||prompt.size()>std::size_t(context_))throw std::invalid_argument("invalid prefix context");
+        for(auto token:prompt)if(token<0||token>=config().vocabulary)throw std::invalid_argument("invalid prefix token");
+        auto& state=*sequences_.at(id);const auto used=prefix_.reuse(state,prompt);
+        if(used){const auto bytes=state.blocks.size()*sizeof(int);
+            try{check(cudaMemcpyAsync(state.table.data,state.blocks.data(),bytes,cudaMemcpyHostToDevice,stream_),"upload reused block table");
+                check(cudaStreamSynchronize(stream_),"prefix table completion");stats_.block_table_uploaded_bytes+=bytes;
+            }catch(...){cudaStreamSynchronize(stream_);pool_.release(state);throw;}}
+        return used;
+    }
+    void cache_prefix(const RequestId& id) override{prefix_.publish(*sequences_.at(id));}
+    void clear_prefix_cache() override{check(cudaStreamSynchronize(stream_),"clear prefix completion");prefix_.clear();}
     std::vector<float> append(const RequestId& id,const std::vector<TokenId>& tokens) override{
         auto& state=*sequences_.at(id);const auto& c=config();const int n=static_cast<int>(tokens.size());
         if(n<1||n>context_-state.used)throw std::invalid_argument("context overflow/empty input");
         for(auto token:tokens)if(token<0||token>=c.vocabulary)throw std::invalid_argument("invalid token");
         std::vector<float> result(c.vocabulary);
-        const auto original_blocks=state.blocks.size();pool_.reserve(state,state.used+n);
+        state.tokens.reserve(state.used+n);
+        const auto original_blocks=state.blocks.size();prefix_.reserve(state,state.used+n);
         try{
             if(state.blocks.size()!=original_blocks){const auto bytes=(state.blocks.size()-original_blocks)*sizeof(int);
                 check(cudaMemcpyAsync(reinterpret_cast<int*>(state.table.data)+original_blocks,state.blocks.data()+original_blocks,
@@ -135,18 +149,22 @@ public:
             check(cudaStreamSynchronize(stream_),"model completion");
             for(float v:result)if(!std::isfinite(v))throw std::runtime_error("nonfinite CUDA logits");
         }catch(...){cudaStreamSynchronize(stream_);pool_.rollback(state,original_blocks);throw;}
+        state.tokens.insert(state.tokens.end(),tokens.begin(),tokens.end());
         state.used+=n;stats_.forward_tokens+=n;stats_.logits_downloaded_bytes+=result.size()*4;return result;
     }
     void release(const RequestId& id) override{check(cudaStreamSynchronize(stream_),"release completion");
         auto it=sequences_.find(id);if(it==sequences_.end())throw std::invalid_argument("unknown sequence");
         pool_.release(*it->second);sequences_.erase(it);}
     void clear() override{check(cudaStreamSynchronize(stream_),"clear completion");
-        for(auto& item:sequences_)pool_.release(*item.second);sequences_.clear();}
+        for(auto& item:sequences_)pool_.release(*item.second);sequences_.clear();prefix_.clear();}
     RunnerStats stats() const override{auto result=stats_;
         result.live_sequences=sequences_.size();result.kv_block_tokens=pool_.config().block_tokens;result.kv_total_blocks=pool_.config().max_blocks;
         result.kv_live_blocks=pool_.live_blocks();result.kv_peak_blocks=pool_.peak_blocks();
         result.kv_reserved_bytes=pool_.reserved_bytes();result.live_kv_bytes=pool_.live_blocks()*pool_.block_bytes();
         result.peak_kv_bytes=pool_.peak_blocks()*pool_.block_bytes();
+        result.prefix_cache_capacity=pool_.config().prefix_cache_blocks;result.kv_cached_blocks=prefix_.size();
+        result.kv_cache_only_blocks=prefix_.cache_only_blocks();result.prefix_hits=prefix_.hits();result.prefix_misses=prefix_.misses();
+        result.prefix_reused_tokens=prefix_.reused_tokens();result.prefix_evictions=prefix_.evictions();
         for(const auto& item:sequences_)result.block_table_device_bytes+=item.second->table.bytes;
         result.device_workspace_bytes=x_.bytes+norm_.bytes+q_.bytes+k_.bytes+v_.bytes+attention_.bytes+projection_.bytes+gate_.bytes+up_.bytes+logits_.bytes+tokens_.bytes;
         return result;}

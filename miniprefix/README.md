@@ -6,11 +6,13 @@ MiniPrefix 是建立在 TinyInfer 之上的最小 LLM 生成引擎，目标是�
 **当前状态：已运行真实 SmolLM2-135M-Instruct 的原生 CPU/CUDA 推理闭环，并建立首个
 FP32 端到端性能基线。** 入口、权重准备与数值验收见 [真实模型](docs/real_model.md)，
 测量口径见 [基线协议](docs/baseline.md)，结果见 [历史 dense 报告](docs/acceptance/baseline-smollm2-fp32.md)
-与 [分页验收报告](docs/acceptance/paged-kv-smollm2-fp32.md)。
+与 [分页验收报告](docs/acceptance/paged-kv-smollm2-fp32.md)。2026-10-25 新增
+[最小精确前缀缓存](docs/prefix_cache.md)，默认关闭、可显式配置页面容量。
+2026-10-26 补齐 [命中后的增量 prefill](docs/incremental_prefill.md) 范围校验、逐轮计数与长 suffix 验收。
 
 当前 CPU/CUDA KV 已改为共享 block 池和序列 block table，CUDA 权重/KV 常驻，详见
 [分页 KV](docs/paged_kv.md)；runner 按 sequence 顺序执行。原
-[serving_scheduler](../examples/serving_scheduler/README.md) 的重算、共享/COW 和
+[serving_scheduler](../examples/serving_scheduler/README.md) 的重算、部分页 COW 和
 跨请求矩阵 batching 仍是独立可运行参考，尚未全部迁入真实模型路径。
 
 ## 定位与边界
@@ -64,7 +66,8 @@ miniprefix/
 此开关默认 OFF，不要求 CUDA、Python、模型下载或其他第三方依赖。CUDA 实现后继续
 受现有 `TINYINFER_ENABLE_CUDA` 约束，不创建第二套 CUDA SDK 配置。
 
-下一步按 [路线图](docs/roadmap.md) 实现真实模型的前缀共享/COW，并用冻结基线评估改动。
+下一步按 [路线图](docs/roadmap.md) 扩展前缀负载、索引效率、部分页 COW 与容量准入，
+用缓存关闭/冷/热对照评估改动。
 
 M0 检查：MSVC 19.43 / C++17 / Release / CUDA OFF 的独立 CMake consumer 已成功链接
 `MiniPrefix::contracts` 并编译初始请求类型；18 份 Markdown 的本地链接检查通过。

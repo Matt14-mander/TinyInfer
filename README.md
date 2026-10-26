@@ -84,8 +84,9 @@ docs/                Architecture and roadmap notes
 [MiniPrefix](miniprefix/README.md) runs a documented SmolLM2-135M-Instruct FP32
 CPU/CUDA path with GPU-resident paged KV and an independent-reference-checked
 [end-to-end baseline](miniprefix/docs/baseline.md). Its existing serving examples
-remain advanced algorithm references; prefix/COW/recompute migration to the
-real-model runner is pending. `TINYINFER_BUILD_MINIPREFIX` remains OFF by default.
+remain advanced algorithm references. The real-model runner supports optional
+[exact full-page prefix reuse](miniprefix/docs/prefix_cache.md); partial-page COW
+and recompute are pending. `TINYINFER_BUILD_MINIPREFIX` remains OFF by default.
 
 Requirements: a C++17 compiler and CMake 3.20 or newer.
 

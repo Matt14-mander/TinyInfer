@@ -6,14 +6,14 @@ import time
 
 class NativeEngine:
     def __init__(self, worker, model, backend="cpu", context=512, batch_size=2, token_budget=32, chunk_size=16,
-                 block_tokens=16, kv_blocks=128):
+                 block_tokens=16, kv_blocks=128, prefix_cache_blocks=0):
         self.process = subprocess.Popen([str(Path(worker).resolve()), str(Path(model).resolve()), backend,
-                                         str(context), str(batch_size), str(token_budget), str(chunk_size), str(block_tokens), str(kv_blocks)],
+                                         str(context), str(batch_size), str(token_budget), str(chunk_size), str(block_tokens), str(kv_blocks), str(prefix_cache_blocks)],
                                         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                         text=True, bufsize=1)
         self.ids, self.diagnostics, self.pending = {}, {}, set()
         ready = self.process.stdout.readline().strip().split()
-        if len(ready) != 7 or ready[:3] != ["READY", "MINIPREFIX", "2"]:
+        if len(ready) != 7 or ready[:3] != ["READY", "MINIPREFIX", "3"]:
             self.close(force=True)
             raise RuntimeError("native worker failed to initialize: " + getattr(self, "last_stderr", ""))
         self.vocabulary, self.eos, self.context = map(int, ready[3:6])
@@ -74,6 +74,12 @@ class NativeEngine:
     def step(self):
         return self._events(self._command(["STEP"]))
 
+    def last_step_stats(self):
+        values = self._command(["STEP_STATS"])
+        if len(values) != 3:
+            raise RuntimeError("invalid engine step stats")
+        return dict(zip(("prefix_reused_tokens", "prefill_tokens", "decode_tokens"), values))
+
     def cancel(self, request_id):
         return self._events(self._command(["CANCEL", self.ids[request_id]]))
 
@@ -93,11 +99,24 @@ class NativeEngine:
     def release(self, sequence_id):
         self._command(["RELEASE", self.diagnostics[sequence_id]])
 
+    def reuse_prefix(self, sequence_id, prompt_tokens):
+        if sequence_id not in self.diagnostics:
+            self.diagnostics[sequence_id] = len(self.diagnostics) + 1
+        tokens = list(prompt_tokens)
+        return self._command(["REUSE", self.diagnostics[sequence_id], len(tokens)] + tokens)[0]
+
+    def cache_prefix(self, sequence_id):
+        self._command(["CACHE", self.diagnostics[sequence_id]])
+
+    def clear_prefix_cache(self):
+        self._command(["CLEAR_PREFIX"])
+
     def stats(self):
         names = ("live_sequences", "live_kv_bytes", "peak_kv_bytes", "forward_tokens", "device_weight_bytes",
             "weight_uploaded_bytes", "token_uploaded_bytes", "kv_uploaded_bytes", "logits_downloaded_bytes", "device_allocations", "device_workspace_bytes",
             "kv_block_tokens", "kv_total_blocks", "kv_live_blocks", "kv_peak_blocks", "kv_reserved_bytes",
-            "block_table_uploaded_bytes", "block_table_device_bytes")
+            "block_table_uploaded_bytes", "block_table_device_bytes", "prefix_cache_capacity", "kv_cached_blocks",
+            "kv_cache_only_blocks", "prefix_hits", "prefix_misses", "prefix_reused_tokens", "prefix_evictions")
         values = self._command(["STATS"])
         if len(values) != len(names):
             raise RuntimeError("invalid native stats")
