@@ -10,6 +10,8 @@ FP32 端到端性能基线。** 入口、权重准备与数值验收见 [真实�
 [最小精确前缀缓存](docs/prefix_cache.md)，默认关闭、可显式配置页面容量。
 2026-10-26 补齐 [命中后的增量 prefill](docs/incremental_prefill.md) 范围校验、逐轮计数与长 suffix 验收。
 共享/混合/零共享八请求流的 off/cold/warm 独立进程对照，见 [真实收益测量](docs/prefix_benefit.md)。
+2026-10-27 从 CPU/CUDA runner 提取 [统一 KVManager](include/miniprefix/kv_manager.h)，
+公共接口保留在 include，实现在 src/kv；行为与回归证据见 [重构验收](docs/acceptance/kv-manager-refactor.md)。
 
 当前 CPU/CUDA KV 已改为共享 block 池和序列 block table，CUDA 权重/KV 常驻，详见
 [分页 KV](docs/paged_kv.md)；runner 按 sequence 顺序执行。原
@@ -30,14 +32,14 @@ KV 常驻 → 可信端到端基线 → 前缀索引和复用优化。已有 ser
 
 ```text
 miniprefix/
-├── CMakeLists.txt                 # 默认关闭；contracts、engine、CPU/可选 CUDA worker
+├── CMakeLists.txt                 # 默认关闭；contracts、kv、engine、CPU/可选 CUDA worker
 ├── include/miniprefix/           # 对外数据契约；引擎 API 随实现增加
 ├── src/
 │   ├── engine/                   # 请求生命周期、迭代协调、事件与采样
 │   ├── scheduler/                # token 预算、准入、重算、调度计划
 │   ├── model/                    # 配置、权重、tokenizer 适配、ModelRunner
-│   ├── kv/                       # block pool/table、引用、COW、资源事务
-│   ├── prefix/                   # cache identity、最长前缀查找与驱逐策略
+│   ├── kv/                       # KVManager、页池、精确索引、引用与追加事务
+│   ├── prefix/                   # 前缀策略说明，当前实现由 kv 模块编译
 │   └── backend/
 │       ├── cpu/                  # 数值 oracle 与小规模参考执行
 │       └── cuda/                 # GPU 常驻模型/KV、attention 与设备更新

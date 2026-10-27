@@ -1,0 +1,93 @@
+{
+  "date": "2026-10-27",
+  "passed": true,
+  "before_source_commit": "75f3001c73ce363d2ea74882487af611ad4e12e1",
+  "native_model_sha256": "fe826f487690854ac806197b60edffc2c76c6c446eede6b188e47763deae7aef",
+  "before_worker_sha256": {
+    "cpu": "a565f4fa409b4156bb24b45fc4f2c0c9441635a5cef05a9bb7bbc1a53779624a",
+    "cuda": "2f605077541b19e2c8cc138260ee6ee7f640c7fd80224e1f1b6f737f053ca92f"
+  },
+  "after_worker_sha256": {
+    "cpu": "f26839486539517dff155a7492c6e3974d4195779685fe347c6e5490a3763967",
+    "cuda": "caacc5f4ab0cb675d4fc4a9836ceba9348b10fa5ca5e0c1e8b000ceb8e083aa5"
+  },
+  "builds": {
+    "cuda": {
+      "path": "build-kv-manager-cuda",
+      "cache_sha256": "a7af401d8f6ed29077bb0cb3a875f46385e184aa8173a592044c5a4cac8e999b",
+      "flags": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CUDA_ARCHITECTURES": "89-real",
+        "CMAKE_CUDA_COMPILER": "E:/Project Learning/AI Infra/TinyInfer/build-cuda-sdk-12.5.1/toolkit/bin/nvcc.exe",
+        "CMAKE_CXX_COMPILER": "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.29.30133/bin/HostX64/x64/cl.exe",
+        "CMAKE_CXX_FLAGS": "/EHsc /permissive-",
+        "CMAKE_CXX_FLAGS_RELEASE": "/O2 /Ob2 /DNDEBUG",
+        "CMAKE_TRY_COMPILE_CONFIGURATION": "Release",
+        "TINYINFER_BUILD_MINIPREFIX": "ON",
+        "TINYINFER_ENABLE_CUDA": "ON",
+        "TINYINFER_ENABLE_NATIVE_ARCH": "ON"
+      }
+    },
+    "cpu_only": {
+      "path": "build-kv-manager-cpu",
+      "cache_sha256": "c4a63502a5ba2a84ca3bee663d6cfe3e14350e18d3f22a938fb48050a7b7b59b",
+      "flags": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_COMPILER": "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.29.30133/bin/HostX64/x64/cl.exe",
+        "CMAKE_CXX_FLAGS": "/EHsc /permissive-",
+        "CMAKE_CXX_FLAGS_RELEASE": "/O2 /Ob2 /DNDEBUG",
+        "CMAKE_TRY_COMPILE_CONFIGURATION": "Release",
+        "TINYINFER_BUILD_MINIPREFIX": "ON",
+        "TINYINFER_ENABLE_CUDA": "OFF",
+        "TINYINFER_ENABLE_NATIVE_ARCH": "ON"
+      }
+    }
+  },
+  "tests": {
+    "cuda": {
+      "passed": 58,
+      "total": 58,
+      "skipped": 0
+    },
+    "cpu_only": {
+      "passed": 51,
+      "total": 51,
+      "skipped": 0
+    }
+  },
+  "differential": {
+    "checkpoints": 94,
+    "logit_vectors": 10,
+    "checked_logits": 491520,
+    "exact_fp32_bytes": true,
+    "stats_fields": 25
+  },
+  "independent": {
+    "logit_vectors": 90,
+    "checked_logits": 4423680,
+    "max_abs_error": 0.00011372566223144531,
+    "cuda_residency_checks": 9,
+    "incremental_cases": 14,
+    "prefix_cases": 18
+  },
+  "memcheck": {
+    "passed": true,
+    "errors": 0,
+    "leaked_bytes": 0,
+    "leaked_allocations": 0,
+    "raw_log_sha256": "b37311b535764297cf6a7bea8bad62e2584c93b127836809487406b47d4d909d",
+    "scope": "real CUDA model: append, publish, release, prefix restore, suffix append, cache clear with active owner, release, shutdown",
+    "sandbox_attempt": "no attachable process; not counted as pass",
+    "host_attempt": "completed, error exit code 99 configured, actual exit 0"
+  },
+  "performance": "No performance acceptance or baseline replacement; prefix validation has three incidental paired flows, excluded from refactor performance claims.",
+  "evidence_sha256": {
+    "kv-manager-differential.json": "90b95cda49ab8b3390f36ce39c962600d9cfaa1004c69bfa87b8a7e3454a9dd4",
+    "kv-manager-real-model-verification.json": "6504e2e4e5a0e3c083168db940e132f4f62b480b4da1b40eef5034b62b22b9be",
+    "kv-manager-incremental-verification.json": "25b1d2b573047ecd0aa519802baa5ed2372c2bed013c507275441b69747f8773",
+    "kv-manager-prefix-verification.json": "a8f82c55d4b29b7bb064828974e89eb4d4b23f89dbb1ec7d8d2fd915e522760f",
+    "kv-manager-memcheck.log": "f4c3550cded4e8319d22d0e4b3de27f56b3e560250e6df31e626a423737458c6",
+    "kv-manager-cuda-tests.log": "2a8c14c9a8e4b7fdc212a098e659c0ba175503149ff451bd71c5f01209a78456",
+    "kv-manager-cpu-tests.log": "1777d1fe3de69e0dcddd185a5cf44a2470f605494d1742943b92adca8d8a9d16"
+  }
+}

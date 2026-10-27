@@ -8,14 +8,14 @@ append/attention kernel 直接寻址页面，不先 gather 成连续序列，也
 
 ## 所有权与失败边界
 
-- `include/miniprefix/paged_kv.h` 的 KvBlockPool 管理固定容量的 free list、页面申请、
-  追加失败回滚、回收和占用峰值；CPU/CUDA 共用此 metadata 实现。
-- runner 持有物理 payload，序列持有逻辑页面表和已提交 token 数。create 只创建序列
+- `include/miniprefix/paged_kv.h` 声明 KvBlockPool，src/kv/paged_kv.cpp 实现 free list、
+  页面申请、回滚、回收和占用峰值。统一 KVManager 持有页池、缓存和所有序列 metadata。
+- runner 持有物理 payload，manager 的序列持有逻辑页面表和已提交 token 数。create 只创建序列
   metadata，append 按 `ceil((used+input)/block_tokens)` 申请页面，release 归还页面。
 - 默认缓存关闭、页面独占；开启 [精确前缀缓存](prefix_cache.md) 后，完整页面通过
   引用计数共享，未满尾页私有。部分页共享/COW 尚未实现，不能自行复制页表来共享。
 - 申请所需页面不足时，在写入前失败，旧页面表和已提交 token 不变。
-  forward 异常归还本次新增页面；只会写未提交位置，已有有效 prefix 不被覆盖。
+  forward 异常由 Append 事务归还本次新增页面；只写未提交位置，已有有效 prefix 不被覆盖。
 - CUDA pool 在 runner 初始化时一次分配两块 K/V，生命周期内不迁移页面。序列 create
   只分配一张设备 block table；只有新增页号 H2D，已有表项与 KV 不重复上传。
   append 返回前同步完成，release/clear/异常回滚前也同步，避免在途访问使用已回收页。

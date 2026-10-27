@@ -1,0 +1,14 @@
+# CUDA KVManager lifecycle memcheck; host run after sandbox attachment timeout.
+# Full raw log SHA256: b37311b535764297cf6a7bea8bad62e2584c93b127836809487406b47d4d909d
+# Native long logits lines omitted; control responses and sanitizer diagnostics retained.
+========= COMPUTE-SANITIZER
+READY MINIPREFIX 3 49152 2 64 cuda
+OK
+OK
+OK 6
+OK
+OK
+OK 0 0 552960 12 651306240 651306240 48 0 589824 288 374044 3 12 0 4 1658880 28 0 6 0 0 1 0 6 0
+OK
+========= LEAK SUMMARY: 0 bytes leaked in 0 allocations
+========= ERROR SUMMARY: 0 errors

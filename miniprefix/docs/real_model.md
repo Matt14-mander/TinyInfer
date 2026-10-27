@@ -17,6 +17,8 @@ CPU、CUDA 和独立 Transformers 参考都执行 FP32。固定 revision：
   Greedy、EOS/长度结束、排队/活跃取消与失败终态。Python 只做 tokenizer、IPC 和展示。
 - 原生 runner 每次处理一个 sequence 的 chunk，同轮请求依次执行；没有跨请求矩阵合并。
 - CPU/CUDA KV 使用共享物理 block 池与序列页表，直接分页寻址，见 [分页 KV](paged_kv.md)。
+  KVManager 统一持有序列 metadata、页面引用、追加事务与公共统计；backend 保留 payload、
+  设备页表和同步。接口为 include/miniprefix/kv_manager.h，实现位于 src/kv。
   2026-10-25 已接入 [完整页面精确前缀共享](prefix_cache.md)，默认关闭；部分页 COW、
   抢占重算尚未迁入真实模型路径，不能用旧示例的 feature flag 宣称支持。
 

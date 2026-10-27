@@ -1,6 +1,7 @@
 # 开发路线与验收
 
-2026-10-26：M0 已完成；M1 已有请求生命周期/配置/原生 runner，调度与高级 KV 提取未完成；
+2026-10-27：M0 已完成；M1 已有请求生命周期/配置/原生 runner 和统一 KVManager，
+独立调度与重算未完成；
 M2 已完成首个 SmolLM2-135M-Instruct CPU/CUDA 正确性闭环；M3 已有分页 KV/权重常驻
 GPU、完整 forward 与设备增量页表更新，COW 尚未实现；M4 已建立无缓存 dense/paged FP32 基线，
 已接入最小精确前缀缓存、增量 prefill 与冷/热 paired 实验；共享/混合/零共享八请求流的

@@ -1,7 +1,6 @@
 #pragma once
 #include "request.h"
-#include "paged_kv.h"
-#include "prefix_cache.h"
+#include "kv_manager.h"
 #include "tinyinfer/core/tensor.h"
 #include <map>
 #include <memory>
@@ -30,6 +29,8 @@ struct RunnerStats {
     std::size_t kv_reserved_bytes=0,block_table_uploaded_bytes=0,block_table_device_bytes=0;
     std::size_t prefix_cache_capacity=0,kv_cached_blocks=0,kv_cache_only_blocks=0;
     std::size_t prefix_hits=0,prefix_misses=0,prefix_reused_tokens=0,prefix_evictions=0;
+    // Preserve the original field order/layout and map common metadata once.
+    void update_kv_stats(const KvStats& stats);
 };
 class ModelRunner {
 public:

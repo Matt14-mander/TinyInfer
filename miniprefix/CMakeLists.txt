@@ -5,9 +5,13 @@ target_compile_features(miniprefix_contracts INTERFACE cxx_std_17)
 target_include_directories(miniprefix_contracts INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 
+add_library(miniprefix_kv src/kv/paged_kv.cpp src/kv/prefix_cache.cpp src/kv/kv_manager.cpp)
+add_library(MiniPrefix::kv ALIAS miniprefix_kv)
+target_link_libraries(miniprefix_kv PUBLIC MiniPrefix::contracts)
+
 add_library(miniprefix_engine src/model/model.cpp src/backend/cpu/llama_runner.cpp src/engine/engine.cpp)
 add_library(MiniPrefix::engine ALIAS miniprefix_engine)
-target_link_libraries(miniprefix_engine PUBLIC MiniPrefix::contracts TinyInfer::tinyinfer)
+target_link_libraries(miniprefix_engine PUBLIC MiniPrefix::kv TinyInfer::tinyinfer)
 add_executable(miniprefix_worker apps/worker.cpp)
 target_link_libraries(miniprefix_worker PRIVATE MiniPrefix::engine)
 

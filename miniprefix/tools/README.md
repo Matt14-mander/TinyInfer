@@ -6,6 +6,8 @@ verify_prefix_cache.py 验证真实 CPU/CUDA 完整页面前缀共享、清理�
 缓存的五组暖进程 paired flows；原始证据与口径见 ../docs/prefix_cache.md。
 verify_incremental_prefill.py 验证默认页长下长 suffix、budget/chunk、逐步 logits、
 decode 混合与取消；只验收正确性及计算量，不报告性能。
+verify_kv_manager_refactor.py 对保存的重构前 worker 与新 worker 做精确差分：FP32 logits、
+事件、逐轮计数、错误及全部 STATS 字段，不把相近输出当作行为相同。
 requirements-reference.txt 固定参考依赖，CPU PyTorch 单独安装于工作区虚拟环境。
 
 后续提供显式触发的权重检查/转换、tokenizer 验证、独立框架参考导出和 fixture 准备。

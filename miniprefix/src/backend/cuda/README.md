@@ -4,6 +4,8 @@
 attention kernel 直接使用 block table 寻址。只上传新增页号，不上传 KV payload。
 完整页面的精确前缀复用已接入，只复制页号，不复制 KV。当前使用私有 RAII/cuBLAS/stream，
 尚未统一到 core 设备 API，尚无部分页 COW。
+公共序列/页池/前缀管理交由 KVManager；本后端保留 GPU payload、页表分配/上传和完成同步。
+追加异常必须先同步，再 rollback，防止在途 kernel 使用已回收页面。
 真实模型与基线边界见 docs/real_model.md、docs/baseline.md。
 
 目标是完整 GPU 模型执行、GPU 常驻权重/KV、packed/ragged attention、追加、COW 与

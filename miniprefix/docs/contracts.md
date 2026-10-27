@@ -1,7 +1,8 @@
 # 接口契约与不变量
 
 本文为接口演进约束。Engine 与 ModelRunner 已有首版代码接口，见 include/miniprefix/；
-KVManager、PrefixIndex 与 SchedulePlan 仍是目标接口，尚未成为真实模型的可调用 API。
+KVManager 已成为真实 CPU/CUDA runner 共用的可调用 API；更完整的 PrefixIndex 与
+SchedulePlan 仍是目标接口。当前精确索引由 manager 内部的 ExactPrefixCache 提供。
 
 ## 公共边界
 
@@ -29,6 +30,13 @@ prefill 可计算全部必需 attention 行，但只为需要的生成位置保�
 KVManager 目标操作：dry-run/prepare、commit、rollback、release_sequence、
 retain/release_cached_prefix、stats。申请结果包含 sequence handle 和资源 lease；
 异步场景必须使用代次/epoch 防止旧 completion 引用已复用 slot。
+
+当前同步接口提供 create/reuse_prefix/cache_prefix/prepare_append/reset_sequence/release/
+clear_prefix_cache/clear/stats。prepare_append 返回不可复制/移动的 Append 事务；
+commit 推进历史及实际 forward，rollback/析构仅归还新增页。sequence 返回只读借用视图，
+只在序列/事务存活时有效。待提交事务存在时，禁止重置/释放相应序列或 clear 全部状态。
+调用者在 GPU 访问结束后才能回滚；manager 自身不调用 CUDA，也不假设主机 scope 结束
+代表 kernel 已完成。共享页面恢复的设备页表上传失败时，可 reset_sequence 保留空序列。
 
 - prepare 失败不能留下部分映射、引用或可见 token。
 - 失败/取消先等待在途设备访问终止，再释放引用；禁止对同一 batch 静默 CPU 重跑。

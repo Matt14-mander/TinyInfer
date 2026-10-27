@@ -1,6 +1,7 @@
 # PrefixIndex
 
-状态：include/miniprefix/prefix_cache.h 已实现真实 CPU/CUDA 共用的 ExactPrefixCache。
+状态：include/miniprefix/prefix_cache.h 声明 ExactPrefixCache，算法实现在 src/kv/prefix_cache.cpp，
+由统一 KVManager 持有。CPU/CUDA runner 通过 manager 调用，不直接操作缓存或页池。
 完整 token 历史的 vector key、完整页面匹配、请求/缓存引用、页面 LRU 和压力淘汰已接入。
 默认关闭，跨同一 runner 的请求保留。边界与实际验收见 ../../docs/prefix_cache.md。
 

@@ -6,8 +6,9 @@
 
 ## 匹配与所有权
 
-- `ExactPrefixCache` 位于 `include/miniprefix/prefix_cache.h`；与 KvBlockPool 共用页面
-  引用计数。每个索引项持有一个完整页面，活跃请求也各持有引用；只有引用归零才回收。
+- `ExactPrefixCache` 接口位于 `include/miniprefix/prefix_cache.h`，实现位于 src/kv/prefix_cache.cpp，
+  由 KVManager 与 KvBlockPool 一起持有。每个索引项持有一个完整页面，活跃请求也各持有
+  引用；只有引用归零才回收。
 - 每页的 key 是从位置 0 到该页末尾的**全部 token ID**，用 vector 精确比较，包含
   所有先前位置的因果上下文。后续页面 token 相同但此前 prefix 不同，不能误命中。
 - 索引限定在一个固定权重、配置、FP32 布局和 RoPE 的 runner 内，不与另一个模型或

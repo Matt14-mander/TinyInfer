@@ -54,4 +54,13 @@ std::shared_ptr<ModelWeights> ModelWeights::load(const std::string& path) {
     if(file.peek()!=std::char_traits<char>::eof())throw std::runtime_error("trailing model data");
     return model;
 }
+void RunnerStats::update_kv_stats(const KvStats& stats){
+    live_sequences=stats.live_sequences;live_kv_bytes=stats.live_kv_bytes;
+    peak_kv_bytes=stats.peak_kv_bytes;forward_tokens=stats.forward_tokens;
+    kv_block_tokens=stats.kv_block_tokens;kv_total_blocks=stats.kv_total_blocks;
+    kv_live_blocks=stats.kv_live_blocks;kv_peak_blocks=stats.kv_peak_blocks;kv_reserved_bytes=stats.kv_reserved_bytes;
+    prefix_cache_capacity=stats.prefix_cache_capacity;kv_cached_blocks=stats.kv_cached_blocks;
+    kv_cache_only_blocks=stats.kv_cache_only_blocks;prefix_hits=stats.prefix_hits;prefix_misses=stats.prefix_misses;
+    prefix_reused_tokens=stats.prefix_reused_tokens;prefix_evictions=stats.prefix_evictions;
+}
 } // namespace miniprefix

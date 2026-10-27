@@ -2,9 +2,26 @@
 #include <cassert>
 #include <iostream>
 #include <limits>
+#include <cstddef>
+#include <type_traits>
 
 using namespace miniprefix;
 namespace {
+static_assert(std::is_standard_layout<RunnerStats>::value,"RunnerStats keeps its field layout");
+static_assert(sizeof(RunnerStats)==25*sizeof(std::size_t),"STATS remains 25 fields");
+static_assert(offsetof(RunnerStats,device_weight_bytes)==4*sizeof(std::size_t),"preserve device field offset");
+static_assert(offsetof(RunnerStats,kv_block_tokens)==11*sizeof(std::size_t),"preserve KV field offset");
+void stats_mapping(){
+    RunnerStats stats;stats.device_weight_bytes=123;stats.token_uploaded_bytes=456;
+    stats.block_table_uploaded_bytes=789;stats.block_table_device_bytes=12;
+    KvStats common;common.live_sequences=2;common.forward_tokens=20;common.kv_live_blocks=3;
+    common.kv_reserved_bytes=100;common.prefix_hits=4;common.prefix_reused_tokens=16;
+    stats.update_kv_stats(common);
+    assert(stats.live_sequences==2&&stats.forward_tokens==20&&stats.kv_live_blocks==3);
+    assert(stats.kv_reserved_bytes==100&&stats.prefix_hits==4&&stats.prefix_reused_tokens==16);
+    assert(stats.device_weight_bytes==123&&stats.token_uploaded_bytes==456);
+    assert(stats.block_table_uploaded_bytes==789&&stats.block_table_device_bytes==12);
+}
 struct Call {RequestId id;std::size_t position;std::vector<TokenId> input;};
 class RecordingRunner final:public ModelRunner {
     ModelConfig config_;
@@ -87,5 +104,5 @@ void invalid_hit_and_logits(){
     assert(trace->publishes.empty()&&trace->positions.empty());
 }
 }
-int main(){interleaved_suffix();small_budget_and_cancel();invalid_hit_and_logits();
+int main(){stats_mapping();interleaved_suffix();small_budget_and_cancel();invalid_hit_and_logits();
     std::cout<<"incremental suffix prefill positions, budgets, interleaving, events and cleanup passed\n";}

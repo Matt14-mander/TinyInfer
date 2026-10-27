@@ -12,6 +12,8 @@ engine_prefill_test.cpp / miniprefix_engine_prefill_tests 验证命中后逐 chu
 budget、首事件边界、取消与失败清理；verify_incremental_prefill.py 提供真实 CPU/CUDA 对照。
 test_prefix_benefit.py 验证每个负载的模式顺序独立轮换、命中必须减少实际 forward/H2D，
 以及同轮配对速度比和 seed 成本摊销，避免性能报告的口径错误。
+kv_manager_test.cpp 验证统一追加事务、输入快照、提交/异常回滚、共享 lease、重置、
+压力淘汰及累计统计；engine_prefill_test.cpp 同时固定 RunnerStats 布局并检查设备计数不被覆盖。
 
 后续按 unit / integration / differential / cuda 分类组织：
 

@@ -1,9 +1,9 @@
 # 架构与模块所有权
 
 本文是目标架构。2026-10-23 已有 Engine、ModelConfig、CPU/CUDA Llama runner 和本地
-tokenizer/IPC 入口，以及 CPU/CUDA 共用 KvBlockPool 与序列页表；独立 Scheduler、完整
-KVManager 的部分页 COW 仍待实现。2026-10-25 新增 runner 内的 ExactPrefixCache、
-完整页面请求/缓存引用和页面 LRU；更高效的索引与独立调度模块仍待提取或实现。
+tokenizer/IPC 入口。2026-10-27 已从 CPU/CUDA runner 提取统一 KVManager，持有 KvBlockPool、
+序列页表、追加事务和 ExactPrefixCache。完整页面请求/缓存引用及页面 LRU 已实现；
+部分页 COW、更高效的索引与独立 Scheduler 仍待实现或提取。
 当前实现与目标架构的差异、真实模型和设备边界见 [real_model.md](real_model.md)。
 MiniPrefix 是 TinyInfer 的上层生成引擎，不创建第二套 Tensor、通用 allocator 或设备 runtime。
 
@@ -36,13 +36,18 @@ flowchart TD
 | Engine | 请求状态、已提交 token、输出事件、采样、完成/取消 | attention 数学、物理 block 分配细节 |
 | Scheduler | 活跃/等待/暂停队列、token 预算、抢占选择、计划 | 权重、tokenizer、设备内存 |
 | ModelRunner | 模型配置/权重引用、层执行、batch 元数据到 logits | 队列优先级、重复交付控制 |
-| KVManager | 物理 pool、sequence table、引用、COW、增量资源事务 | 前缀搜索算法、文本处理 |
+| KVManager | 物理页 metadata、sequence table、引用、增量资源事务与公共统计 | GPU payload/stream、文本处理 |
 | PrefixIndex | 带模型上下文的前缀 key、索引、访问/驱逐策略 | 独立释放或写入共享物理块 |
-| Backend | 算子/kernel、stream、completion 与设备更新 | HTTP、调度策略 |
+| Backend | KV payload、设备页表、算子/kernel、stream、completion 与设备更新 | HTTP、调度策略 |
 
 PrefixIndex 通过 KVManager 管理的 lease 持有缓存引用；请求和快照都是明确的持有者。
 驱逐先解除索引 lease，只有所有引用和在途设备访问都结束后，KVManager 才复用物理块。
 ModelRunner 输出 logits/完成句柄，Engine 执行首版 Greedy 采样与 token 提交。
+
+当前可调用接口为 include/miniprefix/kv_manager.h，实现位于 src/kv/，通过 MiniPrefix::kv
+链接。每个 runner 拥有一个 manager，模型/配置作用域仍然隔离。Append 事务只管理 host
+metadata；CUDA runner 负责同步后再 rollback/release/clear。RunnerStats 保留原字段顺序，
+通过统一适配方法合并 KvStats，不混入设备分配和传输计数。
 
 ## 请求状态与恢复
 

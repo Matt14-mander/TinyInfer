@@ -3,6 +3,8 @@
 现有 examples/serving_scheduler 是可运行参考，MiniPrefix 已有真实模型 CPU/CUDA 闭环与
 独立性能基线；真实模型已实现 CPU/CUDA 分页池、直接寻址和完整页面的精确前缀缓存。
 部分页 COW 和抢占重算仍待实现；页池/索引见 include/miniprefix/paged_kv.h 与 prefix_cache.h。
+CPU/CUDA 的公共协调已提取为 KVManager，接口在 include/miniprefix/kv_manager.h，
+页池/索引/manager 的实现均位于 src/kv，通过 MiniPrefix::kv 编译一次。
 迁移必须产生单一的通用实现，不在两个目录长期维护同一算法的副本。
 
 | 现有来源 | 目标位置 | 迁移方式 |
