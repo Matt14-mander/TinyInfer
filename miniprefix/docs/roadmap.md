@@ -1,10 +1,11 @@
 # 开发路线与验收
 
-2026-10-25：M0 已完成；M1 已有请求生命周期/配置/原生 runner，调度与高级 KV 提取未完成；
+2026-10-26：M0 已完成；M1 已有请求生命周期/配置/原生 runner，调度与高级 KV 提取未完成；
 M2 已完成首个 SmolLM2-135M-Instruct CPU/CUDA 正确性闭环；M3 已有分页 KV/权重常驻
 GPU、完整 forward 与设备增量页表更新，COW 尚未实现；M4 已建立无缓存 dense/paged FP32 基线，
-已接入最小精确前缀缓存与冷/热 paired 实验；M5 的完整页面共享、页面 LRU 已开始，
-索引优化和更大负载未完成。验收边界见 [精确前缀缓存](prefix_cache.md)、[真实模型](real_model.md)
+已接入最小精确前缀缓存、增量 prefill 与冷/热 paired 实验；共享/混合/零共享八请求流的
+45 进程 CUDA [收益测量](prefix_benefit.md) 已完成。M5 的完整页面共享、页面 LRU 已开始，
+索引优化和长时间负载未完成。验收边界见 [精确前缀缓存](prefix_cache.md)、[真实模型](real_model.md)
 和 [基线协议](baseline.md)，不把局部实现当整个阶段全部完成。
 
 | 阶段 | 交付 | 验收门槛 |

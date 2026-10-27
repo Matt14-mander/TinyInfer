@@ -9,6 +9,7 @@ FP32 端到端性能基线。** 入口、权重准备与数值验收见 [真实�
 与 [分页验收报告](docs/acceptance/paged-kv-smollm2-fp32.md)。2026-10-25 新增
 [最小精确前缀缓存](docs/prefix_cache.md)，默认关闭、可显式配置页面容量。
 2026-10-26 补齐 [命中后的增量 prefill](docs/incremental_prefill.md) 范围校验、逐轮计数与长 suffix 验收。
+共享/混合/零共享八请求流的 off/cold/warm 独立进程对照，见 [真实收益测量](docs/prefix_benefit.md)。
 
 当前 CPU/CUDA KV 已改为共享 block 池和序列 block table，CUDA 权重/KV 常驻，详见
 [分页 KV](docs/paged_kv.md)；runner 按 sequence 顺序执行。原

@@ -2,7 +2,8 @@
 
 状态：baseline.py 已建立 SmolLM2-135M-Instruct FP32 原生 CPU/CUDA 首个端到端基线，
 见 docs/baseline.md 的测量协议与 docs/acceptance/baseline-smollm2-fp32.md 的冻结结果。
-实际 prefix cache ablation 等待真实模型的共享能力接入。
+prefix_benefit.py 提供真实模型八请求负载的 off/cold/warm 独立进程 ablation，覆盖
+共享 96-token 根、半数共享和零共享控制；协议见 ../docs/prefix_benefit.md。
 
 保留 cold start 与 warm serving 两种窗口。记录模型/权重/tokenizer revision、精度、
 硬件/驱动、构建、warmup、到达过程、输入/输出长度、原始时间戳与重复进程次数。

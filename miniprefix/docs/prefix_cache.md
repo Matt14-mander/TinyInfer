@@ -83,6 +83,7 @@ raw logits、对齐边界、同页不同因果历史、分支、并发共享、�
 与不可抢占活跃引用时的失败清理。另保留原无缓存真实模型和 CTest 回归。
 结果见 [精确前缀验收](acceptance/exact-prefix-smollm2-fp32.md)。
 2026-10-26 补齐长 suffix 的分块计数、调度边界和专门验收，见 [增量 prefill](incremental_prefill.md)。
+八请求共享/混合/零共享负载的独立进程 off/cold/warm 测量见 [真实收益协议](prefix_benefit.md)。
 
 该实验是单个暖进程内的五组 paired flows，参考计算、tokenizer、clear、stats、启动和
 warmup 在窗口外；不是原八请求持续到达负载，也不取代历史无缓存 dense/paged 基线。

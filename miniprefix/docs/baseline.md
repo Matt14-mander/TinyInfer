@@ -73,3 +73,5 @@ docs/acceptance/，不包含模型权重。手算 timestamp/TPOT、nearest rank 
 由 tests/test_baseline.py 验证，运行 `python -m unittest discover -s miniprefix/tests -v`。
 结果解释见 [历史 dense 报告](acceptance/baseline-smollm2-fp32.md) 和
 [paged 报告](acceptance/paged-kv-smollm2-fp32.md)。历史 JSON 不覆盖；当前脚本拒绝 dense 验收。
+前缀收益使用单独的共享/混合/零共享八请求流，见 [测量协议](prefix_benefit.md)，
+不与此处四种短 chat prompt 的历史数字拼接速度比。
