@@ -29,26 +29,82 @@ public:
     std::map<RequestId,std::size_t> hits,positions,restores,publishes;
     std::vector<Call> calls;
     bool invalid_logits=false;
+    RequestId failing_request;
+    int cleanup_failure=0,clear_calls=0,release_calls=0;
+    int runtime_context=128;
+    bool reuse_published_prefix=false;
     RecordingRunner(){config_.context=128;config_.vocabulary=128;}
     const ModelConfig& config() const override{return config_;}
+    int context_limit() const override{return runtime_context;}
     void create(const RequestId& id) override{assert(!positions.count(id));positions[id]=0;}
-    std::size_t reuse_prefix(const RequestId& id,const std::vector<TokenId>&) override{
+    std::size_t reuse_prefix(const RequestId& id,const std::vector<TokenId>& prompt) override{
+        if(reuse_published_prefix&&!publishes.empty()&&prompt.size()>4)hits[id]=4;
         ++restores[id];return positions[id]=hits[id];
     }
     void cache_prefix(const RequestId& id) override{++publishes[id];}
     std::vector<float> append(const RequestId& id,const std::vector<TokenId>& tokens) override{
         assert(!tokens.empty());calls.push_back({id,positions.at(id),tokens});positions[id]+=tokens.size();
+        if(id==failing_request)throw std::runtime_error("forward failed");
         std::vector<float> logits(128,0);logits[(tokens.back()+1)%128]=1;
         if(invalid_logits)logits[0]=std::numeric_limits<float>::quiet_NaN();
         return logits;
     }
-    void release(const RequestId& id) override{assert(positions.erase(id)==1);}
-    void clear() override{positions.clear();}
+    void release(const RequestId& id) override{++release_calls;assert(positions.erase(id)==1);}
+    void clear() override{
+        ++clear_calls;
+        if(cleanup_failure==1)throw std::runtime_error("stream synchronization failed");
+        if(cleanup_failure==2)throw 42;
+        positions.clear();
+    }
     RunnerStats stats() const override{RunnerStats s;s.kv_block_tokens=4;s.live_sequences=positions.size();return s;}
 };
 Request request(std::string id,int length,int output=2){
     Request r;r.id=std::move(id);for(int i=0;i<length;++i)r.prompt_token_ids.push_back(i+1);
     r.generation.max_new_tokens=output;return r;
+}
+void runner_context_validation(){
+    // A larger model context must not hide a smaller runtime limit.
+    for(int limit:{-1,0,4}){
+        auto runner=std::make_unique<RecordingRunner>();runner->runtime_context=limit;
+        bool rejected=false;
+        try{Engine engine(std::move(runner),{1,8,8,5});}
+        catch(const std::invalid_argument&){rejected=true;}
+        assert(rejected);
+    }
+    // Keep validating the model maximum even if a runner overstates its limit.
+    auto oversized=std::make_unique<RecordingRunner>();oversized->runtime_context=256;
+    bool rejected=false;
+    try{Engine engine(std::move(oversized),{1,8,8,129});}
+    catch(const std::invalid_argument&){rejected=true;}
+    assert(rejected);
+    for(int context:{3,4}){
+        auto runner=std::make_unique<RecordingRunner>();auto* trace=runner.get();
+        runner->runtime_context=4;
+        Engine engine(std::move(runner),{1,8,8,context});
+        // Admission still uses prompt + max_new_tokens; rejection is nonfatal.
+        rejected=false;
+        try{engine.submit(request("too-long",context,1));}
+        catch(const std::invalid_argument&){rejected=true;}
+        assert(rejected&&trace->calls.empty()&&trace->positions.empty());
+        assert(engine.idle()&&engine.poll_events().empty());
+        engine.submit(request("boundary",context-1,1));
+        assert(engine.step()&&engine.idle());
+        auto events=engine.poll_events();
+        assert(events.size()==1&&events[0].token_id&&events[0].finish_reason==FinishReason::Length);
+    }
+    // Exercise the actual CPU runner's KV-backed limit, not just the test double.
+    auto weights=std::make_shared<ModelWeights>();
+    auto& c=weights->config;c.layers=1;c.hidden=2;c.heads=1;c.kv_heads=1;
+    c.intermediate=2;c.vocabulary=8;c.context=128;c.eos=0;c.rms_epsilon=1e-5F;c.rope_theta=10000;
+    c.validate();
+    auto cpu=make_cpu_runner(weights,5,{4,2,0});
+    assert(cpu->config().context==128&&cpu->context_limit()==5);
+    rejected=false;
+    try{Engine engine(std::move(cpu),{1,8,8,6});}
+    catch(const std::invalid_argument&){rejected=true;}
+    assert(rejected);
+    Engine boundary(make_cpu_runner(weights,5,{4,2,0}),{1,8,8,5});
+    assert(boundary.idle());
 }
 void interleaved_suffix(){
     auto runner=std::make_unique<RecordingRunner>();auto* trace=runner.get();trace->hits["suffix"]=8;
@@ -103,6 +159,87 @@ void invalid_hit_and_logits(){
     auto events=engine.poll_events();assert(events.size()==1&&events[0].finish_reason==FinishReason::Error);
     assert(trace->publishes.empty()&&trace->positions.empty());
 }
+void cleanup_failure_still_finishes_requests(){
+    for(int failure:{0,1,2}){
+        auto runner=std::make_unique<RecordingRunner>();auto* trace=runner.get();
+        trace->failing_request="broken";trace->cleanup_failure=failure;
+        Engine engine(std::move(runner),{3,8,4,128});
+        engine.submit(request("finished",1,1));
+        engine.submit(request("broken",1));
+        engine.submit(request("active",1));
+        engine.submit(request("waiting",1));
+        assert(engine.step());
+        auto events=engine.poll_events();
+        assert(events.size()==4&&engine.idle()&&trace->clear_calls==1);
+        assert(events[0].request_id=="finished"&&events[0].token_id);
+        assert(events[0].finish_reason==FinishReason::Length);
+        std::string expected="forward failed";
+        if(failure==1)expected+="; cleanup failed: stream synchronization failed";
+        if(failure==2)expected+="; cleanup failed: unknown exception";
+        const std::vector<RequestId> failed_ids={"broken","active","waiting"};
+        for(std::size_t i=0;i<failed_ids.size();++i){
+            const auto& event=events[i+1];
+            assert(event.request_id==failed_ids[i]&&!event.token_id);
+            assert(event.finish_reason==FinishReason::Error&&event.error_message==expected);
+        }
+        // Cleanup failure must not cause per-sequence release or a forward retry.
+        assert(trace->release_calls==1&&trace->calls.size()==2);
+        assert(trace->positions.size()==(failure?1:0));
+        bool rejected=false;
+        try{engine.step();}catch(const std::runtime_error&){rejected=true;}
+        assert(rejected);rejected=false;
+        try{engine.submit(request("new",1));}catch(const std::runtime_error&){rejected=true;}
+        assert(rejected&&engine.poll_events().empty());
+        assert(trace->calls.size()==2&&trace->clear_calls==1);
+        // Retrying shutdown cleanup cannot create duplicate terminal events.
+        trace->cleanup_failure=0;engine.shutdown();engine.shutdown();
+        assert(engine.poll_events().empty()&&trace->positions.empty());
+    }
 }
-int main(){stats_mapping();interleaved_suffix();small_budget_and_cancel();invalid_hit_and_logits();
+void lazy_prefix_and_boundary_refill(){
+    auto runner=std::make_unique<RecordingRunner>();auto* trace=runner.get();
+    trace->reuse_published_prefix=true;
+    Engine engine(std::move(runner),{2,8,8,128});
+    engine.submit(request("seed",5,1));engine.submit(request("follower",9,2));engine.submit(request("waiting",1,1));
+    assert(engine.step());auto events=engine.poll_events();
+    assert(events.size()==1&&events[0].request_id=="seed"&&events[0].finish_reason==FinishReason::Length);
+    assert(trace->calls.size()==2&&trace->calls[0].input.size()==5);
+    assert(trace->calls[1].id=="follower"&&trace->calls[1].position==4&&trace->calls[1].input.size()==3);
+    assert(trace->restores.count("waiting")==0);
+    assert(engine.last_step_stats().prefix_reused_tokens==4&&engine.last_step_stats().prefill_tokens==8);
+    assert(engine.step());events=engine.poll_events();
+    assert(events.size()==2&&events[0].request_id=="follower"&&events[1].request_id=="waiting");
+    assert(!events[0].finish_reason&&events[1].finish_reason==FinishReason::Length);
+    assert(trace->calls[2].position==7&&trace->calls[2].input.size()==2);
+    assert(trace->calls[3].id=="waiting"&&engine.last_step_stats().prefill_tokens==3);
+    assert(engine.last_step_stats().prefix_reused_tokens==0);
+    assert(engine.step());events=engine.poll_events();
+    assert(events.size()==1&&events[0].request_id=="follower"&&*events[0].token_id==11);
+    assert(events[0].finish_reason==FinishReason::Length&&engine.last_step_stats().decode_tokens==1);
+    assert(engine.idle()&&!engine.step()&&engine.last_step_stats().decode_tokens==0);
+}
+void stable_decode_priority_and_cancel(){
+    auto runner=std::make_unique<RecordingRunner>();auto* trace=runner.get();
+    Engine engine(std::move(runner),{3,2,1,128});
+    engine.submit(request("a",1,3));engine.submit(request("b",1,3));engine.submit(request("prefill",4,1));
+    engine.submit(request("cancel-waiting",1,1));engine.submit(request("next",1,1));
+    engine.step();auto events=engine.poll_events();assert(events.size()==2);
+    assert(trace->restores.count("prefill")==0);
+    engine.step();events=engine.poll_events();assert(events.size()==2);
+    assert(trace->calls[2].id=="a"&&trace->calls[3].id=="b");
+    assert(engine.last_step_stats().decode_tokens==2&&trace->restores.count("prefill")==0);
+    engine.cancel("a");engine.cancel("cancel-waiting");events=engine.poll_events();
+    assert(events.size()==2&&events[0].finish_reason==FinishReason::Cancelled&&events[1].finish_reason==FinishReason::Cancelled);
+    engine.step();events=engine.poll_events();
+    assert(events.size()==1&&events[0].request_id=="b"&&events[0].finish_reason==FinishReason::Length);
+    assert(trace->calls[4].id=="b"&&trace->calls[5].id=="prefill");
+    assert(trace->restores.count("next")==0); // admitted, but budget exhausted
+    engine.cancel("prefill");engine.poll_events();
+    engine.step();events=engine.poll_events();
+    assert(events.size()==1&&events[0].request_id=="next"&&events[0].finish_reason==FinishReason::Length);
+    assert(engine.idle()&&trace->positions.empty());
+}
+}
+int main(){stats_mapping();runner_context_validation();interleaved_suffix();small_budget_and_cancel();invalid_hit_and_logits();cleanup_failure_still_finishes_requests();
+    lazy_prefix_and_boundary_refill();stable_decode_priority_and_cancel();
     std::cout<<"incremental suffix prefill positions, budgets, interleaving, events and cleanup passed\n";}

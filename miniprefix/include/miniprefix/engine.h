@@ -1,5 +1,6 @@
 #pragma once
 #include "model.h"
+#include "scheduler.h"
 #include <deque>
 #include <set>
 
@@ -18,15 +19,19 @@ public:
     void cancel(const RequestId&);
     void shutdown();
     bool idle() const;
+    bool failed() const;
     ModelRunner& runner(){return *runner_;}
     const EngineStepStats& last_step_stats() const{return step_stats_;}
 private:
-    struct State{Request request;std::size_t prefilled=0;std::vector<TokenId> output;bool resident=false;};
-    std::unique_ptr<ModelRunner> runner_;EngineConfig config_;
+    struct State{Request request;std::size_t prefilled=0;std::vector<TokenId> output;bool resident=false,finished=false;};
+    enum class TerminalCleanup { ReleaseSequence, RunnerManaged };
+    std::unique_ptr<ModelRunner> runner_;EngineConfig config_;Scheduler scheduler_;
     std::deque<State> waiting_;std::vector<State> active_;std::set<RequestId> seen_;
     std::vector<GenerationEvent> events_;bool failed_=false;
     EngineStepStats step_stats_;
     void restore_prefix(State&);
-    void terminal(State&,FinishReason,const std::string& error="");
+    void terminal(State&,FinishReason,std::optional<TokenId> token=std::nullopt,
+                  const std::string& error="",TerminalCleanup cleanup=TerminalCleanup::ReleaseSequence);
+    void remove_finished(bool include_waiting=false);
 };
 } // namespace miniprefix

@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "before_sha256": "4281ec6b4d905aab91c107ee777daddf414302a478091a028f0e77ed38941c35",
+  "after_sha256": "9dabc1a53f429ffead65f366aad70dfe4d92100a516b40cbf95ed89012deaba2",
+  "model_sha256": "fe826f487690854ac806197b60edffc2c76c6c446eede6b188e47763deae7aef",
+  "records": [
+    {
+      "backend": "cpu",
+      "case": "mixed-and-quit",
+      "returncode": 0,
+      "stdout_sha256": "df73edf6398d630ccd032e20a252f7047e131ec9f44ccd3a3b4d68ba981c58b2",
+      "stdout_bytes": 1611672,
+      "response_lines": 40,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "backend": "cpu",
+      "case": "eof-with-pending-request",
+      "returncode": 0,
+      "stdout_sha256": "14ae4a0b4e8bd03b0f18b7b2d8ced76566f176bfb7acea5f82326a289e28ac28",
+      "stdout_bytes": 63,
+      "response_lines": 4,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

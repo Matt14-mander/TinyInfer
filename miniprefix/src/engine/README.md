@@ -5,6 +5,20 @@ EOS/长度/错误终态。active 请求的 runner 调用仍逐个执行；高级
 已校验命中范围并从命中位置分块执行剩余 prompt；last_step_stats 分开报告复用、实际
 prefill/decode token。长 suffix 与 decode 混合验证见 ../../docs/incremental_prefill.md。
 
+终态统一由 `terminal` 提交：正常完成可携带最后一个 token，取消/失败不携带 token；
+EOS 仍优先于长度限制。正常完成/取消先释放 resident sequence，执行失败路径在 runner
+全局清理交给 runner，使用 `RunnerManaged` 模式，禁止再次按请求释放，即使 clear 抛异常。
+只有终态事件成功入队后
+才标记 finished，`remove_finished` 统一移除队列中的已完成请求，保留其他请求的顺序。
+
+同一轮中已经完成的请求不会被后续失败重复终结，已经发出的非终态 token 保持不变。
+shutdown 按 active、waiting 顺序终结；若某个 release 抛异常，已完成项会先移除再
+传播异常，重试 shutdown 不重复发事件或释放。失败的 release 不被标记为已完成。
+独立的 `engine_terminal_test.cpp` 覆盖这些行为；清理失败时 Engine 仍进入 failed 状态、
+提交每个未完成请求的错误终态，保留原执行错误和清理诊断。资源仍由 runner 持有。
+`failed()` 为只读状态，worker 也据此拒绝绕过 Engine 的诊断调用；统计仍可查询，
+shutdown 可以重试全局清理。
+
 负责 RequestState、事件队列、生成迭代、Greedy 采样、EOS/长度结束、取消、失败与
 shutdown。持有请求已提交 token 与时间戳，协调 Scheduler、KVManager 和 ModelRunner。
 恢复 KV 不改变已提交输出；内存回收等待设备 completion。

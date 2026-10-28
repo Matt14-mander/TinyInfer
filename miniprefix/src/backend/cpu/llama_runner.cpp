@@ -39,6 +39,7 @@ public:
         if(context<1||context>config().context)throw std::invalid_argument("invalid runner context");
         keys_.resize(kv_.reserved_bytes()/sizeof(float)/2);values_.resize(keys_.size());}
     const ModelConfig& config() const override{return weights_->config;}
+    int context_limit() const override{return kv_.context_limit();}
     void create(const RequestId& id) override{
         kv_.create(id);
     }

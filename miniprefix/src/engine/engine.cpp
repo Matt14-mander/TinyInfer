@@ -3,8 +3,16 @@
 #include <cmath>
 
 namespace miniprefix {
-Engine::Engine(std::unique_ptr<ModelRunner> runner,EngineConfig config):runner_(std::move(runner)),config_(config){
-    if(!runner_||config.max_batch_size<1||config.token_budget<1||config.prefill_chunk<1||config.context<1||config.context>runner_->config().context)
+namespace {
+SchedulerConfig scheduler_config(const EngineConfig& config){
+    if(config.max_batch_size<1||config.token_budget<1||config.prefill_chunk<1)
+        throw std::invalid_argument("invalid engine configuration");
+    return {config.max_batch_size,config.token_budget,config.prefill_chunk};
+}
+}
+Engine::Engine(std::unique_ptr<ModelRunner> runner,EngineConfig config):runner_(std::move(runner)),config_(config),
+    scheduler_(scheduler_config(config)){
+    if(!runner_||config.max_batch_size<1||config.token_budget<1||config.prefill_chunk<1||config.context<1||config.context>runner_->config().context||config.context>runner_->context_limit())
         throw std::invalid_argument("invalid engine configuration");
 }
 Engine::~Engine(){try{shutdown();}catch(...){}}
@@ -17,9 +25,20 @@ void Engine::submit(Request request){
     if(request.generation.eos_token_id&&(*request.generation.eos_token_id<0||*request.generation.eos_token_id>=runner_->config().vocabulary))throw std::invalid_argument("invalid EOS");
     State state;state.request=std::move(request);waiting_.push_back(std::move(state));seen_.insert(waiting_.back().request.id);
 }
-void Engine::terminal(State& state,FinishReason reason,const std::string& error){
-    if(state.resident){runner_->release(state.request.id);state.resident=false;}
-    events_.push_back({state.request.id,std::nullopt,reason,error});
+void Engine::terminal(State& state,FinishReason reason,std::optional<TokenId> token,
+                      const std::string& error,TerminalCleanup cleanup){
+    if(state.finished)return;
+    // Normal completion/cancellation releases its lease first. Fatal failure
+    // delegates cleanup to the runner, even if clear failed; never force per-ID release.
+    if(state.resident&&cleanup==TerminalCleanup::ReleaseSequence)runner_->release(state.request.id);
+    state.resident=false;
+    events_.push_back({state.request.id,token,reason,error});
+    state.finished=true;
+}
+void Engine::remove_finished(bool include_waiting){
+    const auto finished=[](const State& state){return state.finished;};
+    active_.erase(std::remove_if(active_.begin(),active_.end(),finished),active_.end());
+    if(include_waiting)waiting_.erase(std::remove_if(waiting_.begin(),waiting_.end(),finished),waiting_.end());
 }
 void Engine::restore_prefix(State& state){
     auto& request=state.request;
@@ -36,23 +55,23 @@ void Engine::restore_prefix(State& state){
 bool Engine::step(){
     step_stats_={};
     if(failed_)throw std::runtime_error("engine failed");
-    while(!waiting_.empty()&&active_.size()<std::size_t(config_.max_batch_size)){
+    const auto admitted=scheduler_.admission_count(active_.size(),waiting_.size());
+    for(std::size_t i=0;i<admitted;++i){
         active_.push_back(std::move(waiting_.front()));waiting_.pop_front();}
     if(active_.empty())return false;
-    int remaining=config_.token_budget;std::set<RequestId> done;
     try{
-        // Existing decoders first, then one prefill chunk per active request.
-        std::vector<std::size_t> order;
-        for(std::size_t i=0;i<active_.size();++i)if(!active_[i].output.empty())order.push_back(i);
-        for(std::size_t i=0;i<active_.size();++i)if(active_[i].output.empty())order.push_back(i);
-        for(auto index:order){if(!remaining)break;auto& s=active_[index];auto& r=s.request;
+        std::vector<SchedulePhase> phases;
+        for(const auto& state:active_)phases.push_back(state.output.empty()?SchedulePhase::Prefill:SchedulePhase::Decode);
+        auto plan=scheduler_.plan(phases);
+        for(const auto& work:plan.order()){
+            if(!plan.has_budget())break;auto& s=active_[work.active_index];auto& r=s.request;
             if(!s.resident)restore_prefix(s);
-            const bool prefilling=s.output.empty();
+            const bool prefilling=work.phase==SchedulePhase::Prefill;
+            const auto count=plan.take_input(work.phase,r.prompt_token_ids.size()-s.prefilled);
             std::vector<TokenId> input;
             if(!prefilling)input={s.output.back()};
-            else{auto count=std::min({r.prompt_token_ids.size()-s.prefilled,std::size_t(config_.prefill_chunk),std::size_t(remaining)});
-                input.assign(r.prompt_token_ids.begin()+s.prefilled,r.prompt_token_ids.begin()+s.prefilled+count);}
-            auto logits=runner_->append(r.id,input);remaining-=static_cast<int>(input.size());
+            else input.assign(r.prompt_token_ids.begin()+s.prefilled,r.prompt_token_ids.begin()+s.prefilled+count);
+            auto logits=runner_->append(r.id,input);
             if(prefilling){s.prefilled+=input.size();step_stats_.prefill_tokens+=input.size();}
             else step_stats_.decode_tokens+=input.size();
             if(s.prefilled<r.prompt_token_ids.size())continue;
@@ -63,25 +82,37 @@ bool Engine::step(){
             s.output.push_back(token);std::optional<FinishReason> finish;
             if(r.generation.eos_token_id&&token==*r.generation.eos_token_id)finish=FinishReason::Eos;
             else if(s.output.size()==r.generation.max_new_tokens)finish=FinishReason::Length;
-            if(finish){runner_->release(r.id);s.resident=false;done.insert(r.id);}
-            events_.push_back({r.id,token,finish,{}});
+            if(finish)terminal(s,*finish,token);
+            else events_.push_back({r.id,token,std::nullopt,{}});
         }
-        active_.erase(std::remove_if(active_.begin(),active_.end(),[&](const State& s){return done.count(s.request.id)!=0;}),active_.end());
+        remove_finished();
     }catch(const std::exception& error){
-        // Synchronous runners return only after device access is terminal.
-        runner_->clear();failed_=true;
-        for(auto& s:active_)if(!done.count(s.request.id))events_.push_back({s.request.id,std::nullopt,FinishReason::Error,error.what()});
-        for(auto& s:waiting_)events_.push_back({s.request.id,std::nullopt,FinishReason::Error,error.what()});
-        active_.clear();waiting_.clear();
+        // Cleanup may itself fail (for example, CUDA stream synchronization).
+        // Poison the engine first; backend ownership must survive failed cleanup.
+        failed_=true;
+        std::string message=error.what();
+        try{runner_->clear();}
+        catch(const std::exception& cleanup){message+="; cleanup failed: ";message+=cleanup.what();}
+        catch(...){message+="; cleanup failed: unknown exception";}
+        for(auto& s:active_)terminal(s,FinishReason::Error,std::nullopt,message,TerminalCleanup::RunnerManaged);
+        for(auto& s:waiting_)terminal(s,FinishReason::Error,std::nullopt,message,TerminalCleanup::RunnerManaged);
+        remove_finished(true);
     }
     return true;
 }
 std::vector<GenerationEvent> Engine::poll_events(){auto result=std::move(events_);events_.clear();return result;}
 void Engine::cancel(const RequestId& id){
-    for(auto it=waiting_.begin();it!=waiting_.end();++it)if(it->request.id==id){terminal(*it,FinishReason::Cancelled);waiting_.erase(it);return;}
-    for(auto it=active_.begin();it!=active_.end();++it)if(it->request.id==id){terminal(*it,FinishReason::Cancelled);active_.erase(it);return;}
+    for(auto& state:waiting_)if(state.request.id==id&&!state.finished){terminal(state,FinishReason::Cancelled);remove_finished(true);return;}
+    for(auto& state:active_)if(state.request.id==id&&!state.finished){terminal(state,FinishReason::Cancelled);remove_finished();return;}
     throw std::invalid_argument("request is unknown or already terminal");
 }
-void Engine::shutdown(){for(auto& s:active_)terminal(s,FinishReason::Cancelled);for(auto& s:waiting_)terminal(s,FinishReason::Cancelled);active_.clear();waiting_.clear();runner_->clear();}
+void Engine::shutdown(){
+    try{
+        for(auto& s:active_)terminal(s,FinishReason::Cancelled);
+        for(auto& s:waiting_)terminal(s,FinishReason::Cancelled);
+    }catch(...){remove_finished(true);throw;}
+    remove_finished(true);runner_->clear();
+}
 bool Engine::idle() const{return active_.empty()&&waiting_.empty();}
+bool Engine::failed() const{return failed_;}
 } // namespace miniprefix

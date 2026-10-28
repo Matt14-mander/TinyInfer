@@ -2,7 +2,8 @@
 
 本文为接口演进约束。Engine 与 ModelRunner 已有首版代码接口，见 include/miniprefix/；
 KVManager 已成为真实 CPU/CUDA runner 共用的可调用 API；更完整的 PrefixIndex 与
-SchedulePlan 仍是目标接口。当前精确索引由 manager 内部的 ExactPrefixCache 提供。
+完整 SchedulePlan 仍是目标接口。当前 SchedulePlan 提供单轮候选顺序与延迟输入预算
+分配，不包含 packed batch 或重算计划；精确索引由 manager 内部的 ExactPrefixCache 提供。
 
 ## 公共边界
 
@@ -10,6 +11,11 @@ Engine 目标操作：submit(tokenized_request)、step()、poll_events()、cance
 drain()/shutdown()、stats()。文本接口经 tokenizer adapter 转换后调用相同 token API。
 每个 engine 生命周期内 request ID 唯一；非法输入在进入执行前失败。首版明确支持
 Greedy、max_new_tokens、EOS；不暴露暂未支持的采样参数。
+
+ModelRunner::context_limit() 返回该 runner 固定的单序列运行上限，由 KVManager
+保存，可小于 ModelConfig::context。Engine 构造时要求自身 context 同时不超过
+模型与 runner 上限；submit 继续校验 prompt + max_new_tokens 不超过 Engine context。
+此上限不表示共享 KV 池当前可用容量，页数不足仍由容量管理处理。
 
 GenerationEvent 可包含 token、终态或二者；取消/错误可无 token。完成和失败必须区分。
 Tokenizer、模型加载、warmup 不混入 warm serving 的请求延迟，但单独保留冷启动测量。
