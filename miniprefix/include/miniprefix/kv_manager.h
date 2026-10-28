@@ -51,6 +51,7 @@ public:
     KVManager& operator=(const KVManager&)=delete;
     ~KVManager();
     const KvCacheConfig& config() const;
+    int context_limit() const;
     std::size_t reserved_bytes() const;
     std::size_t max_sequence_blocks() const;
     bool contains(const RequestId& id) const;
