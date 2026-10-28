@@ -9,7 +9,7 @@ CPU/CUDA 的公共协调已提取为 KVManager，接口在 include/miniprefix/kv
 
 | 现有来源 | 目标位置 | 迁移方式 |
 |---|---|---|
-| scheduler.py / dynamic_scheduler.py | src/scheduler + engine | 保留 Python 轨迹/策略参考；C++ 计划接口就绪后逐项迁入 |
+| scheduler.py / dynamic_scheduler.py | src/scheduler + engine | 已提取 C++ 轮次准入、稳定顺序与预算；Python 动态容量/抢占策略仍作后续参考 |
 | tinyinfer_worker.cpp | src/model / engine / apps | 分离模型、packed forward、采样、状态与 IPC；旧协议留在适配层 |
 | native/paged_kv_cache.h | src/kv + src/prefix + backend/cpu | 先参数化层/head/dtype，再分离 block 所有权、索引和 attention |
 | native/cuda_paged_attention.h/.cu | src/backend/cuda | 保留旧 host 镜像路径作对照；新常驻路径通过 TinyInfer 设备抽象实现 |

@@ -9,9 +9,13 @@ add_library(miniprefix_kv src/kv/paged_kv.cpp src/kv/prefix_cache.cpp src/kv/kv_
 add_library(MiniPrefix::kv ALIAS miniprefix_kv)
 target_link_libraries(miniprefix_kv PUBLIC MiniPrefix::contracts)
 
+add_library(miniprefix_scheduler src/scheduler/scheduler.cpp)
+add_library(MiniPrefix::scheduler ALIAS miniprefix_scheduler)
+target_link_libraries(miniprefix_scheduler PUBLIC MiniPrefix::contracts)
+
 add_library(miniprefix_engine src/model/model.cpp src/backend/cpu/llama_runner.cpp src/engine/engine.cpp)
 add_library(MiniPrefix::engine ALIAS miniprefix_engine)
-target_link_libraries(miniprefix_engine PUBLIC MiniPrefix::kv TinyInfer::tinyinfer)
+target_link_libraries(miniprefix_engine PUBLIC MiniPrefix::kv MiniPrefix::scheduler TinyInfer::tinyinfer)
 add_executable(miniprefix_worker apps/worker.cpp)
 target_link_libraries(miniprefix_worker PRIVATE MiniPrefix::engine)
 

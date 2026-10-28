@@ -2,7 +2,8 @@
 
 本文为接口演进约束。Engine 与 ModelRunner 已有首版代码接口，见 include/miniprefix/；
 KVManager 已成为真实 CPU/CUDA runner 共用的可调用 API；更完整的 PrefixIndex 与
-SchedulePlan 仍是目标接口。当前精确索引由 manager 内部的 ExactPrefixCache 提供。
+完整 SchedulePlan 仍是目标接口。当前 SchedulePlan 提供单轮候选顺序与延迟输入预算
+分配，不包含 packed batch 或重算计划；精确索引由 manager 内部的 ExactPrefixCache 提供。
 
 ## 公共边界
 

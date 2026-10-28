@@ -3,7 +3,15 @@
 #include <cmath>
 
 namespace miniprefix {
-Engine::Engine(std::unique_ptr<ModelRunner> runner,EngineConfig config):runner_(std::move(runner)),config_(config){
+namespace {
+SchedulerConfig scheduler_config(const EngineConfig& config){
+    if(config.max_batch_size<1||config.token_budget<1||config.prefill_chunk<1)
+        throw std::invalid_argument("invalid engine configuration");
+    return {config.max_batch_size,config.token_budget,config.prefill_chunk};
+}
+}
+Engine::Engine(std::unique_ptr<ModelRunner> runner,EngineConfig config):runner_(std::move(runner)),config_(config),
+    scheduler_(scheduler_config(config)){
     if(!runner_||config.max_batch_size<1||config.token_budget<1||config.prefill_chunk<1||config.context<1||config.context>runner_->config().context)
         throw std::invalid_argument("invalid engine configuration");
 }
@@ -36,23 +44,24 @@ void Engine::restore_prefix(State& state){
 bool Engine::step(){
     step_stats_={};
     if(failed_)throw std::runtime_error("engine failed");
-    while(!waiting_.empty()&&active_.size()<std::size_t(config_.max_batch_size)){
+    const auto admitted=scheduler_.admission_count(active_.size(),waiting_.size());
+    for(std::size_t i=0;i<admitted;++i){
         active_.push_back(std::move(waiting_.front()));waiting_.pop_front();}
     if(active_.empty())return false;
-    int remaining=config_.token_budget;std::set<RequestId> done;
+    std::set<RequestId> done;
     try{
-        // Existing decoders first, then one prefill chunk per active request.
-        std::vector<std::size_t> order;
-        for(std::size_t i=0;i<active_.size();++i)if(!active_[i].output.empty())order.push_back(i);
-        for(std::size_t i=0;i<active_.size();++i)if(active_[i].output.empty())order.push_back(i);
-        for(auto index:order){if(!remaining)break;auto& s=active_[index];auto& r=s.request;
+        std::vector<SchedulePhase> phases;
+        for(const auto& state:active_)phases.push_back(state.output.empty()?SchedulePhase::Prefill:SchedulePhase::Decode);
+        auto plan=scheduler_.plan(phases);
+        for(const auto& work:plan.order()){
+            if(!plan.has_budget())break;auto& s=active_[work.active_index];auto& r=s.request;
             if(!s.resident)restore_prefix(s);
-            const bool prefilling=s.output.empty();
+            const bool prefilling=work.phase==SchedulePhase::Prefill;
+            const auto count=plan.take_input(work.phase,r.prompt_token_ids.size()-s.prefilled);
             std::vector<TokenId> input;
             if(!prefilling)input={s.output.back()};
-            else{auto count=std::min({r.prompt_token_ids.size()-s.prefilled,std::size_t(config_.prefill_chunk),std::size_t(remaining)});
-                input.assign(r.prompt_token_ids.begin()+s.prefilled,r.prompt_token_ids.begin()+s.prefilled+count);}
-            auto logits=runner_->append(r.id,input);remaining-=static_cast<int>(input.size());
+            else input.assign(r.prompt_token_ids.begin()+s.prefilled,r.prompt_token_ids.begin()+s.prefilled+count);
+            auto logits=runner_->append(r.id,input);
             if(prefilling){s.prefilled+=input.size();step_stats_.prefill_tokens+=input.size();}
             else step_stats_.decode_tokens+=input.size();
             if(s.prefilled<r.prompt_token_ids.size())continue;
