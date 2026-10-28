@@ -20,7 +20,7 @@ add_executable(miniprefix_worker apps/worker.cpp)
 target_link_libraries(miniprefix_worker PRIVATE MiniPrefix::engine)
 
 if(TINYINFER_ENABLE_CUDA)
-    add_library(miniprefix_cuda src/backend/cuda/llama_runner.cu)
+    add_library(miniprefix_cuda src/backend/cuda/llama_runner.cu src/backend/cuda/resources.cpp)
     target_compile_definitions(miniprefix_cuda PUBLIC MINIPREFIX_ENABLE_CUDA=1)
     target_link_libraries(miniprefix_cuda PUBLIC MiniPrefix::engine PRIVATE CUDA::cudart CUDA::cublas)
     set_target_properties(miniprefix_cuda PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED YES CUDA_RUNTIME_LIBRARY Shared)

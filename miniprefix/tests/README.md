@@ -8,6 +8,9 @@ prefix_cache_test.cpp / miniprefix_prefix_cache_tests 验证精确因果 key、�
 logits 边界、LRU 和活跃 lease。tools/verify_prefix_cache.py 验证真实 CPU/CUDA 共享
 与 cold/warm compute counter；口径见 ../docs/prefix_cache.md。
 后续原生引擎更细的单元与故障隔离覆盖继续按下述布局补齐。
+cuda_resources_test.cpp / miniprefix_cuda_resources_tests 验证 CUDA Allocation、StreamBlas
+与 Workspace 的独立生命周期，包含实际 SGEMM、容量复用/增长、申请失败保留旧资源、
+模式设置、重复清理和异常展开。仅 CUDA 配置构建，require-device 下缺少 GPU 会失败。
 engine_prefill_test.cpp / miniprefix_engine_prefill_tests 验证命中后逐 chunk token/绝对位置、
 budget、首事件边界、取消与失败清理；verify_incremental_prefill.py 提供真实 CPU/CUDA 对照。
 scheduler_test.cpp / miniprefix_scheduler_tests 独立链接 MiniPrefix::scheduler，验证
