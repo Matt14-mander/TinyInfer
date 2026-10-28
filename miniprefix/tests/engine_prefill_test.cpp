@@ -31,8 +31,10 @@ public:
     bool invalid_logits=false;
     RequestId failing_request;
     int cleanup_failure=0,clear_calls=0,release_calls=0;
+    int runtime_context=128;
     RecordingRunner(){config_.context=128;config_.vocabulary=128;}
     const ModelConfig& config() const override{return config_;}
+    int context_limit() const override{return runtime_context;}
     void create(const RequestId& id) override{assert(!positions.count(id));positions[id]=0;}
     std::size_t reuse_prefix(const RequestId& id,const std::vector<TokenId>&) override{
         ++restores[id];return positions[id]=hits[id];
@@ -57,6 +59,50 @@ public:
 Request request(std::string id,int length,int output=2){
     Request r;r.id=std::move(id);for(int i=0;i<length;++i)r.prompt_token_ids.push_back(i+1);
     r.generation.max_new_tokens=output;return r;
+}
+void runner_context_validation(){
+    // A larger model context must not hide a smaller runtime limit.
+    for(int limit:{-1,0,4}){
+        auto runner=std::make_unique<RecordingRunner>();runner->runtime_context=limit;
+        bool rejected=false;
+        try{Engine engine(std::move(runner),{1,8,8,5});}
+        catch(const std::invalid_argument&){rejected=true;}
+        assert(rejected);
+    }
+    // Keep validating the model maximum even if a runner overstates its limit.
+    auto oversized=std::make_unique<RecordingRunner>();oversized->runtime_context=256;
+    bool rejected=false;
+    try{Engine engine(std::move(oversized),{1,8,8,129});}
+    catch(const std::invalid_argument&){rejected=true;}
+    assert(rejected);
+    for(int context:{3,4}){
+        auto runner=std::make_unique<RecordingRunner>();auto* trace=runner.get();
+        runner->runtime_context=4;
+        Engine engine(std::move(runner),{1,8,8,context});
+        // Admission still uses prompt + max_new_tokens; rejection is nonfatal.
+        rejected=false;
+        try{engine.submit(request("too-long",context,1));}
+        catch(const std::invalid_argument&){rejected=true;}
+        assert(rejected&&trace->calls.empty()&&trace->positions.empty());
+        assert(engine.idle()&&engine.poll_events().empty());
+        engine.submit(request("boundary",context-1,1));
+        assert(engine.step()&&engine.idle());
+        auto events=engine.poll_events();
+        assert(events.size()==1&&events[0].token_id&&events[0].finish_reason==FinishReason::Length);
+    }
+    // Exercise the actual CPU runner's KV-backed limit, not just the test double.
+    auto weights=std::make_shared<ModelWeights>();
+    auto& c=weights->config;c.layers=1;c.hidden=2;c.heads=1;c.kv_heads=1;
+    c.intermediate=2;c.vocabulary=8;c.context=128;c.eos=0;c.rms_epsilon=1e-5F;c.rope_theta=10000;
+    c.validate();
+    auto cpu=make_cpu_runner(weights,5,{4,2,0});
+    assert(cpu->config().context==128&&cpu->context_limit()==5);
+    rejected=false;
+    try{Engine engine(std::move(cpu),{1,8,8,6});}
+    catch(const std::invalid_argument&){rejected=true;}
+    assert(rejected);
+    Engine boundary(make_cpu_runner(weights,5,{4,2,0}),{1,8,8,5});
+    assert(boundary.idle());
 }
 void interleaved_suffix(){
     auto runner=std::make_unique<RecordingRunner>();auto* trace=runner.get();trace->hits["suffix"]=8;
@@ -149,5 +195,5 @@ void cleanup_failure_still_finishes_requests(){
     }
 }
 }
-int main(){stats_mapping();interleaved_suffix();small_budget_and_cancel();invalid_hit_and_logits();cleanup_failure_still_finishes_requests();
+int main(){stats_mapping();runner_context_validation();interleaved_suffix();small_budget_and_cancel();invalid_hit_and_logits();cleanup_failure_still_finishes_requests();
     std::cout<<"incremental suffix prefill positions, budgets, interleaving, events and cleanup passed\n";}

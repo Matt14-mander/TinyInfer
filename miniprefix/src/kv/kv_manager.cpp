@@ -11,6 +11,7 @@ KVManager::~KVManager(){
     prefix_.clear();
 }
 const KvCacheConfig& KVManager::config() const{return pool_.config();}
+int KVManager::context_limit() const{return context_;}
 std::size_t KVManager::reserved_bytes() const{return pool_.reserved_bytes();}
 std::size_t KVManager::max_sequence_blocks() const{
     return std::size_t(context_/config().block_tokens+(context_%config().block_tokens!=0));

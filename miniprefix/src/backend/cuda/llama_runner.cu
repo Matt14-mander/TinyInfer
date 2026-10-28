@@ -89,6 +89,7 @@ public:
     }
     ~CudaRunner() override{if(stream_)cudaStreamSynchronize(stream_);block_tables_.clear();parameters_.clear();if(blas_)cublasDestroy(blas_);if(stream_)cudaStreamDestroy(stream_);}
     const ModelConfig& config() const override{return weights_->config;}
+    int context_limit() const override{return kv_.context_limit();}
     void create(const RequestId& id) override{
         if(kv_.contains(id))throw std::invalid_argument("sequence already exists");
         auto table=std::make_unique<Allocation>();table->ensure(kv_.max_sequence_blocks()*sizeof(int),stats_);

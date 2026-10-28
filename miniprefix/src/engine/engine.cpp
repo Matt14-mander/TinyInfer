@@ -4,7 +4,8 @@
 
 namespace miniprefix {
 Engine::Engine(std::unique_ptr<ModelRunner> runner,EngineConfig config):runner_(std::move(runner)),config_(config){
-    if(!runner_||config.max_batch_size<1||config.token_budget<1||config.prefill_chunk<1||config.context<1||config.context>runner_->config().context)
+    if(!runner_||config.max_batch_size<1||config.token_budget<1||config.prefill_chunk<1||config.context<1||
+       config.context>runner_->config().context||config.context>runner_->context_limit())
         throw std::invalid_argument("invalid engine configuration");
 }
 Engine::~Engine(){try{shutdown();}catch(...){}}

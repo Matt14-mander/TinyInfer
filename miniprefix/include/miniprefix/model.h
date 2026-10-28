@@ -36,6 +36,9 @@ class ModelRunner {
 public:
     virtual ~ModelRunner()=default;
     virtual const ModelConfig& config() const=0;
+    // Fixed per-sequence token limit of this runner, possibly below model context.
+    // This is independent of the shared KV pool's available page count.
+    virtual int context_limit() const=0;
     virtual void create(const RequestId&)=0;
     virtual std::size_t reuse_prefix(const RequestId&,const std::vector<TokenId>&){return 0;}
     virtual void cache_prefix(const RequestId&){}
