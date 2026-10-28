@@ -114,4 +114,5 @@ void Engine::shutdown(){
     remove_finished(true);runner_->clear();
 }
 bool Engine::idle() const{return active_.empty()&&waiting_.empty();}
+bool Engine::failed() const{return failed_;}
 } // namespace miniprefix

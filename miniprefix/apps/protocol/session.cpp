@@ -8,6 +8,11 @@ int serve(Engine& engine,std::istream& in,std::ostream& out){
     while(std::getline(in,line)){
         try{
             auto command=parse(line);
+            // Diagnostics share the runner with Engine. Once execution has
+            // failed, even a direct diagnostic call must not reuse that backend.
+            if(engine.failed()&&(command.kind==Kind::Forward||command.kind==Kind::Reuse||
+               command.kind==Kind::Cache||command.kind==Kind::Release||command.kind==Kind::ClearPrefix))
+                throw std::runtime_error("engine failed; create a new engine");
             switch(command.kind){
             case Kind::Submit:engine.submit(std::move(command.request));ok(out);break;
             case Kind::Step:engine.step();events(out,engine.poll_events());break;

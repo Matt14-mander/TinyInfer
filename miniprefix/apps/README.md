@@ -15,6 +15,8 @@ miniprefix_worker_protocol 静态库供 CPU/CUDA worker 复用，不作为公共
 
 保持现有协议宽松规则：忽略尾随字段，沿用流式整数解析；CACHE/RELEASE/CANCEL 的 ID
 校验仍由下游处理。事件不额外编码 error_message，错误文本、字段顺序、握手版本不变。
+Engine 进入 failed 后，FORWARD/REUSE/CACHE/RELEASE/CLEAR_PREFIX 也拒绝执行，避免
+绕过 Engine 使用同一故障后端；STATS/STEP_STATS 仍可读取，QUIT 可重试 shutdown 清理。
 解析/编码/状态轨迹由 miniprefix_worker_protocol_tests 验证。真实 worker 的完整输出
 差分证据见 [CPU](../docs/acceptance/worker-protocol-cpu.json) 与
 [CUDA](../docs/acceptance/worker-protocol-cuda.json)，使用 tools/verify_worker_protocol.py 复现。

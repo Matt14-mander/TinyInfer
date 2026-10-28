@@ -14,7 +14,7 @@ ModelConfig config(){
     ModelConfig c;c.layers=1;c.hidden=8;c.heads=2;c.kv_heads=1;c.intermediate=12;
     c.vocabulary=16;c.context=32;c.eos=0;c.rms_epsilon=1e-5F;c.rope_theta=10000;c.validate();return c;
 }
-void allocation(){
+void allocation(bool sanitizer){
     RunnerStats stats;Allocation memory;memory.ensure(0,stats);assert(!memory.data&&stats.device_allocations==0);
     memory.ensure(16,stats);auto* first=memory.data;
     const float value=7;check(cudaMemcpy(first,&value,sizeof(value),cudaMemcpyHostToDevice),"test upload");
@@ -22,9 +22,13 @@ void allocation(){
     float actual=0;check(cudaMemcpy(&actual,memory.data,sizeof(actual),cudaMemcpyDeviceToHost),"test download");
     assert(memory.data==first&&memory.bytes==16&&actual==7&&stats.device_allocations==1);
     memory.ensure(32,stats);assert(memory.bytes==32&&stats.device_allocations==2);
-    first=memory.data;bool rejected=false;
-    try{memory.ensure(std::numeric_limits<std::size_t>::max(),stats);}catch(const std::runtime_error&){rejected=true;}
-    cudaGetLastError();assert(rejected&&memory.data==first&&memory.bytes==32&&stats.device_allocations==2);
+    if(!sanitizer){
+        // Intentionally impossible allocation is covered by normal CTest. Under
+        // instrumentation it may terminate the process before the success marker.
+        first=memory.data;bool rejected=false;
+        try{memory.ensure(std::numeric_limits<std::size_t>::max(),stats);}catch(const std::runtime_error&){rejected=true;}
+        cudaGetLastError();assert(rejected&&memory.data==first&&memory.bytes==32&&stats.device_allocations==2);
+    }
 }
 void workspace(){
     RunnerStats stats;Workspace work;const auto c=config();assert(work.bytes()==0);
@@ -66,9 +70,15 @@ void execution_resources(){
 }
 }
 int main(int argc,char** argv){
-    const bool required=argc>1&&std::string(argv[1])=="--require-device";
+    bool required=false,sanitizer=false;
+    for(int i=1;i<argc;++i){
+        const std::string arg=argv[i];
+        if(arg=="--require-device")required=true;
+        else if(arg=="--sanitizer")sanitizer=true;
+        else return 2;
+    }
     int count=0;const auto status=cudaGetDeviceCount(&count);
     if(status!=cudaSuccess||count==0){std::cerr<<"CUDA device unavailable\n";return required?1:77;}
-    try{allocation();workspace();execution_resources();std::cout<<"CUDA resource lifecycle and workspace tests passed\n";return 0;}
+    try{allocation(sanitizer);workspace();execution_resources();std::cout<<"CUDA resource lifecycle and workspace tests passed"<<std::endl;return 0;}
     catch(const std::exception& error){std::cerr<<error.what()<<'\n';return 1;}
 }

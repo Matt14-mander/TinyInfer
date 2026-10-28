@@ -11,6 +11,9 @@ logits 边界、LRU 和活跃 lease。tools/verify_prefix_cache.py 验证真实 
 cuda_resources_test.cpp / miniprefix_cuda_resources_tests 验证 CUDA Allocation、StreamBlas
 与 Workspace 的独立生命周期，包含实际 SGEMM、容量复用/增长、申请失败保留旧资源、
 模式设置、重复清理和异常展开。仅 CUDA 配置构建，require-device 下缺少 GPU 会失败。
+Compute Sanitizer 使用 `--sanitizer` 跳过刻意的 SIZE_MAX 分配失败用例（普通 CTest
+仍运行该用例），并必须同时检查测试完成标记与 sanitizer 的 error/leak summary，
+不能仅凭进程退出码 0 判定插桩测试实际执行完成。
 worker_protocol_test.cpp / miniprefix_worker_protocol_tests 无需模型或 GPU，验证解析错误
 优先级、整数边界、尾随字段、所有响应布局/精度、诊断与生成命名空间、失败后的重试、
 事件/取消、逐行 flush、QUIT 和 EOF。verify_worker_protocol.py 对真实新旧 worker 的

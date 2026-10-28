@@ -19,6 +19,7 @@ public:
     void cancel(const RequestId&);
     void shutdown();
     bool idle() const;
+    bool failed() const;
     ModelRunner& runner(){return *runner_;}
     const EngineStepStats& last_step_stats() const{return step_stats_;}
 private:

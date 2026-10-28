@@ -1,5 +1,6 @@
 #include "miniprefix/engine.h"
 #include <cassert>
+#include <algorithm>
 #include <iostream>
 using namespace miniprefix;
 namespace {
@@ -15,6 +16,7 @@ class Runner final:public ModelRunner {
 public:
     explicit Runner(std::shared_ptr<Trace> trace):trace_(std::move(trace)){config_.context=128;config_.vocabulary=128;}
     const ModelConfig& config() const override{return config_;}
+    int context_limit() const override{return config_.context;}
     void create(const RequestId& id) override{assert(trace_->resident.insert(id).second);trace_->operations.push_back("create:"+id);}
     std::vector<float> append(const RequestId& id,const std::vector<TokenId>& tokens) override{
         assert(trace_->resident.count(id));trace_->operations.push_back("append:"+id);
@@ -114,10 +116,21 @@ void retry_cancellation(){
     assert(events.size()==1);event(events[0],"resident",std::nullopt,FinishReason::Cancelled);
     assert(engine.idle()&&trace->resident.empty());
 }
+void scheduling_after_partial_shutdown(){
+    auto trace=std::make_shared<Trace>();Engine engine(std::make_unique<Runner>(trace),{2,2,1,128});
+    engine.submit(request("first",3));engine.submit(request("second",3));engine.submit(request("waiting"));engine.step();
+    trace->fail_release="second";rejects([&]{engine.shutdown();});
+    auto events=engine.poll_events();assert(events.size()==1);event(events[0],"first",std::nullopt,FinishReason::Cancelled);
+    trace->fail_release.clear();
+    engine.step();events=engine.poll_events();assert(events.size()==1);event(events[0],"waiting",2,FinishReason::Length);
+    engine.step();events=engine.poll_events();assert(events.size()==1);event(events[0],"second",2,FinishReason::Length);
+    assert(engine.idle()&&trace->resident.empty());
+    assert(std::count(trace->operations.begin(),trace->operations.end(),"append:first")==1);
+}
 }
 int main(int argc,char** argv){
     const bool legacy=argc==2&&std::string(argv[1])=="--legacy-compatible";
     if(argc!=1&&!legacy)return 2;
     completion();cancellation();failure_preserves_prior_events(false);failure_preserves_prior_events(true);
-    shutdown_order_and_destructor();retry_cancellation();if(!legacy)retry_partial_shutdown();
+    shutdown_order_and_destructor();retry_cancellation();if(!legacy){retry_partial_shutdown();scheduling_after_partial_shutdown();}
     std::cout<<"terminal events, ordering, release ownership and retries passed\n";}
