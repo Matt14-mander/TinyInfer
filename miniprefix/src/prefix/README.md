@@ -5,6 +5,11 @@
 完整 token 历史的 vector key、完整页面匹配、请求/缓存引用、页面 LRU 和压力淘汰已接入。
 默认关闭，跨同一 runner 的请求保留。边界与实际验收见 ../../docs/prefix_cache.md。
 
+ExactPrefixCache 不再提供 reserve，也不计算追加页数或检查 pool 空闲容量。
+公开 evict_one() 按原 LRU 策略移除一个缓存引用并返回 true，空缓存返回 false 且
+不增加淘汰计数。条目上限触发的淘汰仍由 publish 处理；物理池压力下的协调由
+KVManager 执行。调用方追加数据应使用 KVManager::prepare_append，而非缓存分配接口。
+
 负责 cache namespace、最长因果前缀匹配、索引更新、访问记录和驱逐候选。
 索引返回可复用范围与 KV lease，不持有独立物理 allocator，不直接释放或写入共享块。
 跨 generate 保留缓存；flush_cache 与 reset_stats 分离。

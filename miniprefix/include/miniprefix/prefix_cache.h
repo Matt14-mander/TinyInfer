@@ -12,7 +12,6 @@ class ExactPrefixCache {
     std::map<std::vector<std::int32_t>,Entry> entries_;
     std::uint64_t clock_=0;
     std::size_t hits_=0,misses_=0,reused_=0,evictions_=0;
-    void evict_one();
 public:
     explicit ExactPrefixCache(KvBlockPool& pool);
     ExactPrefixCache(const ExactPrefixCache&)=delete;
@@ -27,6 +26,8 @@ public:
     void clear() noexcept;
     int reuse(PagedSequence& sequence,const std::vector<std::int32_t>& prompt);
     void publish(const PagedSequence& sequence);
-    void reserve(PagedSequence& sequence,int end);
+    // Drop one LRU cache reference, not necessarily a physical page: active
+    // sequence references survive. False means no cache entry was available.
+    bool evict_one();
 };
 } // namespace miniprefix

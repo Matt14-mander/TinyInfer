@@ -46,6 +46,16 @@ void KVManager::clear_prefix_cache(){
 KVManager::Append KVManager::prepare_append(const RequestId& id,const std::vector<TokenId>& tokens){
     return Append(*this,id,tokens);
 }
+void KVManager::reserve_pages(PagedSequence& sequence,int end){
+    const auto tokens=config().block_tokens;
+    const auto count=std::size_t(end/tokens+(end%tokens!=0));
+    const auto required=count>sequence.blocks.size()?count-sequence.blocks.size():0;
+    // Eviction only drops a cache lease. Recheck physical capacity after every
+    // victim, including pages still pinned by active sequences. Preserve LRU
+    // order and eviction side effects even if reservation ultimately fails.
+    while(pool_.free_blocks()<required&&prefix_.evict_one()){}
+    pool_.reserve(sequence,end);
+}
 KVManager::Append::Append(KVManager& owner,const RequestId& id,const std::vector<TokenId>& tokens):
     owner_(&owner),state_(&owner.idle_state(id)),tokens_(tokens),original_blocks_(state_->sequence.blocks.size()){
     auto& sequence=state_->sequence;
@@ -53,7 +63,7 @@ KVManager::Append::Append(KVManager& owner,const RequestId& id,const std::vector
         throw std::invalid_argument("context overflow/empty input");
     owner.validate_tokens(tokens);
     sequence.tokens.reserve(sequence.used+tokens.size());
-    owner.prefix_.reserve(sequence,sequence.used+static_cast<int>(tokens.size()));
+    owner.reserve_pages(sequence,sequence.used+static_cast<int>(tokens.size()));
     state_->appending=true;
 }
 KVManager::Append::~Append(){rollback();}
