@@ -1,5 +1,6 @@
 #pragma once
 #include "model.h"
+#include "scheduler.h"
 #include <deque>
 #include <set>
 
@@ -22,7 +23,7 @@ public:
     const EngineStepStats& last_step_stats() const{return step_stats_;}
 private:
     struct State{Request request;std::size_t prefilled=0;std::vector<TokenId> output;bool resident=false;};
-    std::unique_ptr<ModelRunner> runner_;EngineConfig config_;
+    std::unique_ptr<ModelRunner> runner_;EngineConfig config_;Scheduler scheduler_;
     std::deque<State> waiting_;std::vector<State> active_;std::set<RequestId> seen_;
     std::vector<GenerationEvent> events_;bool failed_=false;
     EngineStepStats step_stats_;

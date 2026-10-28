@@ -10,6 +10,10 @@ logits 边界、LRU 和活跃 lease。tools/verify_prefix_cache.py 验证真实 
 后续原生引擎更细的单元与故障隔离覆盖继续按下述布局补齐。
 engine_prefill_test.cpp / miniprefix_engine_prefill_tests 验证命中后逐 chunk token/绝对位置、
 budget、首事件边界、取消与失败清理；verify_incremental_prefill.py 提供真实 CPU/CUDA 对照。
+scheduler_test.cpp / miniprefix_scheduler_tests 独立链接 MiniPrefix::scheduler，验证
+准入数、稳定 decode 优先顺序，以及 756 种 phase/budget/chunk 组合与原策略一致。
+engine_prefill_test.cpp 同时检查同一步缓存发布/复用、预算耗尽时不提前创建序列、
+完成后下一轮 FIFO 补位、取消及生成事件顺序；这些轨迹也在提取前 Engine 上验证过。
 test_prefix_benefit.py 验证每个负载的模式顺序独立轮换、命中必须减少实际 forward/H2D，
 以及同轮配对速度比和 seed 成本摊销，避免性能报告的口径错误。
 kv_manager_test.cpp 验证统一追加事务、输入快照、提交/异常回滚、共享 lease、重置、
