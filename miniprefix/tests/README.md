@@ -8,6 +8,10 @@ prefix_cache_test.cpp / miniprefix_prefix_cache_tests 验证精确因果 key、�
 logits 边界、LRU 和活跃 lease。tools/verify_prefix_cache.py 验证真实 CPU/CUDA 共享
 与 cold/warm compute counter；口径见 ../docs/prefix_cache.md。
 后续原生引擎更细的单元与故障隔离覆盖继续按下述布局补齐。
+worker_protocol_test.cpp / miniprefix_worker_protocol_tests 无需模型或 GPU，验证解析错误
+优先级、整数边界、尾随字段、所有响应布局/精度、诊断与生成命名空间、失败后的重试、
+事件/取消、逐行 flush、QUIT 和 EOF。verify_worker_protocol.py 对真实新旧 worker 的
+完整 stdout/stderr 字节与退出码做差分，不归一化响应内容。
 engine_prefill_test.cpp / miniprefix_engine_prefill_tests 验证命中后逐 chunk token/绝对位置、
 budget、首事件边界、取消与失败清理；verify_incremental_prefill.py 提供真实 CPU/CUDA 对照。
 test_prefix_benefit.py 验证每个负载的模式顺序独立轮换、命中必须减少实际 forward/H2D，

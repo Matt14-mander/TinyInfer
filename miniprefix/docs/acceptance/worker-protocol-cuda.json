@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "before_sha256": "d605000e5ffea1694081b87876cd5b7af202b76fb76e8ec29a3bfd4b9377a92e",
+  "after_sha256": "084ff4f49c9555d96ea3883c4db2ed2f8a36c330db5d52b49df276069a510505",
+  "model_sha256": "fe826f487690854ac806197b60edffc2c76c6c446eede6b188e47763deae7aef",
+  "records": [
+    {
+      "backend": "cuda",
+      "case": "mixed-and-quit",
+      "returncode": 0,
+      "stdout_sha256": "bb55b9a77d1184b32282f182d345e79ed52904a4ac16a38a2f4c8d0a8596b014",
+      "stdout_bytes": 1611724,
+      "response_lines": 40,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "backend": "cuda",
+      "case": "eof-with-pending-request",
+      "returncode": 0,
+      "stdout_sha256": "5c3c737848c8c923a442ce835fe10fc100dbab3d60d490b694ced19e1bf79ef0",
+      "stdout_bytes": 64,
+      "response_lines": 4,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}
