@@ -17,9 +17,20 @@ void Engine::submit(Request request){
     if(request.generation.eos_token_id&&(*request.generation.eos_token_id<0||*request.generation.eos_token_id>=runner_->config().vocabulary))throw std::invalid_argument("invalid EOS");
     State state;state.request=std::move(request);waiting_.push_back(std::move(state));seen_.insert(waiting_.back().request.id);
 }
-void Engine::terminal(State& state,FinishReason reason,const std::string& error){
-    if(state.resident){runner_->release(state.request.id);state.resident=false;}
-    events_.push_back({state.request.id,std::nullopt,reason,error});
+void Engine::terminal(State& state,FinishReason reason,std::optional<TokenId> token,
+                      const std::string& error,TerminalCleanup cleanup){
+    if(state.finished)return;
+    // Normal completion/cancellation releases its lease first. Fatal failure
+    // has already cleared the runner and must not release individual IDs again.
+    if(state.resident&&cleanup==TerminalCleanup::ReleaseSequence)runner_->release(state.request.id);
+    state.resident=false;
+    events_.push_back({state.request.id,token,reason,error});
+    state.finished=true;
+}
+void Engine::remove_finished(bool include_waiting){
+    const auto finished=[](const State& state){return state.finished;};
+    active_.erase(std::remove_if(active_.begin(),active_.end(),finished),active_.end());
+    if(include_waiting)waiting_.erase(std::remove_if(waiting_.begin(),waiting_.end(),finished),waiting_.end());
 }
 void Engine::restore_prefix(State& state){
     auto& request=state.request;
@@ -39,7 +50,7 @@ bool Engine::step(){
     while(!waiting_.empty()&&active_.size()<std::size_t(config_.max_batch_size)){
         active_.push_back(std::move(waiting_.front()));waiting_.pop_front();}
     if(active_.empty())return false;
-    int remaining=config_.token_budget;std::set<RequestId> done;
+    int remaining=config_.token_budget;
     try{
         // Existing decoders first, then one prefill chunk per active request.
         std::vector<std::size_t> order;
@@ -63,25 +74,31 @@ bool Engine::step(){
             s.output.push_back(token);std::optional<FinishReason> finish;
             if(r.generation.eos_token_id&&token==*r.generation.eos_token_id)finish=FinishReason::Eos;
             else if(s.output.size()==r.generation.max_new_tokens)finish=FinishReason::Length;
-            if(finish){runner_->release(r.id);s.resident=false;done.insert(r.id);}
-            events_.push_back({r.id,token,finish,{}});
+            if(finish)terminal(s,*finish,token);
+            else events_.push_back({r.id,token,std::nullopt,{}});
         }
-        active_.erase(std::remove_if(active_.begin(),active_.end(),[&](const State& s){return done.count(s.request.id)!=0;}),active_.end());
+        remove_finished();
     }catch(const std::exception& error){
         // Synchronous runners return only after device access is terminal.
         runner_->clear();failed_=true;
-        for(auto& s:active_)if(!done.count(s.request.id))events_.push_back({s.request.id,std::nullopt,FinishReason::Error,error.what()});
-        for(auto& s:waiting_)events_.push_back({s.request.id,std::nullopt,FinishReason::Error,error.what()});
-        active_.clear();waiting_.clear();
+        for(auto& s:active_)terminal(s,FinishReason::Error,std::nullopt,error.what(),TerminalCleanup::RunnerCleared);
+        for(auto& s:waiting_)terminal(s,FinishReason::Error,std::nullopt,error.what(),TerminalCleanup::RunnerCleared);
+        remove_finished(true);
     }
     return true;
 }
 std::vector<GenerationEvent> Engine::poll_events(){auto result=std::move(events_);events_.clear();return result;}
 void Engine::cancel(const RequestId& id){
-    for(auto it=waiting_.begin();it!=waiting_.end();++it)if(it->request.id==id){terminal(*it,FinishReason::Cancelled);waiting_.erase(it);return;}
-    for(auto it=active_.begin();it!=active_.end();++it)if(it->request.id==id){terminal(*it,FinishReason::Cancelled);active_.erase(it);return;}
+    for(auto& state:waiting_)if(state.request.id==id&&!state.finished){terminal(state,FinishReason::Cancelled);remove_finished(true);return;}
+    for(auto& state:active_)if(state.request.id==id&&!state.finished){terminal(state,FinishReason::Cancelled);remove_finished();return;}
     throw std::invalid_argument("request is unknown or already terminal");
 }
-void Engine::shutdown(){for(auto& s:active_)terminal(s,FinishReason::Cancelled);for(auto& s:waiting_)terminal(s,FinishReason::Cancelled);active_.clear();waiting_.clear();runner_->clear();}
+void Engine::shutdown(){
+    try{
+        for(auto& s:active_)terminal(s,FinishReason::Cancelled);
+        for(auto& s:waiting_)terminal(s,FinishReason::Cancelled);
+    }catch(...){remove_finished(true);throw;}
+    remove_finished(true);runner_->clear();
+}
 bool Engine::idle() const{return active_.empty()&&waiting_.empty();}
 } // namespace miniprefix
