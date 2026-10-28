@@ -68,10 +68,15 @@ bool Engine::step(){
         }
         active_.erase(std::remove_if(active_.begin(),active_.end(),[&](const State& s){return done.count(s.request.id)!=0;}),active_.end());
     }catch(const std::exception& error){
-        // Synchronous runners return only after device access is terminal.
-        runner_->clear();failed_=true;
-        for(auto& s:active_)if(!done.count(s.request.id))events_.push_back({s.request.id,std::nullopt,FinishReason::Error,error.what()});
-        for(auto& s:waiting_)events_.push_back({s.request.id,std::nullopt,FinishReason::Error,error.what()});
+        // Cleanup may itself fail (for example, CUDA stream synchronization).
+        // Poison the engine first; backend ownership must survive failed cleanup.
+        failed_=true;
+        std::string message=error.what();
+        try{runner_->clear();}
+        catch(const std::exception& cleanup){message+="; cleanup failed: ";message+=cleanup.what();}
+        catch(...){message+="; cleanup failed: unknown exception";}
+        for(auto& s:active_)if(!done.count(s.request.id))events_.push_back({s.request.id,std::nullopt,FinishReason::Error,message});
+        for(auto& s:waiting_)events_.push_back({s.request.id,std::nullopt,FinishReason::Error,message});
         active_.clear();waiting_.clear();
     }
     return true;
