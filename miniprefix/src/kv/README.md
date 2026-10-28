@@ -13,4 +13,14 @@ KVManager 持有页池、ExactPrefixCache 和所有序列 metadata，统一校�
 Append 事务提交前不推进 used/token history/forward 计数，异常退出归还新增页面；
 backend 必须先结束在途设备访问，再 rollback/销毁事务。事务不能超过 manager 生命周期。
 部分页面共享/COW 仍待实现；当前只共享完整不可变页，尾页私有。
-前缀搜索与驱逐策略属于 PrefixIndex，KVManager 只执行可证明安全的 retain/release。
+前缀搜索与 LRU 选择属于 ExactPrefixCache。KVManager 的 reserve_pages 负责计算追加
+所需的新页数、按实际空闲页触发逐次淘汰，最后调用 KvBlockPool::reserve。缓存提供
+evict_one()，仅移除一个缓存引用；活跃请求仍持有的页不会变为空闲页，因此每次都需
+重新检查物理容量。缓存为空时停止，保持原有 pool exhausted 错误及请求映射不变。
+失败申请或 Append 回滚不会恢复已经淘汰的缓存条目，淘汰计数仍累计；只有新分配的
+请求页面会回滚。输入/context 校验仍在任何压力淘汰前完成。
+
+2026-10-28 容量协调重构：CPU CTest 51/51、CUDA CTest 58/58 通过；新增容量测试也在
+原 KVManager/ExactPrefixCache 实现上通过。真实 CPU/CUDA worker 差分的 94 个检查点、
+491,520 个 FP32 logits、事件/逐轮计数与全部 STATS 字段一致，证据见
+[kv-capacity-differential.json](../../docs/acceptance/kv-capacity-differential.json)。

@@ -4,10 +4,11 @@
 #include <utility>
 
 namespace miniprefix {
-void ExactPrefixCache::evict_one(){
+bool ExactPrefixCache::evict_one(){
+    if(entries_.empty())return false;
     auto victim=std::min_element(entries_.begin(),entries_.end(),[](const auto& a,const auto& b){
         return a.second.touched<b.second.touched;});
-    pool_.unref(victim->second.block);entries_.erase(victim);++evictions_;
+    pool_.unref(victim->second.block);entries_.erase(victim);++evictions_;return true;
 }
 ExactPrefixCache::ExactPrefixCache(KvBlockPool& pool):pool_(pool){}
 ExactPrefixCache::~ExactPrefixCache(){clear();}
@@ -53,14 +54,5 @@ void ExactPrefixCache::publish(const PagedSequence& sequence){
         try{entries_.emplace(std::move(key),Entry{page,++clock_});}
         catch(...){pool_.unref(page);throw;}
     }
-}
-void ExactPrefixCache::reserve(PagedSequence& sequence,int end){
-    const auto tokens=pool_.config().block_tokens;
-    const auto count=std::size_t(end/tokens+(end%tokens!=0));
-    const auto required=count>sequence.blocks.size()?count-sequence.blocks.size():0;
-    // Cache leases can be evicted; references held by active sequences
-    // survive eviction. Active-request preemption is deliberately separate.
-    while(pool_.free_blocks()<required&&!entries_.empty())evict_one();
-    pool_.reserve(sequence,end);
 }
 } // namespace miniprefix

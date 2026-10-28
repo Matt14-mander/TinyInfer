@@ -29,6 +29,11 @@ test_prefix_benefit.py 验证每个负载的模式顺序独立轮换、命中必
 以及同轮配对速度比和 seed 成本摊销，避免性能报告的口径错误。
 kv_manager_test.cpp 验证统一追加事务、输入快照、提交/异常回滚、共享 lease、重置、
 压力淘汰及累计统计；engine_prefill_test.cpp 同时固定 RunnerStats 布局并检查设备计数不被覆盖。
+容量边界重构补充：KVManager 测试覆盖空闲页足够、尾页内追加、满足容量立即停止、
+LRU 刷新、活跃引用阻止释放、无法满足的申请、输入校验先于淘汰、回滚后缓存淘汰
+仍保留，以及关闭缓存的路径。这些测试在原实现与重构后均执行，保持错误和计数语义。
+prefix_cache_test.cpp 只测试匹配、缓存引用和淘汰策略；测试数据分配直接使用页池，
+不在测试辅助函数中复制 KVManager 的容量协调逻辑。
 
 后续按 unit / integration / differential / cuda 分类组织：
 
