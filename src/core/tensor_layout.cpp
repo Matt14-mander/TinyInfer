@@ -5,6 +5,25 @@
 #include <utility>
 
 namespace tinyinfer {
+namespace {
+
+std::size_t checked_multiply(std::size_t lhs, std::size_t rhs,
+                            const char* message) {
+    if (lhs != 0 && rhs > std::numeric_limits<std::size_t>::max() / lhs) {
+        throw std::overflow_error(message);
+    }
+    return lhs * rhs;
+}
+
+std::size_t checked_add(std::size_t lhs, std::size_t rhs,
+                       const char* message) {
+    if (lhs > std::numeric_limits<std::size_t>::max() - rhs) {
+        throw std::overflow_error(message);
+    }
+    return lhs + rhs;
+}
+
+}  // namespace
 
 TensorLayout::TensorLayout() : TensorLayout(Shape{}) {}
 
@@ -33,10 +52,11 @@ TensorLayout::TensorLayout(Shape shape, Strides strides)
 
 std::size_t TensorLayout::size_bytes(DataType dtype) const {
     const auto element_size = size_of(dtype);
-    if (numel_ > std::numeric_limits<std::size_t>::max() / element_size) {
-        throw std::overflow_error("tensor byte size overflows size_t");
+    if (element_size == 0) {
+        throw std::invalid_argument("unsupported tensor data type");
     }
-    return numel_ * element_size;
+    return checked_multiply(numel_, static_cast<std::size_t>(element_size),
+                           "tensor byte size overflows size_t");
 }
 
 std::size_t TensorLayout::offset(const Shape& indices) const {
@@ -50,8 +70,11 @@ std::size_t TensorLayout::offset(const Shape& indices) const {
         if (index < 0 || index >= shape_[dimension]) {
             throw std::out_of_range("tensor index is out of range");
         }
-        result += static_cast<std::size_t>(index) *
-                  static_cast<std::size_t>(strides_[dimension]);
+        const auto coordinate = static_cast<std::size_t>(index);
+        const auto stride = static_cast<std::size_t>(strides_[dimension]);
+        result = checked_add(result, checked_multiply(coordinate, stride,
+                                                     "tensor offset overflows size_t"),
+                             "tensor offset overflows size_t");
     }
     return result;
 }
@@ -67,11 +90,16 @@ std::size_t TensorLayout::storage_offset(std::size_t logical_index) const {
     }
 
     std::size_t result = 0;
+    std::size_t working_index = logical_index;
     for (std::size_t dimension = rank(); dimension > 0; --dimension) {
         const auto size = static_cast<std::size_t>(shape_[dimension - 1]);
-        const auto coordinate = logical_index % size;
-        logical_index /= size;
-        result += coordinate * static_cast<std::size_t>(strides_[dimension - 1]);
+        const auto coordinate = working_index % size;
+        working_index /= size;
+        result = checked_add(result,
+                             checked_multiply(coordinate,
+                                              static_cast<std::size_t>(strides_[dimension - 1]),
+                                              "storage offset overflows size_t"),
+                             "storage offset overflows size_t");
     }
     return result;
 }
@@ -108,10 +136,8 @@ std::size_t TensorLayout::checked_numel(const Shape& shape) {
     std::size_t result = 1;
     for (const auto dimension : shape) {
         const auto size = static_cast<std::size_t>(dimension);
-        if (result > std::numeric_limits<std::size_t>::max() / size) {
-            throw std::overflow_error("tensor element count overflows size_t");
-        }
-        result *= size;
+        result = checked_multiply(result, size,
+                                 "tensor element count overflows size_t");
     }
     return result;
 }
@@ -126,10 +152,8 @@ Strides TensorLayout::make_contiguous_strides(const Shape& shape) {
         strides[dimension - 1] = static_cast<std::int64_t>(running_stride);
         if (dimension > 1) {
             const auto size = static_cast<std::size_t>(shape[dimension - 1]);
-            if (size != 0 && running_stride > std::numeric_limits<std::size_t>::max() / size) {
-                throw std::overflow_error("contiguous stride overflows size_t");
-            }
-            running_stride *= size;
+            running_stride = checked_multiply(running_stride, size,
+                                            "contiguous stride overflows size_t");
         }
     }
     return strides;
@@ -146,19 +170,12 @@ std::size_t TensorLayout::checked_storage_span(const Shape& shape,
     for (std::size_t dimension = 0; dimension < shape.size(); ++dimension) {
         const auto extent = static_cast<std::size_t>(shape[dimension] - 1);
         const auto stride = static_cast<std::size_t>(strides[dimension]);
-        if (extent != 0 && stride > std::numeric_limits<std::size_t>::max() / extent) {
-            throw std::overflow_error("tensor storage span overflows size_t");
-        }
-        const auto contribution = extent * stride;
-        if (maximum_offset > std::numeric_limits<std::size_t>::max() - contribution) {
-            throw std::overflow_error("tensor storage span overflows size_t");
-        }
-        maximum_offset += contribution;
+        const auto contribution = checked_multiply(extent, stride,
+                                                  "tensor storage span overflows size_t");
+        maximum_offset = checked_add(maximum_offset, contribution,
+                                    "tensor storage span overflows size_t");
     }
-    if (maximum_offset == std::numeric_limits<std::size_t>::max()) {
-        throw std::overflow_error("tensor storage span overflows size_t");
-    }
-    return maximum_offset + 1;
+    return checked_add(maximum_offset, 1, "tensor storage span overflows size_t");
 }
 
 Shape TensorLayout::resolve_reshape_shape(Shape shape,
@@ -187,10 +204,8 @@ Shape TensorLayout::resolve_reshape_shape(Shape shape,
         if (has_zero) continue;
 
         const auto unsigned_size = static_cast<std::size_t>(size);
-        if (known_elements > std::numeric_limits<std::size_t>::max() / unsigned_size) {
-            throw std::overflow_error("reshape element count overflows size_t");
-        }
-        known_elements *= unsigned_size;
+        known_elements = checked_multiply(known_elements, unsigned_size,
+                                         "reshape element count overflows size_t");
     }
 
     if (inferred_dimension != shape.size()) {
@@ -205,7 +220,8 @@ Shape TensorLayout::resolve_reshape_shape(Shape shape,
             throw std::overflow_error("inferred reshape dimension overflows int64_t");
         }
         shape[inferred_dimension] = static_cast<std::int64_t>(inferred_size);
-        known_elements *= inferred_size;
+        known_elements = checked_multiply(known_elements, inferred_size,
+                                         "reshape element count overflows size_t");
     }
 
     if (known_elements != current_elements) {
