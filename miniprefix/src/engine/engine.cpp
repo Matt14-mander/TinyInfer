@@ -51,7 +51,7 @@ void Engine::restore_prefix(State& state){
     const auto block_tokens=runner_->stats().kv_block_tokens;
     if(reused>=request.prompt_token_ids.size()||(reused&&(!block_tokens||reused%block_tokens)))
         throw std::runtime_error("invalid reusable prefix range");
-    state.prefilled=reused;step_stats_.prefix_reused_tokens+=reused;
+    state.kv_block_tokens=block_tokens;state.prefilled=reused;step_stats_.prefix_reused_tokens+=reused;
 }
 bool Engine::step(){
     step_stats_={};
@@ -93,7 +93,11 @@ bool Engine::step(){
                 if(s.prefilled<r.prompt_token_ids.size())continue;
                 if(logits.size()!=std::size_t(runner_->config().vocabulary))throw std::runtime_error("invalid logits arity");
                 for(float v:logits)if(!std::isfinite(v))throw std::runtime_error("nonfinite model result");
-                if(prefilling)runner_->cache_prefix(r.id);
+                // append committed the prompt or the PREVIOUS sampled token.
+                // Publish before sampling: the new output has no KV yet.
+                const auto committed=r.prompt_token_ids.size()+s.output.size();
+                if(prefilling||(s.kv_block_tokens&&committed%s.kv_block_tokens==0))
+                    runner_->cache_prefix(r.id);
                 auto token=static_cast<TokenId>(std::max_element(logits.begin(),logits.end())-logits.begin());
                 s.output.push_back(token);std::optional<FinishReason> finish;
                 if(r.generation.eos_token_id&&token==*r.generation.eos_token_id)finish=FinishReason::Eos;

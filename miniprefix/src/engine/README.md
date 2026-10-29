@@ -28,3 +28,6 @@ shutdown。持有请求已提交 token 与时间戳，协调 Scheduler、KVManag
 
 容量感知准入已接入：按最大 KV 长度预约，暂时不足保持 FIFO 等待，无进展或超过总容量时只结束该请求。
 KvCapacityError 不毒化 Engine；后端同步/释放错误仍走全局失败路径。详见 [容量准入](../../docs/capacity_admission.md)。
+
+生成历史发布：prefill 完成后、decode 提交完整页边界且 logits 校验成功后发布，先发布再采样。
+最终输出 token 尚无 KV，不额外执行 forward；见 [多轮历史](../../docs/generation_history.md)。

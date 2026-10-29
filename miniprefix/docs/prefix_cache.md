@@ -9,8 +9,8 @@
 - `ExactPrefixCache` 接口位于 `include/miniprefix/prefix_cache.h`，实现位于 src/kv/prefix_cache.cpp，
   由 KVManager 与 KvBlockPool 一起持有。每个索引项持有一个完整页面，活跃请求也各持有
   引用；只有引用归零才回收。
-- 每页的 key 是从位置 0 到该页末尾的**全部 token ID**，用 vector 精确比较，包含
-  所有先前位置的因果上下文。后续页面 token 相同但此前 prefix 不同，不能误命中。
+- 使用按完整页面分边的 token trie，路径编码从位置 0 到该页末尾的全部因果上下文。
+  每条边只保存一页 token，按 token 精确比较；后续页面相同但此前 prefix 不同，不能误命中。
 - 索引限定在一个固定权重、配置、FP32 布局和 RoPE 的 runner 内，不与另一个模型或
   runner 交换页面。运行时更换模型/adapter/位置编码不受支持，必须新建 runner。
 - 按顺序匹配连续完整页面，遇到缺页或不一致即停止；只复用完全相同的前缀。
@@ -18,7 +18,8 @@
 - 命中最多复用 `floor((prompt_tokens-1)/block_tokens)*block_tokens` 个 token。
   因为首版不缓存 logits，始终保留至少一个 prompt token 重新计算；prompt 恰好页对齐
   时会重算最后一整页，避免拿不到首个输出 logits 或改写共享页。
-- 只在 prompt prefill 成功结束时发布完整页面；生成阶段不自动缓存。未满尾页私有，
+- 在 prompt prefill 成功结束及 decode 成功提交完整页边界时发布页面，见 [多轮历史](generation_history.md)。
+  最新采样但尚未输入模型的 token 不发布。未满尾页私有，
   后续输入写新页面或请求自己的尾页，永不改写共享 KV，因此本版本无需 COW。
   这不等于已实现任意位置 fork 或部分页面共享。
 - Engine 在第一次 forward 前恢复命中页和 used/位置，prefilled 直接跳过命中 token。
@@ -29,12 +30,13 @@
 
 容量单位为缓存页面条目，取值 `0..kv_blocks`，不另分配 KV pool。发布新条目时按页面
 LRU 淘汰；申请物理页不足时也先淘汰缓存引用。淘汰不会撤销活跃请求引用，清空缓存
-也不影响正在 decode 的请求。若活跃引用仍占满物理池，则维持现有明确失败语义：
-Engine 结束所有未完成请求，clear 同时回收请求与缓存引用，不做抢占或 CPU fallback。
+也不影响正在 decode 的请求。普通容量不足由 [容量准入](capacity_admission.md) 协调：
+暂时等待或只结束无法容纳/无法进展的请求；不做抢占或 CPU fallback。后端故障仍使 Engine 失败。
 
 为让长 prompt 在小缓存中仍能保留根前缀，一次发布最多前 `prefix_cache_blocks` 页。
 页面独立 LRU 可能留下缺祖先的后续条目；此时查找停在缺页处，不会不安全地复用它们。
-首版采用完整 vector key 和有界 map，尚无 radix/tree、块哈希或查找时间指标。
+当前改为精确页 trie 和侵入式双向 LRU，详见 [索引与 LRU 优化](prefix_index.md)。
+显式 clear 保留旧字典序释放次序；结构节点不持有 KV 引用，也不计入缓存页面容量。
 
 ## 使用与统计
 

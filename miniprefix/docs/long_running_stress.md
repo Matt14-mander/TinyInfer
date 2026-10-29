@@ -74,8 +74,9 @@ python miniprefix/benchmarks/stress.py --executable BUILD/miniprefix/miniprefix_
 淘汰数量及引用归零。source 在淘汰期间仍引用页面，因此淘汰测的是缓存引用/LRU 操作，
 不冒充 GPU 物理释放成本。
 
-`stored_key_token_bytes` 是按当前实现计算的完整因果 key 内容大小（不含 map 节点、
-vector 容量余量和 allocator），公式为 `pages*(pages+1)/2 * block_tokens * sizeof(int32)`。
+`stored_key_token_bytes` 当前由缓存实际保留的边 token 数量计算（不含节点、
+vector 容量余量和 allocator）。历史完整 key 实现使用
+`pages*(pages+1)/2 * block_tokens * sizeof(int32)`；历史报告不改写。
 这是索引扩展性诊断，不能把其时间直接加到真实模型端到端结果或作为新索引的加速证据。
 
 ```text

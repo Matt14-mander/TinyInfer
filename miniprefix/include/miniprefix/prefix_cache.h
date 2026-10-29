@@ -1,16 +1,14 @@
 #pragma once
 #include "paged_kv.h"
-#include <map>
+#include <memory>
 
 namespace miniprefix {
-// Exact keys contain the ENTIRE token history through the end of a page, not
-// just that page's tokens. Model/weights/RoPE/dtype are fixed by the owning
-// runner; this index never crosses runner instances or position origins.
+// Exact page-token trie. Paths encode the entire causal history; no hashes or
+// cross-runner keys. Structural ancestors may survive eviction without a KV lease.
 class ExactPrefixCache {
-    struct Entry {int block;std::uint64_t touched;};
+    struct Index;
     KvBlockPool& pool_;
-    std::map<std::vector<std::int32_t>,Entry> entries_;
-    std::uint64_t clock_=0;
+    std::unique_ptr<Index> index_;
     std::size_t hits_=0,misses_=0,reused_=0,evictions_=0;
 public:
     explicit ExactPrefixCache(KvBlockPool& pool);
@@ -18,6 +16,8 @@ public:
     ExactPrefixCache& operator=(const ExactPrefixCache&)=delete;
     ~ExactPrefixCache();
     std::size_t size() const;
+    std::size_t index_nodes() const;
+    std::size_t key_token_bytes() const;
     std::size_t hits() const;
     std::size_t misses() const;
     std::size_t reused_tokens() const;

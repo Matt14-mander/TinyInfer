@@ -16,8 +16,9 @@ int main(){try{
         for(int i=0;i<source.used;++i)source.tokens.push_back(1+i%100);
         auto prompt=source.tokens;prompt.push_back(1);auto miss=prompt;miss[0]=999;
         std::vector<double> hits,misses,publishes,evictions;
+        std::size_t key_bytes=0;
         for(int repeat=0;repeat<11;++repeat){
-            auto t=Clock::now();cache.publish(source);const double publish=elapsed(t);
+            auto t=Clock::now();cache.publish(source);const double publish=elapsed(t);key_bytes=cache.key_token_bytes();
             PagedSequence restored;t=Clock::now();const auto reused=cache.reuse(restored,prompt);const double hit=elapsed(t);
             check(reused==pages*4);pool.release(restored);
             PagedSequence absent;t=Clock::now();const auto rejected=cache.reuse(absent,miss);const double nohit=elapsed(t);
@@ -28,7 +29,7 @@ int main(){try{
             if(repeat){publishes.push_back(publish);hits.push_back(hit);misses.push_back(nohit);evictions.push_back(eviction);}
         }
         pool.release(source);check(pool.live_blocks()==0);
-        std::cout<<"{\"pages\":"<<pages<<",\"block_tokens\":4,\"stored_key_token_bytes\":"<<std::size_t(pages)*(pages+1)/2*4*sizeof(std::int32_t);
+        std::cout<<"{\"pages\":"<<pages<<",\"block_tokens\":4,\"stored_key_token_bytes\":"<<key_bytes;
         for(auto item:{std::make_pair("publish_us",publishes),std::make_pair("full_hit_us",hits),std::make_pair("root_miss_us",misses),std::make_pair("evict_all_us",evictions)}){
             std::cout<<",\""<<item.first<<"\":[";for(std::size_t i=0;i<item.second.size();++i){if(i)std::cout<<',';std::cout<<item.second[i];}std::cout<<']';}
         std::cout<<"}"<<std::endl;

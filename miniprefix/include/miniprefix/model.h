@@ -44,6 +44,7 @@ public:
     virtual void release_reservation(const RequestId&) noexcept{}
     virtual void create(const RequestId&)=0;
     virtual std::size_t reuse_prefix(const RequestId&,const std::vector<TokenId>&){return 0;}
+    // Publish complete pages of committed input history only; sampled output has no KV yet.
     virtual void cache_prefix(const RequestId&){}
     virtual void clear_prefix_cache(){}
     virtual std::vector<float> append(const RequestId&,const std::vector<TokenId>&)=0;

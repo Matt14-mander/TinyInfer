@@ -1,0 +1,82 @@
+{
+  "passed": true,
+  "model_sha256": "fe826f487690854ac806197b60edffc2c76c6c446eede6b188e47763deae7aef",
+  "records": [
+    {
+      "backend": "cpu",
+      "passed": true,
+      "expected_tokens": [
+        282,
+        260,
+        905,
+        30
+      ],
+      "stats": {
+        "live_sequences": 0,
+        "live_kv_bytes": 0,
+        "peak_kv_bytes": 276480,
+        "forward_tokens": 30,
+        "device_weight_bytes": 0,
+        "weight_uploaded_bytes": 0,
+        "token_uploaded_bytes": 0,
+        "kv_uploaded_bytes": 0,
+        "logits_downloaded_bytes": 0,
+        "device_allocations": 0,
+        "device_workspace_bytes": 0,
+        "kv_block_tokens": 2,
+        "kv_total_blocks": 3,
+        "kv_live_blocks": 0,
+        "kv_peak_blocks": 3,
+        "kv_reserved_bytes": 276480,
+        "block_table_uploaded_bytes": 0,
+        "block_table_device_bytes": 0,
+        "prefix_cache_capacity": 3,
+        "kv_cached_blocks": 0,
+        "kv_cache_only_blocks": 0,
+        "prefix_hits": 5,
+        "prefix_misses": 1,
+        "prefix_reused_tokens": 10,
+        "prefix_evictions": 1
+      },
+      "worker_sha256": "cdf24f21703f50f76626b12ddcf60cb1139d2287268e8ea1787ef3d78009f560"
+    },
+    {
+      "backend": "cuda",
+      "passed": true,
+      "expected_tokens": [
+        282,
+        260,
+        905,
+        30
+      ],
+      "stats": {
+        "live_sequences": 0,
+        "live_kv_bytes": 0,
+        "peak_kv_bytes": 276480,
+        "forward_tokens": 30,
+        "device_weight_bytes": 651306240,
+        "weight_uploaded_bytes": 651306240,
+        "token_uploaded_bytes": 120,
+        "kv_uploaded_bytes": 0,
+        "logits_downloaded_bytes": 4325376,
+        "device_allocations": 305,
+        "device_workspace_bytes": 348696,
+        "kv_block_tokens": 2,
+        "kv_total_blocks": 3,
+        "kv_live_blocks": 0,
+        "kv_peak_blocks": 3,
+        "kv_reserved_bytes": 276480,
+        "block_table_uploaded_bytes": 84,
+        "block_table_device_bytes": 0,
+        "prefix_cache_capacity": 3,
+        "kv_cached_blocks": 0,
+        "kv_cache_only_blocks": 0,
+        "prefix_hits": 5,
+        "prefix_misses": 1,
+        "prefix_reused_tokens": 10,
+        "prefix_evictions": 1
+      },
+      "worker_sha256": "c7a4d9ab8354c54edea85f07f92a793a93accf63edd5aa5dd1bfdcee1863f236"
+    }
+  ]
+}

@@ -6,7 +6,9 @@ M2 已完成首个 SmolLM2-135M-Instruct CPU/CUDA 正确性闭环；M3 已有分
 GPU、完整 forward 与设备增量页表更新，COW 尚未实现；M4 已建立无缓存 dense/paged FP32 基线，
 已接入最小精确前缀缓存、增量 prefill 与冷/热 paired 实验；共享/混合/零共享八请求流的
 45 进程 CUDA [收益测量](prefix_benefit.md) 已完成。M5 的完整页面共享、页面 LRU 已开始，
-索引优化未完成；新增 [长期压力测试与瓶颈测量](long_running_stress.md)，验收范围与结果单独记录。验收边界见 [精确前缀缓存](prefix_cache.md)、[真实模型](real_model.md)
+已完成 [精确页索引与 LRU 优化](prefix_index.md)；[长期压力测试与瓶颈测量](long_running_stress.md)
+的历史验收与本次优化回归分别记录；已接入 [多轮生成历史完整页复用](generation_history.md)，
+部分页 COW 仍待实现。验收边界见 [精确前缀缓存](prefix_cache.md)、[真实模型](real_model.md)
 和 [基线协议](baseline.md)，不把局部实现当整个阶段全部完成。
 
 | 阶段 | 交付 | 验收门槛 |
@@ -16,7 +18,7 @@ GPU、完整 forward 与设备增量页表更新，COW 尚未实现；M4 已建�
 | M2 真实模型正确性 | 选定一种小型预训练模型架构、配置/权重/tokenizer；多层/多头/GQA 与必要 RoPE/RMSNorm/MLP | 真实权重 logits/Greedy 对独立框架参考；全前缀/增量/分块一致 |
 | M3 GPU 完整执行 | GPU forward、权重与 KV 常驻、设备追加/COW/table 更新 | 实际设备对照通过；warm step 无完整 KV pool H2D；GPU 资源完成后安全复用 |
 | M4 端到端基线 | 本地 CLI、生成事件流、冷/热测量、缓存关闭/开启对照 | 固定模型/精度/输入，重复测量 TTFT/TPOT/吞吐/显存；保留原始数据与环境 |
-| M5 前缀复用优化 | 替换线性扫描索引、合理驱逐、跨 generate 缓存、多轮/分叉工作负载 | 无跨上下文误命中；输出一致；命中、节省计算、内存与端到端收益均可解释 |
+| M5 前缀复用优化 | 优化精确前缀索引与 LRU、合理驱逐、跨 generate 缓存、多轮/分叉工作负载 | 无跨上下文误命中；输出一致；命中、节省计算、内存与端到端收益均可解释 |
 
 M1 可分批迁入现有 continuous batching、chunked prefill、共享/COW 和抢占机制；
 M2/M3 保留这些机制的开关，以便隔离模型与设备问题。M5 优化已有前缀能力，不意味着

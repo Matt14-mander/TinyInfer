@@ -20,3 +20,6 @@ requirements-reference.txt 固定参考依赖，CPU PyTorch 单独安装于工�
 
 `verify_capacity_admission.py` 对真实 CPU/CUDA worker 运行小页池准入/取消/EOS/诊断占页回归，
 对照大页池输出并检查最终资源归零。参数与策略见 [容量准入](../docs/capacity_admission.md)。
+
+`verify_generation_history.py` 验证多轮生成历史完整页复用，覆盖 CPU/CUDA cache off/on，
+使用独立 Transformers full-prefix oracle，记录实际跳过计算量和恢复后的 logits。

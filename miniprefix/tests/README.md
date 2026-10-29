@@ -48,3 +48,9 @@ prefix_cache_test.cpp 只测试匹配、缓存引用和淘汰策略；测试数�
 
 不把 skip、模拟值、空测试或 CPU fallback 当 GPU 验收。随机性固定 seed、容差明确；
 仅为实际行为编写测试，不为文档目录或空实现堆测试。
+
+前缀索引回归包含 test-only 冻结旧实现的 15,000 步差分，以及缺失祖先重新发布、
+长期根切换剪枝、retain 失败回收和 8,192 页深路径非递归清理。
+
+`miniprefix_engine_history_tests` 检查 decode 完整页发布时机、采样/KV 边界、取消/EOS、
+失败不发布和同轮分叉。真实 CPU/CUDA 多轮验收由 verify_generation_history.py 显式运行。

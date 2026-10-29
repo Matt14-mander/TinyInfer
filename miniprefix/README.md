@@ -83,3 +83,9 @@ M0 检查：MSVC 19.43 / C++17 / Release / CUDA OFF 的独立 CMake consumer 已
 
 2026-10-29 工作区：新增 [长期压力测试与瓶颈测量](docs/long_running_stress.md)，
 直接运行原生 Engine，覆盖持续混合请求与容量压力；与 worker 端到端性能基线分开报告。
+
+前缀索引已改为精确页 token trie 和双向 LRU，保留缺页停止、引用及淘汰语义；
+实现与验收见 [索引优化](docs/prefix_index.md)。
+
+已接入 [多轮生成历史完整页复用](docs/generation_history.md)：成功 decode 补满一页后发布已提交历史，
+支持后续请求复用，未满尾页和最新未计算的输出 token 不缓存，部分页 COW 尚未实现。
