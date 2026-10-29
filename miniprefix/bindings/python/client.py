@@ -111,6 +111,19 @@ class NativeEngine:
     def clear_prefix_cache(self):
         self._command(["CLEAR_PREFIX"])
 
+    def set_cost_timing(self, enabled):
+        if type(enabled) is not bool:
+            raise ValueError("enabled must be bool")
+        self._command(["COST_TIMING", int(enabled)])
+
+    def cost_stats(self):
+        names = ("lookup_calls", "lookup_ns", "publish_calls", "publish_ns",
+                 "cow_pages", "cow_bytes", "cow_copy_ns", "cow_timed_copies")
+        values = self._command(["COST_STATS"])
+        if len(values) != len(names):
+            raise RuntimeError("invalid cost stats")
+        return dict(zip(names, values))
+
     def stats(self):
         names = ("live_sequences", "live_kv_bytes", "peak_kv_bytes", "forward_tokens", "device_weight_bytes",
             "weight_uploaded_bytes", "token_uploaded_bytes", "kv_uploaded_bytes", "logits_downloaded_bytes", "device_allocations", "device_workspace_bytes",

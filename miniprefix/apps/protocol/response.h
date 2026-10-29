@@ -7,6 +7,7 @@ void ok(std::ostream&);
 void count(std::ostream&,std::size_t);
 void logits(std::ostream&,const std::vector<float>&);
 void events(std::ostream&,const std::vector<GenerationEvent>&);
+void cost_stats(std::ostream&,const CostStats&);
 void stats(std::ostream&,const RunnerStats&);
 void step_stats(std::ostream&,const EngineStepStats&);
 void error(std::ostream&,const std::string&);

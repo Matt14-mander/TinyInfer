@@ -185,6 +185,33 @@ void partial_cache(bool cuda){
     assert(r->stats().kv_live_blocks==1&&r->stats().kv_cached_blocks==0);
     r->release("next");assert(r->stats().kv_live_blocks==0);oracle->clear();
 }
+void costs(bool cuda){
+    for(bool timed:{false,true}){
+        auto w=weights();auto r=make_cpu_runner(w,16,{4,8,8});
+#ifdef MINIPREFIX_ENABLE_CUDA
+        if(cuda)r=make_cuda_runner(w,16,{4,8,8});
+#endif
+        r->set_cost_timing(timed);r->set_cost_timing(timed);
+        r->create("a");r->append("a",{1,2,3});r->cache_prefix("a");r->create("b");
+        assert(r->reuse_prefix("b",{1,2,3,4})==3);r->append("b",{4});
+        auto cost=r->cost_stats();assert(cost.lookup_calls==1&&cost.publish_calls==1);
+        assert(cost.cow_pages==1&&cost.cow_bytes==192&&cost.cow_timed_copies==std::uint64_t(timed));
+        if(!timed)assert(cost.lookup_ns==0&&cost.publish_ns==0&&cost.cow_copy_ns==0);
+        r->create("failed");r->fork_sequence("a","failed");rejects([&]{r->append("failed",{15});});
+        cost=r->cost_stats();assert(cost.cow_pages==2&&cost.cow_bytes==384);
+        // Work already copied is observable even when the model transaction fails.
+        assert(cost.cow_timed_copies==(timed?2:0));
+        r->clear();assert(r->cost_stats().cow_bytes==384&&r->stats().kv_live_blocks==0);
+        r->set_cost_timing(false);
+        const auto stopped=r->cost_stats();
+        r->create("next");r->append("next",{1,2,3});r->cache_prefix("next");r->create("copy");
+        assert(r->reuse_prefix("copy",{1,2,3,4})==3);r->append("copy",{4});
+        const auto final=r->cost_stats();assert(final.cow_bytes==576&&final.cow_pages==3);
+        assert(final.lookup_ns==stopped.lookup_ns&&final.publish_ns==stopped.publish_ns);
+        assert(final.cow_copy_ns==stopped.cow_copy_ns&&final.cow_timed_copies==stopped.cow_timed_copies);
+        r->clear();
+    }
+}
 int main(int argc,char** argv){
     std::cout<<"COW regression started"<<std::endl;
     bool cuda=false,required=false;for(int i=1;i<argc;++i){cuda|=std::string(argv[i])=="--cuda";required|=std::string(argv[i])=="--require-device";}
@@ -197,4 +224,5 @@ int main(int argc,char** argv){
     payload(cuda);std::cout<<"COW payload passed"<<std::endl;
     runner(cuda);std::cout<<"COW copy, capacity, rollback, retry and release passed"<<std::endl;
     partial_cache(cuda);std::cout<<"Partial prefix cache, COW and capacity passed"<<std::endl;
+    costs(cuda);std::cout<<"Cost counters and opt-in timing passed"<<std::endl;
 }

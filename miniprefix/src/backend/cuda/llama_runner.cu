@@ -51,6 +51,14 @@ __global__ void swiglu_kernel(float* gate,const float* up,int count){int i=block
 class CudaRunner final:public ModelRunner {
     std::shared_ptr<ModelWeights> weights_;RunnerStats stats_;
     KVManager kv_;
+    CostStats costs_;bool cost_timing_=false;
+    struct CopyEvents {
+        cudaEvent_t begin=nullptr,end=nullptr;
+        CopyEvents(){check(cudaEventCreate(&begin),"COW event begin");
+            try{check(cudaEventCreate(&end),"COW event end");}catch(...){cudaEventDestroy(begin);throw;}}
+        ~CopyEvents(){cudaEventDestroy(begin);cudaEventDestroy(end);}
+    };
+    std::unique_ptr<CopyEvents> copy_events_;
     Allocation keys_,values_;
     cuda_detail::StreamBlas execution_;
     std::map<std::string,std::unique_ptr<Allocation>> parameters_;
@@ -79,6 +87,14 @@ public:
     }
     ~CudaRunner() override{execution_.synchronize_noexcept();block_tables_.clear();parameters_.clear();execution_.reset();}
     const ModelConfig& config() const override{return weights_->config;}
+    CostStats cost_stats() const override{
+        auto result=kv_.cost_stats();result.cow_pages=costs_.cow_pages;result.cow_bytes=costs_.cow_bytes;
+        result.cow_copy_ns=costs_.cow_copy_ns;result.cow_timed_copies=costs_.cow_timed_copies;return result;
+    }
+    void set_cost_timing(bool enabled) override{
+        if(enabled&&!copy_events_)copy_events_=std::make_unique<CopyEvents>();
+        cost_timing_=enabled;kv_.set_cost_timing(enabled);
+    }
     int context_limit() const override{return kv_.context_limit();}
     KvAdmission reserve_request(const RequestId& id,std::size_t tokens) override{return kv_.reserve_request(id,tokens);}
     void release_reservation(const RequestId& id) noexcept override{kv_.release_reservation(id);}
@@ -107,11 +123,16 @@ public:
         std::vector<float> result(c.vocabulary);
         const auto original_blocks=append.original_blocks();
         auto& table_state=*block_tables_.at(id);
+        const bool timed=cost_timing_&&bool(append.tail_copy());
+        if(append.tail_copy())++costs_.cow_pages;
         try{
+            if(timed)check(cudaEventRecord(copy_events_->begin,execution_.stream()),"COW timing begin");
             append.copy_shared_tail([&](std::size_t destination,std::size_t source,std::size_t count){
                 check(cudaMemcpyAsync(keys_.data+destination,keys_.data+source,count*sizeof(float),cudaMemcpyDeviceToDevice,execution_.stream()),"COW keys");
                 check(cudaMemcpyAsync(values_.data+destination,values_.data+source,count*sizeof(float),cudaMemcpyDeviceToDevice,execution_.stream()),"COW values");
+                costs_.cow_bytes+=2*count*sizeof(float);
             });
+            if(timed)check(cudaEventRecord(copy_events_->end,execution_.stream()),"COW timing end");
             const auto first=table_state.dirty?std::size_t(0):(append.tail_copy()?original_blocks-1:original_blocks);
             if(state.blocks.size()!=first){const auto bytes=(state.blocks.size()-first)*sizeof(int);
                 check(cudaMemcpyAsync(reinterpret_cast<int*>(table_state.data)+first,state.blocks.data()+first,
@@ -144,6 +165,8 @@ public:
             check(cudaGetLastError(),"model kernel launch");
             check(cudaMemcpyAsync(result.data(),workspace_.logits.data,result.size()*4,cudaMemcpyDeviceToHost,execution_.stream()),"download logits");
             execution_.synchronize("model completion");
+            if(timed){float milliseconds=0;check(cudaEventElapsedTime(&milliseconds,copy_events_->begin,copy_events_->end),"COW elapsed");
+                costs_.cow_copy_ns+=static_cast<std::uint64_t>(milliseconds*1e6);++costs_.cow_timed_copies;}
             for(float v:result)if(!std::isfinite(v))throw std::runtime_error("nonfinite CUDA logits");
         }catch(...){execution_.synchronize_noexcept();table_state.dirty=true;append.rollback();throw;}
         append.commit();table_state.dirty=false;stats_.logits_downloaded_bytes+=result.size()*4;return result;

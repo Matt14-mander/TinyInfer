@@ -53,6 +53,8 @@ public:
     virtual void release(const RequestId&)=0;
     virtual void clear()=0;
     virtual RunnerStats stats() const=0;
+    virtual CostStats cost_stats() const{return {};}
+    virtual void set_cost_timing(bool){}
 };
 std::unique_ptr<ModelRunner> make_cpu_runner(std::shared_ptr<ModelWeights>,int context,KvCacheConfig kv={});
 #ifdef MINIPREFIX_ENABLE_CUDA

@@ -1,5 +1,6 @@
 #pragma once
 #include "request.h"
+#include "cost_stats.h"
 #include "prefix_cache.h"
 #include <map>
 #include <functional>
@@ -24,6 +25,7 @@ class KVManager {
     std::map<RequestId,State> sequences_;
     std::size_t forward_tokens_=0;
     bool append_active_=false;
+    bool cost_timing_=false;CostStats costs_;
     void require_idle() const;
     std::map<RequestId,std::size_t> reservations_;
     std::size_t committed_blocks() const;
@@ -84,5 +86,7 @@ public:
     void release(const RequestId& id);
     void clear();
     KvStats stats() const;
+    void set_cost_timing(bool enabled){cost_timing_=enabled;}
+    CostStats cost_stats() const{return costs_;}
 };
 } // namespace miniprefix

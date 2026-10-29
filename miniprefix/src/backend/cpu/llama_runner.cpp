@@ -23,6 +23,7 @@ void rope(Tensor& x,int heads,int dim,int start,float theta){
 class CpuRunner final:public ModelRunner {
     std::shared_ptr<ModelWeights> weights_;
     KVManager kv_;
+    CostStats costs_;bool cost_timing_=false;
     std::vector<float> keys_,values_;
     std::map<std::string,std::unique_ptr<tinyinfer::cpu::PackedMatMulRhs>> packed_;
     RunnerStats stats_;
@@ -39,6 +40,11 @@ public:
         if(context<1||context>config().context)throw std::invalid_argument("invalid runner context");
         keys_.resize(kv_.reserved_bytes()/sizeof(float)/2);values_.resize(keys_.size());}
     const ModelConfig& config() const override{return weights_->config;}
+    CostStats cost_stats() const override{
+        auto result=kv_.cost_stats();result.cow_pages=costs_.cow_pages;result.cow_bytes=costs_.cow_bytes;
+        result.cow_copy_ns=costs_.cow_copy_ns;result.cow_timed_copies=costs_.cow_timed_copies;return result;
+    }
+    void set_cost_timing(bool enabled) override{cost_timing_=enabled;kv_.set_cost_timing(enabled);}
     int context_limit() const override{return kv_.context_limit();}
     KvAdmission reserve_request(const RequestId& id,std::size_t tokens) override{return kv_.reserve_request(id,tokens);}
     void release_reservation(const RequestId& id) noexcept override{kv_.release_reservation(id);}
@@ -53,10 +59,14 @@ public:
     void clear_prefix_cache() override{kv_.clear_prefix_cache();}
     std::vector<float> append(const RequestId& id,const std::vector<TokenId>& tokens) override{
         auto append=kv_.prepare_append(id,tokens);const auto& s=append.sequence();
+        if(append.tail_copy())++costs_.cow_pages;
+        {CostTimer timer(cost_timing_&&bool(append.tail_copy()),costs_.cow_copy_ns);
         append.copy_shared_tail([&](std::size_t destination,std::size_t source,std::size_t count){
             std::copy_n(keys_.data()+source,count,keys_.data()+destination);
             std::copy_n(values_.data()+source,count,values_.data()+destination);
-        });
+            costs_.cow_bytes+=2*count*sizeof(float);
+        });}
+        if(cost_timing_&&append.tail_copy())++costs_.cow_timed_copies;
         const auto& c=config();const int n=static_cast<int>(tokens.size()),dim=c.head_dimension(),kv=c.kv_width();
         Tensor x({n,c.hidden});const auto& embedding=weights_->get("model.embed_tokens.weight");
         for(int row=0;row<n;++row){

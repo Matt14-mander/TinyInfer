@@ -75,6 +75,7 @@ std::size_t KVManager::reuse_prefix(const RequestId& id,const std::vector<TokenI
     if(prompt.empty()||prompt.size()>std::size_t(context_))throw std::invalid_argument("invalid prefix context");
     for(auto token:prompt)if(token<0||token>=vocabulary_)throw std::invalid_argument("invalid prefix token");
     auto& sequence=idle_state(id).sequence;
+    ++costs_.lookup_calls;CostTimer timer(cost_timing_,costs_.lookup_ns);
     const auto count=prefix_.reuse(sequence,prompt);
     const auto reservation=reservations_.find(id);
     if(reservation!=reservations_.end()&&sequence.blocks.size()>reservation->second){
@@ -85,7 +86,10 @@ std::size_t KVManager::reuse_prefix(const RequestId& id,const std::vector<TokenI
     }
     return count;
 }
-void KVManager::cache_prefix(const RequestId& id){prefix_.publish(idle_state(id).sequence);}
+void KVManager::cache_prefix(const RequestId& id){
+    auto& sequence=idle_state(id).sequence;++costs_.publish_calls;
+    CostTimer timer(cost_timing_,costs_.publish_ns);prefix_.publish(sequence);
+}
 void KVManager::clear_prefix_cache(){
     require_idle();
     // Even cache-only pages may still be read by an in-flight append kernel.

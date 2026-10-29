@@ -29,6 +29,9 @@ Command parse(const std::string& line){
     if(op=="STEP")return {Kind::Step};
     if(op=="STEP_STATS")return {Kind::StepStats};
     if(op=="CLEAR_PREFIX")return {Kind::ClearPrefix};
+    if(op=="COST_STATS")return {Kind::CostStats};
+    if(op=="COST_TIMING"){Command c{Kind::CostTiming};c.id=integer(in);
+        if(c.id!=0&&c.id!=1)throw std::invalid_argument("invalid timing flag");return c;}
     if(op=="STATS")return {Kind::Stats};
     if(op=="QUIT")return {Kind::Quit};
     throw std::invalid_argument("unknown command");

@@ -8,7 +8,7 @@ using namespace miniprefix;
 namespace {
 void parsing(){
     const std::vector<std::pair<std::string,std::string>> errors={
-        {"","unknown command"},{"step","unknown command"},{"UNKNOWN 1","unknown command"},
+        {"COST_TIMING 2","invalid timing flag"},{"COST_TIMING","missing integer"},{"","unknown command"},{"step","unknown command"},{"UNKNOWN 1","unknown command"},
         {"CANCEL","missing integer"},{"CANCEL 2147483648","missing integer"},
         {"SUBMIT 0 0 -2 0","invalid request"},{"SUBMIT 0 0 -2","missing integer"},
         {"SUBMIT 1 1 -2 0","invalid token count"},{"SUBMIT 1 1 -2 1","missing integer"},
@@ -17,6 +17,8 @@ void parsing(){
         {"FORWARD 1 131073","invalid token count"},{"FORWARD 1 -1","invalid token count"}};
     for(const auto& item:errors){bool caught=false;try{protocol::parse(item.first);}
         catch(const std::invalid_argument& e){caught=true;assert(e.what()==item.second);}assert(caught);}
+    assert(protocol::parse("COST_STATS").kind==protocol::Kind::CostStats);
+    assert(protocol::parse("COST_TIMING 1").id==1);
     auto c=protocol::parse(" \tSUBMIT +1 2 -1 2 0 3 trailing ignored\r");
     assert(c.kind==protocol::Kind::Submit&&c.request.id=="1"&&c.request.generation.max_new_tokens==2);
     assert(!c.request.generation.eos_token_id&&(c.request.prompt_token_ids==std::vector<TokenId>{0,3}));
@@ -30,10 +32,11 @@ void encoding(){
     protocol::events(out,{{"1",3,std::nullopt,{}},{"2",std::nullopt,FinishReason::Error,"not on wire"}});
     protocol::events(out,{});protocol::step_stats(out,{4,3,2});
     protocol::stats(out,RunnerStats{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25});
+    protocol::cost_stats(out,CostStats{1,2,3,4,5,6,7,8});
     protocol::error(out,"bad input");
     assert(out.str()=="READY MINIPREFIX 3 8 2 16 cuda\nOK\nOK 4\nOK 0.125 1.23456788 -0\n"
         "OK 2 1 3 -1 2 -1 3\nOK 0\nOK 4 3 2\n"
-        "OK 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25\nERROR bad input\n");
+        "OK 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25\nOK 1 2 3 4 5 6 7 8\nERROR bad input\n");
 }
 class Runner final:public ModelRunner {
     ModelConfig config_;

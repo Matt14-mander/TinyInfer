@@ -89,3 +89,6 @@ M0 检查：MSVC 19.43 / C++17 / Release / CUDA OFF 的独立 CMake consumer 已
 
 已接入 [非整页精确前缀缓存](docs/partial_prefix_cache.md)：prefill 完成及每次成功 decode 后发布已提交历史，
 支持页内最长前缀命中和 CPU/CUDA COW；最新未计算的输出 token 不缓存，始终保留一个 prompt token 计算 logits。
+
+新增 [非整页缓存成本观测与收益测量](docs/partial_prefix_costs.md)：独立 COST_STATS/COST_TIMING，
+保持原 STATS 不变，区分无耗时插桩的端到端测量与 CUDA event profiling。

@@ -18,3 +18,7 @@ prefix_benefit.py 提供真实模型八请求负载的 off/cold/warm 独立进�
 `stress.cpp` / `stress.py` 提供同一 Engine 的长期混合压力测试及原生调用级耗时归因，
 包含 watchdog、终态/输出/容量/回收检查及 Windows 进程内存采样。
 协议和口径见 [长期压力测试](../docs/long_running_stress.md)。
+
+`partial_prefix.py` 是当前非整页缓存的 off/cold/hot 配对测量入口：
+正式延迟测量关闭耗时插桩，独立 profiling 轮次收集主机索引成本与 CUDA event COW 时间，
+输出可复核 JSON 和 Markdown。详见 [成本观测与测量协议](../docs/partial_prefix_costs.md)。
