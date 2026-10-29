@@ -17,7 +17,7 @@ decode 优先顺序和输入预算；请求生命周期与前缀恢复时序仍�
 
 当前 CPU/CUDA KV 已改为共享 block 池和序列 block table，CUDA 权重/KV 常驻，详见
 [分页 KV](docs/paged_kv.md)；runner 按 sequence 顺序执行。原
-[serving_scheduler](../examples/serving_scheduler/README.md) 的重算、部分页 COW 和
+[serving_scheduler](../examples/serving_scheduler/README.md) 的重算和
 跨请求矩阵 batching 仍是独立可运行参考，尚未全部迁入真实模型路径。
 
 ## 定位与边界
@@ -71,7 +71,7 @@ miniprefix/
 此开关默认 OFF，不要求 CUDA、Python、模型下载或其他第三方依赖。CUDA 实现后继续
 受现有 `TINYINFER_ENABLE_CUDA` 约束，不创建第二套 CUDA SDK 配置。
 
-下一步按 [路线图](docs/roadmap.md) 扩展前缀负载、索引效率、部分页 COW 与容量准入，
+下一步按 [路线图](docs/roadmap.md) 测量非整页复用的收益与 COW 开销，并优化执行后端，
 用缓存关闭/冷/热对照评估改动。
 
 M0 检查：MSVC 19.43 / C++17 / Release / CUDA OFF 的独立 CMake consumer 已成功链接
@@ -87,5 +87,5 @@ M0 检查：MSVC 19.43 / C++17 / Release / CUDA OFF 的独立 CMake consumer 已
 前缀索引已改为精确页 token trie 和双向 LRU，保留缺页停止、引用及淘汰语义；
 实现与验收见 [索引优化](docs/prefix_index.md)。
 
-已接入 [多轮生成历史完整页复用](docs/generation_history.md)：成功 decode 补满一页后发布已提交历史，
-支持后续请求复用，未满尾页和最新未计算的输出 token 不缓存，部分页 COW 尚未实现。
+已接入 [非整页精确前缀缓存](docs/partial_prefix_cache.md)：prefill 完成及每次成功 decode 后发布已提交历史，
+支持页内最长前缀命中和 CPU/CUDA COW；最新未计算的输出 token 不缓存，始终保留一个 prompt token 计算 logits。

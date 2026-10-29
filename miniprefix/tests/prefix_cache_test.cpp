@@ -2,7 +2,7 @@
 #include <cassert>
 #include <iostream>
 #include <random>
-#include "prefix_cache_reference.h"
+#include "partial_prefix_reference.h"
 using namespace miniprefix;
 namespace {
 void append(KvBlockPool& pool,PagedSequence& sequence,std::vector<std::int32_t> tokens){
@@ -22,7 +22,7 @@ void deep_path(){
 void differential(){
     for(int capacity:{0,1,2,5,16}){
         KvBlockPool left({2,128,capacity},1,1),right({2,128,capacity},1,1);
-        ExactPrefixCache actual(left);LegacyPrefixCache expected(right);
+        ExactPrefixCache actual(left);PartialPrefixReference expected(right);
         std::mt19937 random(7341+capacity);
         for(int step=0;step<3000;++step){
             const auto action=random()%7;
@@ -82,15 +82,25 @@ void missing_ancestor_and_pruning(){
 int main(){
     differential();missing_ancestor_and_pruning();deep_path();
     {
+        KvBlockPool pool({4,4,4},1,1);ExactPrefixCache cache(pool);PagedSequence source,shorter,probe;
+        append(pool,source,{1,2,3,4});cache.publish(source);
+        assert(cache.reuse(shorter,{1,2,9})==2);cache.publish(shorter);
+        pool.release(source);pool.release(shorter);
+        // Two cache snapshots, one physical page; no active owner remains.
+        assert(cache.size()==2&&pool.live_blocks()==1&&cache.cache_only_blocks()==1);
+        assert(cache.evict_one());assert(cache.reuse(probe,{1,2,8})==2);
+        cache.clear();assert(pool.live_blocks()==1);pool.release(probe);assert(pool.live_blocks()==0);
+    }
+    {
         KvBlockPool pool({2,8,3},2,4);ExactPrefixCache cache(pool);PagedSequence source,a,b;
         append(pool,source,{1,2,3,4,5});cache.publish(source);
-        assert(cache.size()==2&&pool.live_blocks()==3); // tail is not published
+        assert(cache.size()==3&&pool.live_blocks()==3); // partial tail is published
         const int shared=source.blocks[0];assert(pool.references(shared)==2);
         assert(cache.reuse(a,{1,2,3,4,5})==4&&pool.references(shared)==3);
         append(pool,a,{9,10});assert(a.blocks.back()!=source.blocks.back());
         assert(cache.reuse(b,{9,9,3,4,5})==0); // equal later block is not a prefix
         pool.release(b);
-        assert(cache.reuse(b,{1,2,3,4})==2); // aligned full hit recomputes last block
+        assert(cache.reuse(b,{1,2,3,4})==3); // only the last token is recomputed
         cache.clear();assert(cache.size()==0&&pool.references(shared)==3);
         pool.release(a);pool.release(b);assert(pool.references(shared)==1);
         pool.release(source);assert(pool.live_blocks()==0);

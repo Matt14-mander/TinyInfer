@@ -8,7 +8,7 @@ GPU、完整 forward 与设备增量页表更新，已接入部分页 COW 基础
 45 进程 CUDA [收益测量](prefix_benefit.md) 已完成。M5 的完整页面共享、页面 LRU 已开始，
 已完成 [精确页索引与 LRU 优化](prefix_index.md)；[长期压力测试与瓶颈测量](long_running_stress.md)
 的历史验收与本次优化回归分别记录；已接入 [多轮生成历史完整页复用](generation_history.md)，
-[部分页 COW 基础能力](partial_page_cow.md) 已实现，非整页前缀缓存仍待实现。验收边界见 [精确前缀缓存](prefix_cache.md)、[真实模型](real_model.md)
+[部分页 COW 基础能力](partial_page_cow.md) 已实现，[非整页精确前缀缓存](partial_prefix_cache.md) 已接入。验收边界见 [精确前缀缓存](prefix_cache.md)、[真实模型](real_model.md)
 和 [基线协议](baseline.md)，不把局部实现当整个阶段全部完成。
 
 | 阶段 | 交付 | 验收门槛 |
@@ -31,6 +31,6 @@ M2/M3 保留这些机制的开关，以便隔离模型与设备问题。M5 优�
 CUDA Graph、CPU/GPU 异步重叠、量化、真实推测解码、HTTP、multi-GPU、PD 分离、
 多模态与 MoE 均在 M4 基线之后按实际瓶颈安排，不纳入第一版承诺。
 
-下一项具体工作：在 COW 基础上实现非整页精确前缀缓存，明确部分页发布、匹配和淘汰语义，
-并测量多轮负载收益；共享感知容量估算与抢占恢复仍后置。保守容量准入已实现。保留历史 dense/paged 基线与独立框架 oracle，复用基线
+下一项具体工作：测量非整页精确前缀缓存的多轮负载收益、COW 复制和缓存快照成本，
+按瓶颈优化发布策略与后端执行；共享感知容量估算与抢占恢复仍后置。保守容量准入已实现。保留历史 dense/paged 基线与独立框架 oracle，复用基线
 对照正确性、实际跳过计算量、显存和端到端收益。

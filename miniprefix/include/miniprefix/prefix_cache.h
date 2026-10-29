@@ -3,7 +3,8 @@
 #include <memory>
 
 namespace miniprefix {
-// Exact page-token trie. Paths encode the entire causal history; no hashes or
+// Exact page-token trie with variable-length final edges. Paths encode the
+// entire causal history; no hashes or
 // cross-runner keys. Structural ancestors may survive eviction without a KV lease.
 class ExactPrefixCache {
     struct Index;
@@ -24,6 +25,7 @@ public:
     std::size_t evictions() const;
     std::size_t cache_only_blocks() const;
     void clear() noexcept;
+    // Reuse the longest cached token prefix, keeping one prompt token for logits.
     int reuse(PagedSequence& sequence,const std::vector<std::int32_t>& prompt);
     void publish(const PagedSequence& sequence);
     // Drop one LRU cache reference, not necessarily a physical page: active

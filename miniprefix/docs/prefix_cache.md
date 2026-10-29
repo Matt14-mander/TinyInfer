@@ -1,5 +1,7 @@
 # 最小精确前缀缓存
 
+> 2026-10-29 更新：当前已支持[非整页精确前缀缓存](partial_prefix_cache.md)。下文保留该阶段的实现与历史验收边界；当前匹配和发布语义以新文档为准。
+
 2026-10-25：真实 CPU/CUDA ModelRunner 已支持完整页面的精确前缀复用。
 默认关闭（`prefix_cache_blocks=0`），打开后跨同一 NativeEngine 的请求保留；
 进程退出、Engine shutdown 或失败时全部释放。缓存不开启跨进程持久化。

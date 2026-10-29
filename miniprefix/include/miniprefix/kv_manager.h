@@ -29,7 +29,7 @@ class KVManager {
     std::size_t committed_blocks() const;
     State& idle_state(const RequestId& id);
     void validate_tokens(const std::vector<TokenId>& tokens) const;
-    void reserve_pages(const RequestId& id,PagedSequence& sequence,int end,bool cow);
+    void reserve_pages(const RequestId& id,PagedSequence& sequence,int end,bool& cow);
 public:
     // The transaction owns an immutable input snapshot. Backend code MUST finish
     // all device accesses before rollback/destruction. It must not outlive its

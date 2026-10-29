@@ -22,7 +22,7 @@ public:
         published.push_back(kv.sequence(id).tokens);kv.cache_prefix(id);
     }
     std::vector<float> append(const RequestId& id,const std::vector<TokenId>& t) override{
-        auto transaction=kv.prepare_append(id,t);transaction.commit();
+        auto transaction=kv.prepare_append(id,t);transaction.copy_shared_tail([](std::size_t,std::size_t,std::size_t){});transaction.commit();
         std::vector<float> logits(128,0);logits[(t.back()+1)%128]=1;
         if(invalid_logits)logits[0]=std::numeric_limits<float>::quiet_NaN();return logits;
     }
@@ -44,16 +44,17 @@ void history_and_boundaries(){
     auto runner=std::make_unique<Runner>();auto* trace=runner.get();Engine engine(std::move(runner),{2,8,2,128});
     engine.submit(request("turn1",{1,2,3},2));assert((finish(engine)==std::vector<TokenId>{4,5}));
     assert((trace->published==std::vector<std::vector<TokenId>>{{1,2,3},{1,2,3,4}}));
-    assert(trace->stats().kv_cached_blocks==1); // sampled final token 5 has no KV
+    assert(trace->stats().kv_cached_blocks==2); // sampled final token 5 has no KV
     engine.submit(request("turn2",{1,2,3,4,5,9},3));engine.step();
     assert(engine.last_step_stats().prefix_reused_tokens==4&&engine.last_step_stats().prefill_tokens==2);
     auto events=engine.poll_events();assert(events.size()==1&&events[0].token_id==10);
     engine.step();engine.poll_events();engine.step();events=engine.poll_events();
     assert(events.size()==1&&events[0].token_id==12&&events[0].finish_reason==FinishReason::Length);
     assert((trace->published.back()==std::vector<TokenId>{1,2,3,4,5,9,10,11}));
-    // A complete aligned prompt still recomputes its last page for logits.
+    // A complete aligned prompt only recomputes its last token for logits.
     engine.submit(request("aligned",{1,2,3,4,5,9,10,11},1));engine.step();
-    assert(engine.last_step_stats().prefix_reused_tokens==4);finish(engine);
+    assert(engine.last_step_stats().prefix_reused_tokens==7);
+    events=engine.poll_events();assert(events.size()==1&&events[0].finish_reason==FinishReason::Length);
     engine.shutdown();assert(trace->stats().kv_live_blocks==0);
 }
 void cancellation_eos_and_failure(){
@@ -62,7 +63,7 @@ void cancellation_eos_and_failure(){
         auto r=request("a",{1,2,3},8);if(eos)r.generation.eos_token_id=5;e.submit(r);
         e.step();e.poll_events();e.step();auto events=e.poll_events();assert(events[0].token_id==5);
         if(!eos){e.cancel("a");e.poll_events();}
-        assert(e.idle()&&trace->stats().kv_cached_blocks==1&&trace->published.back().back()==4);
+        assert(e.idle()&&trace->stats().kv_cached_blocks==2&&trace->published.back().back()==4);
         e.submit(request("next",{1,2,3,4,5,6},1));e.step();assert(e.last_step_stats().prefix_reused_tokens==4);e.poll_events();
     }
     for(bool nan:{false,true}){

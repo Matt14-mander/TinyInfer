@@ -1,6 +1,7 @@
 #include "miniprefix/prefix_cache.h"
 #include <algorithm>
 #include <map>
+#include <iterator>
 #include <utility>
 
 namespace miniprefix {
@@ -9,6 +10,7 @@ struct ExactPrefixCache::Index {
         const std::int32_t* first;
         const std::int32_t* last;
         Page(const std::vector<std::int32_t>& v):first(v.data()),last(v.data()+v.size()){}
+        Page(const std::vector<std::int32_t>* v):Page(*v){}
         Page(const std::int32_t* begin,const std::int32_t* end):first(begin),last(end){}
     };
     struct Less {
@@ -21,10 +23,15 @@ struct ExactPrefixCache::Index {
         Node* parent=nullptr;
         const std::vector<std::int32_t>* edge=nullptr; // stable owning map key
         std::map<std::vector<std::int32_t>,std::unique_ptr<Node>,Less> children;
+        // Non-owning keys point into children; only nodes with a cache lease.
+        std::map<const std::vector<std::int32_t>*,Node*,Less> available;
         int block=-1;
         Node* previous=nullptr;
         Node* next=nullptr;
     };
+    // A shorter snapshot may refer to a page already leased by a longer one.
+    std::vector<std::size_t> leases;
+    explicit Index(std::size_t blocks):leases(blocks,0){}
     Node root;
     Node* oldest=nullptr;
     Node* newest=nullptr;
@@ -49,7 +56,8 @@ struct ExactPrefixCache::Index {
         }
     }
     void drop_node(KvBlockPool& pool,Node& node,Node* protected_node=nullptr) noexcept{
-        unlink(node);pool.unref(node.block);node.block=-1;--cached;prune(&node,protected_node);
+        node.parent->available.erase(node.edge);
+        --leases[node.block];unlink(node);pool.unref(node.block);node.block=-1;--cached;prune(&node,protected_node);
     }
     void drop(KvBlockPool& pool,Node* protected_node=nullptr) noexcept{drop_node(pool,*oldest,protected_node);}
     Node* successor(Node* n) noexcept{
@@ -66,7 +74,7 @@ bool ExactPrefixCache::evict_one(){
     if(!index_->oldest)return false;
     index_->drop(pool_);++evictions_;return true;
 }
-ExactPrefixCache::ExactPrefixCache(KvBlockPool& pool):pool_(pool),index_(std::make_unique<Index>()){}
+ExactPrefixCache::ExactPrefixCache(KvBlockPool& pool):pool_(pool),index_(std::make_unique<Index>(pool.config().max_blocks)){}
 ExactPrefixCache::~ExactPrefixCache(){clear();}
 std::size_t ExactPrefixCache::size() const{return index_->cached;}
 std::size_t ExactPrefixCache::index_nodes() const{return index_->nodes;}
@@ -77,7 +85,8 @@ std::size_t ExactPrefixCache::reused_tokens() const{return reused_;}
 std::size_t ExactPrefixCache::evictions() const{return evictions_;}
 std::size_t ExactPrefixCache::cache_only_blocks() const{
     std::size_t count=0;
-    for(auto* n=index_->oldest;n;n=n->next)if(pool_.references(n->block)==1)++count;
+    for(std::size_t block=0;block<index_->leases.size();++block)
+        if(index_->leases[block]&&pool_.references(static_cast<int>(block))==index_->leases[block])++count;
     return count;
 }
 void ExactPrefixCache::clear() noexcept{
@@ -91,15 +100,28 @@ int ExactPrefixCache::reuse(PagedSequence& sequence,const std::vector<std::int32
         throw std::invalid_argument("prefix reuse requires an empty sequence");
     if(!pool_.config().prefix_cache_blocks)return 0;
     const auto block_tokens=std::size_t(pool_.config().block_tokens);
-    const auto limit=prompt.empty()?0:(prompt.size()-1)/block_tokens;
-    std::vector<int> pages;auto* parent=&index_->root;
-    for(std::size_t i=0;i<limit;++i){
-        const auto* begin=prompt.data()+i*block_tokens;
-        auto found=parent->children.find(Index::Page(begin,begin+block_tokens));
-        if(found==parent->children.end()||found->second->block<0)break;
-        auto& node=*found->second;pages.push_back(node.block);index_->touch(node);parent=&node;
+    const auto limit=prompt.empty()?0:prompt.size()-1;
+    std::vector<int> pages;auto* parent=&index_->root;std::size_t count=0;
+    while(count<limit){
+        const auto length=std::min(block_tokens,limit-count);
+        const auto* begin=prompt.data()+count;
+        const Index::Page query(begin,begin+length);
+        auto next=parent->available.lower_bound(query);
+        Index::Node* best=nullptr;std::size_t matched=0;
+        auto consider=[&](Index::Node* node){
+            const auto& edge=*node->edge;std::size_t n=0;
+            while(n<length&&n<edge.size()&&edge[n]==begin[n])++n;
+            if(n>matched){matched=n;best=node;}
+        };
+        // The lexicographic neighbors contain a longest common prefix. Prefer
+        // the lower_bound neighbor on ties for deterministic LRU behavior.
+        if(next!=parent->available.end())consider(next->second);
+        if(next!=parent->available.begin())consider(std::prev(next)->second);
+        if(!matched)break;
+        pages.push_back(best->block);index_->touch(*best);count+=matched;
+        if(matched!=block_tokens)break;
+        parent=best;
     }
-    const auto count=pages.size()*block_tokens;
     std::vector<std::int32_t> tokens(prompt.begin(),prompt.begin()+count);
     for(int page:pages)pool_.retain(page);
     sequence.blocks=std::move(pages);sequence.tokens=std::move(tokens);sequence.used=static_cast<int>(count);
@@ -109,29 +131,28 @@ int ExactPrefixCache::reuse(PagedSequence& sequence,const std::vector<std::int32
 void ExactPrefixCache::publish(const PagedSequence& sequence){
     if(sequence.tokens.size()!=std::size_t(sequence.used))throw std::logic_error("invalid committed KV token history");
     const auto block_tokens=std::size_t(pool_.config().block_tokens);
-    const auto count=std::min(sequence.blocks.size(),std::min(std::size_t(sequence.used)/block_tokens,
+    const auto count=std::min(sequence.blocks.size(),std::min((std::size_t(sequence.used)+block_tokens-1)/block_tokens,
                              std::size_t(pool_.config().prefix_cache_blocks)));
     auto* parent=&index_->root;
     for(std::size_t i=0;i<count;++i){
         const auto* begin=sequence.tokens.data()+i*block_tokens;
-        auto found=parent->children.find(Index::Page(begin,begin+block_tokens));
+        const auto length=std::min(block_tokens,std::size_t(sequence.used)-i*block_tokens);
+        auto found=parent->children.find(Index::Page(begin,begin+length));
         if(found==parent->children.end()){
             auto node=std::make_unique<Index::Node>();node->parent=parent;
-            found=parent->children.emplace(std::vector<std::int32_t>(begin,begin+block_tokens),std::move(node)).first;
-            found->second->edge=&found->first;++index_->nodes;index_->key_tokens+=block_tokens;
+            found=parent->children.emplace(std::vector<std::int32_t>(begin,begin+length),std::move(node)).first;
+            found->second->edge=&found->first;++index_->nodes;index_->key_tokens+=length;
         }
         auto& node=*found->second;
         if(node.block>=0){index_->touch(node);parent=&node;continue;}
-        // Install the path before eviction so pruning cannot delete our parent.
+        const int page=sequence.blocks[i];
+        // Allocate the lookup entry before acquiring a lease or evicting a victim.
+        try{parent->available.emplace(node.edge,&node);pool_.retain(page);}
+        catch(...){parent->available.erase(node.edge);index_->prune(&node);throw;}
         if(size()==std::size_t(pool_.config().prefix_cache_blocks)){
-            // A missing ancestor can be the parent of the last cached victim.
-            // Keep this node alive until its replacement lease is installed.
             index_->drop(pool_,&node);++evictions_;
         }
-        const int page=sequence.blocks[i];
-        try{pool_.retain(page);}
-        catch(...){index_->prune(&node);throw;}
-        node.block=page;index_->append(node);++index_->cached;parent=&node;
+        ++index_->leases[page];node.block=page;index_->append(node);++index_->cached;parent=&node;
     }
 }
 } // namespace miniprefix

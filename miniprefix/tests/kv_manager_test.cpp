@@ -9,7 +9,7 @@ template<class F> void rejects(F&& operation){
     assert(rejected);
 }
 void commit(KVManager& manager,const RequestId& id,std::vector<TokenId> tokens){
-    auto append=manager.prepare_append(id,tokens);append.commit();
+    auto append=manager.prepare_append(id,tokens);append.copy_shared_tail([](std::size_t,std::size_t,std::size_t){});append.commit();
 }
 void reservations(){
     KVManager m({2,3,3},1,1,16,100);
@@ -60,11 +60,11 @@ void transactions(){
 void prefix_and_reset(){
     KVManager manager({2,8,3},2,4,16,100);manager.create("source");
     commit(manager,"source",{1,2,3,4,5});manager.cache_prefix("source");manager.release("source");
-    assert(manager.stats().kv_cache_only_blocks==2&&manager.stats().kv_live_blocks==2);
+    assert(manager.stats().kv_cache_only_blocks==3&&manager.stats().kv_live_blocks==3);
     manager.create("a");assert(manager.reuse_prefix("a",{1,2,3,4,6})==4);
     const auto first=manager.sequence("a").blocks[0];
     manager.create("b");assert(manager.reuse_prefix("b",{1,2,3,4,7})==4);
-    assert(manager.sequence("b").blocks[0]==first&&manager.stats().kv_live_blocks==2);
+    assert(manager.sequence("b").blocks[0]==first&&manager.stats().kv_live_blocks==3);
     assert(manager.offset(manager.sequence("a"),1,2)==(std::size_t(manager.sequence("a").blocks[1])*2+1)*2*4);
     manager.reset_sequence("a");assert(manager.sequence("a").blocks.empty()&&manager.sequence("a").tokens.empty());
     assert(manager.reuse_prefix("a",{1,2,3,4,6})==4);

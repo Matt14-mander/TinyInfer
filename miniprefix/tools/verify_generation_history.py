@@ -1,4 +1,4 @@
-"""Independent FP32 multi-turn full-page history reuse checks on real CPU/CUDA workers."""
+"""Independent FP32 multi-turn token-exact history reuse checks on real CPU/CUDA workers."""
 import argparse
 import hashlib
 import json
@@ -58,7 +58,7 @@ def verify(root,workers):
                 prompt=[1,504,3575]
                 out=generate('turn1',prompt,7,0)
                 prompt=prompt+out+[30,504,198]
-                out=generate('turn2',prompt,5,8)
+                out=generate('turn2',prompt,5,9)
                 prompt=prompt+out+[30,198]
                 # Inspect restored page contents against independent full-prefix logits.
                 restored=e.reuse_prefix('probe',prompt)
@@ -69,18 +69,18 @@ def verify(root,workers):
                 numeric.append(dict(backend=backend,cache_pages=capacity,reused_tokens=restored,
                                     checked_logits=len(actual),max_abs_error=float(difference.max())))
                 e.release('probe')
-                generate('turn3',prompt,3,16)
+                generate('turn3',prompt,3,17)
                 e.clear_prefix_cache()
                 base=[1,504,3575]
                 final=generate('one-token',base,1,0)
-                generate('uncomputed-final',base+final+[30],2,0)
+                generate('uncomputed-final',base+final+[30],2,3)
                 e.clear_prefix_cache()
                 out=generate('aligned-seed',base,6,0)
-                generate('aligned-hit',(base+out)[:8],2,4)
+                generate('aligned-hit',(base+out)[:8],2,7)
                 e.clear_prefix_cache()
                 eos=greedy(base,2,None)[-1]
                 out=generate('eos-seed',base,8,0,eos)
-                expected=(len(base)+len(out)-1)//4*4
+                expected=len(base)+len(out)-1
                 generate('after-eos',base+out+[30],2,expected)
                 e.clear_prefix_cache()
                 # Cancel after three sampled tokens: committed KV is prompt + first two outputs.
@@ -90,7 +90,7 @@ def verify(root,workers):
                     if len(cancelled)==3:break
                 assert cancelled==greedy(base,3,None)
                 assert e.cancel('cancel-seed')[0]['finish_reason']=='cancelled'
-                generate('after-cancel',base+cancelled+[30],2,4)
+                generate('after-cancel',base+cancelled+[30],2,5)
                 e.clear_prefix_cache()
                 e.submit('live',base,6,None);live=[]
                 for _ in range(128):

@@ -96,7 +96,7 @@ void KVManager::clear_prefix_cache(){
 KVManager::Append KVManager::prepare_append(const RequestId& id,const std::vector<TokenId>& tokens){
     return Append(*this,id,tokens);
 }
-void KVManager::reserve_pages(const RequestId& id,PagedSequence& sequence,int end,bool cow){
+void KVManager::reserve_pages(const RequestId& id,PagedSequence& sequence,int end,bool& cow){
     const auto tokens=config().block_tokens;
     const auto count=std::size_t(end/tokens+(end%tokens!=0));
     const auto required=count>sequence.blocks.size()?count-sequence.blocks.size():0;
@@ -113,7 +113,11 @@ void KVManager::reserve_pages(const RequestId& id,PagedSequence& sequence,int en
     // Eviction only drops a cache lease. Recheck physical capacity after every
     // victim, including pages still pinned by active sequences. Preserve LRU
     // order and eviction side effects even if reservation ultimately fails.
-    while(pool_.free_blocks()<required+std::size_t(cow)&&prefix_.evict_one()){}
+    while(pool_.free_blocks()<required+std::size_t(cow)&&prefix_.evict_one()){
+        // A partial tail may have been shared only with the cache. Eviction
+        // removes that lease, so writing in place no longer needs a COW page.
+        if(cow&&pool_.references(sequence.blocks.back())==1)cow=false;
+    }
     if(cow&&pool_.free_blocks()<required+1)throw KvCapacityError("paged KV block pool exhausted");
     pool_.reserve(sequence,end);
 }
@@ -125,7 +129,7 @@ KVManager::Append::Append(KVManager& owner,const RequestId& id,const std::vector
     owner.validate_tokens(tokens);
     sequence.tokens.reserve(sequence.used+tokens.size());
     const int valid=sequence.used%owner.config().block_tokens;
-    const bool cow=valid&&owner.pool_.references(sequence.blocks.back())>1;
+    bool cow=valid&&owner.pool_.references(sequence.blocks.back())>1;
     owner.reserve_pages(id,sequence,sequence.used+static_cast<int>(tokens.size()),cow);
     if(cow){
         // reserve_pages guaranteed room for the replacement and all new pages.

@@ -1,5 +1,7 @@
 # 部分页 COW 基础能力
 
+> 2026-10-29 更新：当前已支持[非整页精确前缀缓存](partial_prefix_cache.md)。下文保留该阶段的实现与历史验收边界；当前匹配和发布语义以新文档为准。
+
 `KVManager::fork_sequence(source, target)` 将源的已提交 token 历史和页引用共享给已创建的空目标，
 包括未满尾页。CPU/CUDA `ModelRunner` 暴露同名接口；本阶段没有新增 Engine 请求类型或 worker 命令。
 `ExactPrefixCache` 仍只发布、匹配完整页，非整页前缀缓存留到下一阶段。

@@ -47,9 +47,9 @@ void Engine::restore_prefix(State& state){
     const auto reused=runner_->reuse_prefix(request.id,request.prompt_token_ids);
     // No cached logits are returned by ModelRunner: at least one prompt token
     // must remain. Reject a broken runner contract before forming a suffix or
-    // executing an empty append. Reused positions must end at a full page.
+    // executing an empty append. A reusable prefix may end inside a page.
     const auto block_tokens=runner_->stats().kv_block_tokens;
-    if(reused>=request.prompt_token_ids.size()||(reused&&(!block_tokens||reused%block_tokens)))
+    if(reused>=request.prompt_token_ids.size()||(reused&&!block_tokens))
         throw std::runtime_error("invalid reusable prefix range");
     state.kv_block_tokens=block_tokens;state.prefilled=reused;step_stats_.prefix_reused_tokens+=reused;
 }
@@ -95,9 +95,7 @@ bool Engine::step(){
                 for(float v:logits)if(!std::isfinite(v))throw std::runtime_error("nonfinite model result");
                 // append committed the prompt or the PREVIOUS sampled token.
                 // Publish before sampling: the new output has no KV yet.
-                const auto committed=r.prompt_token_ids.size()+s.output.size();
-                if(prefilling||(s.kv_block_tokens&&committed%s.kv_block_tokens==0))
-                    runner_->cache_prefix(r.id);
+                runner_->cache_prefix(r.id);
                 auto token=static_cast<TokenId>(std::max_element(logits.begin(),logits.end())-logits.begin());
                 s.output.push_back(token);std::optional<FinishReason> finish;
                 if(r.generation.eos_token_id&&token==*r.generation.eos_token_id)finish=FinishReason::Eos;

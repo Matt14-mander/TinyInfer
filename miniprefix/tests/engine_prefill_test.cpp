@@ -77,7 +77,7 @@ public:
     void cache_prefix(const RequestId& id) override{kv.cache_prefix(id);}
     std::vector<float> append(const RequestId& id,const std::vector<TokenId>& t) override{
         if(inject_capacity){inject_capacity=false;throw KvCapacityError("injected capacity");}
-        auto transaction=kv.prepare_append(id,t);transaction.commit();std::vector<float> result(128,0);result[1]=1;return result;
+        auto transaction=kv.prepare_append(id,t);transaction.copy_shared_tail([](std::size_t,std::size_t,std::size_t){});transaction.commit();std::vector<float> result(128,0);result[1]=1;return result;
     }
     void release(const RequestId& id) override{kv.release(id);}
     void clear() override{kv.clear();}
@@ -208,7 +208,16 @@ void small_budget_and_cancel(){
     assert(trace->publishes.empty()&&trace->positions.empty()&&trace->restores["suffix"]==1);
 }
 void invalid_hit_and_logits(){
-    for(std::size_t hit:{std::size_t(3),std::size_t(8),std::size_t(100)}){
+    {
+        auto runner=std::make_unique<RecordingRunner>();auto* trace=runner.get();trace->hits["partial"]=3;
+        Engine engine(std::move(runner),{1,4,4,128});engine.submit(request("partial",8,1));engine.step();
+        assert(engine.poll_events().empty()&&engine.last_step_stats().prefix_reused_tokens==3);
+        assert(trace->calls[0].position==3&&trace->calls[0].input==std::vector<TokenId>({4,5,6,7}));
+        engine.step();auto events=engine.poll_events();assert(events.size()==1&&events[0].finish_reason==FinishReason::Length);
+        assert(trace->calls[1].position==7&&trace->calls[1].input==std::vector<TokenId>({8}));
+    }
+
+    for(std::size_t hit:{std::size_t(8),std::size_t(100)}){
         auto runner=std::make_unique<RecordingRunner>();auto* trace=runner.get();trace->hits["bad"]=hit;
         Engine engine(std::move(runner),{1,4,4,128});engine.submit(request("bad",8));engine.step();
         auto events=engine.poll_events();assert(events.size()==1&&events[0].finish_reason==FinishReason::Error);

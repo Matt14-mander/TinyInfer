@@ -152,6 +152,39 @@ void runner(bool cuda){
     }
     r->clear();assert(r->stats().live_sequences==0);
 }
+void partial_cache(bool cuda){
+    auto w=weights();auto make=[&](KvCacheConfig config){
+#ifdef MINIPREFIX_ENABLE_CUDA
+        if(cuda)return make_cuda_runner(w,16,config);
+#endif
+        return make_cpu_runner(w,16,config);
+    };
+    auto r=make({4,8,8});auto oracle=make_cpu_runner(w,16,{4,8,0});
+    for(int length:{1,3,4,7,8}){
+        std::vector<TokenId> history(length);for(int i=0;i<length;++i)history[i]=i+1;
+        r->create("source");r->append("source",history);r->cache_prefix("source");
+        // Match both a cached partial page and an interior prefix of a full page.
+        for(int common:{1,length}){
+            std::vector<TokenId> prompt(history.begin(),history.begin()+common);prompt.push_back(10);
+            r->create("target");assert(r->reuse_prefix("target",prompt)==std::size_t(common));
+            const auto before=r->stats();rejects([&]{r->append("target",{15});});
+            assert(r->stats().forward_tokens==before.forward_tokens&&r->stats().kv_live_blocks==before.kv_live_blocks);
+            oracle->create("ref");same(r->append("target",{10}),oracle->append("ref",prompt));
+            r->release("target");oracle->clear();
+        }
+        r->create("identical");assert(r->reuse_prefix("identical",history)==std::size_t(length-1));
+        oracle->create("ref");same(r->append("identical",{history.back()}),oracle->append("ref",history));
+        r->clear();oracle->clear();assert(r->stats().kv_live_blocks==0&&r->stats().block_table_device_bytes==0);
+    }
+    // All capacity is reserved. Cache-only sharing must become exclusive when
+    // its lease is evicted, without requiring an unavailable replacement page.
+    r=make({4,1,1});r->create("seed");r->append("seed",{1,2,3});r->cache_prefix("seed");r->release("seed");
+    assert(r->reserve_request("next",4)==KvAdmission::Ready);r->create("next");
+    assert(r->reuse_prefix("next",{1,2,3,4})==3);
+    oracle->create("ref");same(r->append("next",{4}),oracle->append("ref",{1,2,3,4}));
+    assert(r->stats().kv_live_blocks==1&&r->stats().kv_cached_blocks==0);
+    r->release("next");assert(r->stats().kv_live_blocks==0);oracle->clear();
+}
 int main(int argc,char** argv){
     std::cout<<"COW regression started"<<std::endl;
     bool cuda=false,required=false;for(int i=1;i<argc;++i){cuda|=std::string(argv[i])=="--cuda";required|=std::string(argv[i])=="--require-device";}
@@ -163,4 +196,5 @@ int main(int argc,char** argv){
     metadata();std::cout<<"COW metadata passed"<<std::endl;
     payload(cuda);std::cout<<"COW payload passed"<<std::endl;
     runner(cuda);std::cout<<"COW copy, capacity, rollback, retry and release passed"<<std::endl;
+    partial_cache(cuda);std::cout<<"Partial prefix cache, COW and capacity passed"<<std::endl;
 }
