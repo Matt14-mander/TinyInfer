@@ -77,3 +77,6 @@ miniprefix/
 M0 检查：MSVC 19.43 / C++17 / Release / CUDA OFF 的独立 CMake consumer 已成功链接
 `MiniPrefix::contracts` 并编译初始请求类型；18 份 Markdown 的本地链接检查通过。
 这只验证骨架与契约可接入构建，不代表模型或引擎已实现。
+
+当前工作区新增 [KV 容量感知准入](docs/capacity_admission.md)：不抢占，保守预约完整生成所需页，
+普通容量不足不再使整个 Engine 失败；无进展请求以单请求 Error 结束。

@@ -11,6 +11,22 @@ template<class F> void rejects(F&& operation){
 void commit(KVManager& manager,const RequestId& id,std::vector<TokenId> tokens){
     auto append=manager.prepare_append(id,tokens);append.commit();
 }
+void reservations(){
+    KVManager m({2,3,3},1,1,16,100);
+    assert(m.reserve_request("too-big",7)==KvAdmission::Impossible);
+    assert(m.reserve_request("a",4)==KvAdmission::Ready);
+    assert(m.reserve_request("b",4)==KvAdmission::Wait);
+    assert(m.stats().kv_live_blocks==0); // logical reservation only
+    m.create("external");commit(m,"external",{1,2});
+    rejects([&]{m.prepare_append("external",{3});});
+    m.create("a");commit(m,"a",{1,2,3,4});m.cache_prefix("a");
+    rejects([&]{m.prepare_append("a",{5});});
+    m.release("a");assert(m.reserve_request("b",4)==KvAdmission::Ready);
+    m.create("b");commit(m,"b",{5,6,7,8}); // cache eviction makes physical room
+    m.clear();assert(m.reserve_request("all",6)==KvAdmission::Ready);
+    m.release_reservation("all");assert(m.reserve_request("again",6)==KvAdmission::Ready);
+    m.clear();assert(m.stats().kv_live_blocks==0);
+}
 void transactions(){
     KVManager manager({2,8,2},2,4,16,100);manager.create("a");
     std::vector<TokenId> input{1,2,3};
@@ -133,6 +149,6 @@ void impossible_reservation_and_cache_off(){
     }
 }
 }
-int main(){transactions();prefix_and_reset();exhaustion();capacity_and_lru();pinned_victim_then_free_page();
+int main(){reservations();transactions();prefix_and_reset();exhaustion();capacity_and_lru();pinned_victim_then_free_page();
     rollback_keeps_eviction_effects();impossible_reservation_and_cache_off();
     std::cout<<"KVManager transactions, shared leases, reset, stats and exhaustion passed\n";}

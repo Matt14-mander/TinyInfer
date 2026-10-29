@@ -31,6 +31,7 @@ void Engine::terminal(State& state,FinishReason reason,std::optional<TokenId> to
     // Normal completion/cancellation releases its lease first. Fatal failure
     // delegates cleanup to the runner, even if clear failed; never force per-ID release.
     if(state.resident&&cleanup==TerminalCleanup::ReleaseSequence)runner_->release(state.request.id);
+    runner_->release_reservation(state.request.id);
     state.resident=false;
     events_.push_back({state.request.id,token,reason,error});
     state.finished=true;
@@ -55,35 +56,55 @@ void Engine::restore_prefix(State& state){
 bool Engine::step(){
     step_stats_={};
     if(failed_)throw std::runtime_error("engine failed");
-    const auto admitted=scheduler_.admission_count(active_.size(),waiting_.size());
-    for(std::size_t i=0;i<admitted;++i){
-        active_.push_back(std::move(waiting_.front()));waiting_.pop_front();}
-    if(active_.empty())return false;
+    bool progressed=false;
     try{
+        auto slots=scheduler_.admission_count(active_.size(),waiting_.size());
+        while(slots&&!waiting_.empty()){
+            auto& state=waiting_.front();
+            const auto& request=state.request;
+            // The final sampled token is delivered, never appended to KV.
+            const auto tokens=request.prompt_token_ids.size()+std::size_t(request.generation.max_new_tokens)-1;
+            const auto admission=runner_->reserve_request(request.id,tokens);
+            if(admission==KvAdmission::Wait&&!active_.empty())break;
+            if(admission!=KvAdmission::Ready){
+                terminal(state,FinishReason::Error,std::nullopt,
+                    admission==KvAdmission::Impossible?"request exceeds total KV capacity":
+                    "KV capacity unavailable without active requests to make progress");
+                waiting_.pop_front();progressed=true;continue;
+            }
+            active_.push_back(std::move(state));waiting_.pop_front();--slots;progressed=true;
+        }
+        if(active_.empty())return progressed;
         std::vector<SchedulePhase> phases;
         for(const auto& state:active_)phases.push_back(state.output.empty()?SchedulePhase::Prefill:SchedulePhase::Decode);
         auto plan=scheduler_.plan(phases);
         for(const auto& work:plan.order()){
             if(!plan.has_budget())break;auto& s=active_[work.active_index];auto& r=s.request;
-            if(!s.resident)restore_prefix(s);
-            const bool prefilling=work.phase==SchedulePhase::Prefill;
-            const auto count=plan.take_input(work.phase,r.prompt_token_ids.size()-s.prefilled);
-            std::vector<TokenId> input;
-            if(!prefilling)input={s.output.back()};
-            else input.assign(r.prompt_token_ids.begin()+s.prefilled,r.prompt_token_ids.begin()+s.prefilled+count);
-            auto logits=runner_->append(r.id,input);
-            if(prefilling){s.prefilled+=input.size();step_stats_.prefill_tokens+=input.size();}
-            else step_stats_.decode_tokens+=input.size();
-            if(s.prefilled<r.prompt_token_ids.size())continue;
-            if(logits.size()!=std::size_t(runner_->config().vocabulary))throw std::runtime_error("invalid logits arity");
-            for(float v:logits)if(!std::isfinite(v))throw std::runtime_error("nonfinite model result");
-            if(prefilling)runner_->cache_prefix(r.id);
-            auto token=static_cast<TokenId>(std::max_element(logits.begin(),logits.end())-logits.begin());
-            s.output.push_back(token);std::optional<FinishReason> finish;
-            if(r.generation.eos_token_id&&token==*r.generation.eos_token_id)finish=FinishReason::Eos;
-            else if(s.output.size()==r.generation.max_new_tokens)finish=FinishReason::Length;
-            if(finish)terminal(s,*finish,token);
-            else events_.push_back({r.id,token,std::nullopt,{}});
+            try{
+                if(!s.resident)restore_prefix(s);
+                const bool prefilling=work.phase==SchedulePhase::Prefill;
+                const auto count=plan.take_input(work.phase,r.prompt_token_ids.size()-s.prefilled);
+                std::vector<TokenId> input;
+                if(!prefilling)input={s.output.back()};
+                else input.assign(r.prompt_token_ids.begin()+s.prefilled,r.prompt_token_ids.begin()+s.prefilled+count);
+                auto logits=runner_->append(r.id,input);
+                if(prefilling){s.prefilled+=input.size();step_stats_.prefill_tokens+=input.size();}
+                else step_stats_.decode_tokens+=input.size();
+                if(s.prefilled<r.prompt_token_ids.size())continue;
+                if(logits.size()!=std::size_t(runner_->config().vocabulary))throw std::runtime_error("invalid logits arity");
+                for(float v:logits)if(!std::isfinite(v))throw std::runtime_error("nonfinite model result");
+                if(prefilling)runner_->cache_prefix(r.id);
+                auto token=static_cast<TokenId>(std::max_element(logits.begin(),logits.end())-logits.begin());
+                s.output.push_back(token);std::optional<FinishReason> finish;
+                if(r.generation.eos_token_id&&token==*r.generation.eos_token_id)finish=FinishReason::Eos;
+                else if(s.output.size()==r.generation.max_new_tokens)finish=FinishReason::Length;
+                if(finish)terminal(s,*finish,token);
+                else events_.push_back({r.id,token,std::nullopt,{}});
+            }catch(const KvCapacityError& error){
+                // Defensive isolation for bounded runners/direct diagnostic interference.
+                // A failed release still reaches the fatal backend handler below.
+                terminal(s,FinishReason::Error,std::nullopt,error.what());
+            }
         }
         remove_finished();
     }catch(const std::exception& error){

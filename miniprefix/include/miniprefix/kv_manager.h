@@ -21,9 +21,11 @@ class KVManager {
     ExactPrefixCache prefix_;
     std::map<RequestId,State> sequences_;
     std::size_t forward_tokens_=0;
+    std::map<RequestId,std::size_t> reservations_;
+    std::size_t committed_blocks() const;
     State& idle_state(const RequestId& id);
     void validate_tokens(const std::vector<TokenId>& tokens) const;
-    void reserve_pages(PagedSequence& sequence,int end);
+    void reserve_pages(const RequestId& id,PagedSequence& sequence,int end);
 public:
     // The transaction owns an immutable input snapshot. Backend code MUST finish
     // all device accesses before rollback/destruction. It must not outlive its
@@ -58,6 +60,9 @@ public:
     bool contains(const RequestId& id) const;
     const PagedSequence& sequence(const RequestId& id) const;
     std::size_t offset(const PagedSequence& sequence,int layer,int token) const;
+    // Logical worst-case page reservation, without allocating payload or evicting cache.
+    KvAdmission reserve_request(const RequestId& id,std::size_t max_tokens);
+    void release_reservation(const RequestId& id) noexcept;
     void create(const RequestId& id);
     std::size_t reuse_prefix(const RequestId& id,const std::vector<TokenId>& prompt);
     void cache_prefix(const RequestId& id);

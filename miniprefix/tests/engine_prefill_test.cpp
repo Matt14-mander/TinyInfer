@@ -62,6 +62,66 @@ Request request(std::string id,int length,int output=2){
     Request r;r.id=std::move(id);for(int i=0;i<length;++i)r.prompt_token_ids.push_back(i+1);
     r.generation.max_new_tokens=output;return r;
 }
+class BoundedRunner final:public ModelRunner {
+    ModelConfig config_;
+public:
+    KVManager kv{{2,2,2},1,1,128,128};
+    bool inject_capacity=false;
+    BoundedRunner(){config_.context=128;config_.vocabulary=128;}
+    const ModelConfig& config() const override{return config_;}
+    int context_limit() const override{return 128;}
+    KvAdmission reserve_request(const RequestId& id,std::size_t n) override{return kv.reserve_request(id,n);}
+    void release_reservation(const RequestId& id) noexcept override{kv.release_reservation(id);}
+    void create(const RequestId& id) override{kv.create(id);}
+    std::size_t reuse_prefix(const RequestId& id,const std::vector<TokenId>& p) override{return kv.reuse_prefix(id,p);}
+    void cache_prefix(const RequestId& id) override{kv.cache_prefix(id);}
+    std::vector<float> append(const RequestId& id,const std::vector<TokenId>& t) override{
+        if(inject_capacity){inject_capacity=false;throw KvCapacityError("injected capacity");}
+        auto transaction=kv.prepare_append(id,t);transaction.commit();std::vector<float> result(128,0);result[1]=1;return result;
+    }
+    void release(const RequestId& id) override{kv.release(id);}
+    void clear() override{kv.clear();}
+    RunnerStats stats() const override{RunnerStats result;result.update_kv_stats(kv.stats());return result;}
+};
+void capacity_admission(){
+    {
+        auto runner=std::make_unique<BoundedRunner>();auto* trace=runner.get();
+        Engine engine(std::move(runner),{2,1,1,128});
+        engine.submit(request("first",1,1));engine.submit(request("reserved-only",1,1));
+        engine.step();assert(!trace->kv.contains("reserved-only"));
+        engine.cancel("reserved-only");engine.poll_events();
+        engine.submit(request("full-pool",4,1));
+        for(int i=0;!engine.idle()&&i<8;++i)engine.step();
+        auto events=engine.poll_events();assert(engine.idle()&&!engine.failed());
+        assert(events.size()==1&&events[0].finish_reason==FinishReason::Length);
+    }
+    auto runner=std::make_unique<BoundedRunner>();auto* trace=runner.get();
+    Engine engine(std::move(runner),{2,2,1,128});
+    engine.submit(request("large",5,1));engine.submit(request("a",2,3));engine.submit(request("b",2,3));
+    std::map<std::string,int> tokens,finished;
+    for(int step=0;!engine.idle()&&step<20;++step){
+        engine.step();for(const auto& e:engine.poll_events()){
+            if(e.request_id=="large")assert(e.finish_reason==FinishReason::Error&&!e.token_id);
+            else {assert(e.finish_reason!=FinishReason::Error);if(e.token_id)++tokens[e.request_id];}
+            if(e.finish_reason)++finished[e.request_id];
+        }
+        assert(!engine.failed()&&trace->kv.stats().live_sequences<=1);
+    }
+    assert(engine.idle()&&tokens["a"]==3&&tokens["b"]==3&&finished["large"]==1&&finished["a"]==1&&finished["b"]==1);
+    // A reservation exists even before this candidate gets compute budget.
+    engine.submit(request("cancel",2,3));engine.step();engine.cancel("cancel");engine.poll_events();
+    engine.submit(request("retry",4,1));while(!engine.idle())engine.step();
+    auto events=engine.poll_events();assert(events.size()==1&&events[0].finish_reason==FinishReason::Length);
+    // A direct diagnostic owner cannot make an empty Engine wait forever.
+    trace->kv.create("external");{auto a=trace->kv.prepare_append("external",{1,2,3,4});a.commit();}
+    engine.submit(request("blocked",1,1));engine.step();events=engine.poll_events();
+    assert(events.size()==1&&events[0].finish_reason==FinishReason::Error&&engine.idle()&&!engine.failed());
+    trace->kv.release("external");
+    trace->inject_capacity=true;engine.submit(request("capacity-error",1,1));engine.step();events=engine.poll_events();
+    assert(events.size()==1&&events[0].finish_reason==FinishReason::Error&&!engine.failed());
+    engine.submit(request("healthy",1,1));engine.step();events=engine.poll_events();
+    assert(events.size()==1&&events[0].finish_reason==FinishReason::Length&&engine.idle());
+}
 void runner_context_validation(){
     // A larger model context must not hide a smaller runtime limit.
     for(int limit:{-1,0,4}){
@@ -240,6 +300,6 @@ void stable_decode_priority_and_cancel(){
     assert(engine.idle()&&trace->positions.empty());
 }
 }
-int main(){stats_mapping();runner_context_validation();interleaved_suffix();small_budget_and_cancel();invalid_hit_and_logits();cleanup_failure_still_finishes_requests();
+int main(){capacity_admission();stats_mapping();runner_context_validation();interleaved_suffix();small_budget_and_cancel();invalid_hit_and_logits();cleanup_failure_still_finishes_requests();
     lazy_prefix_and_boundary_refill();stable_decode_priority_and_cancel();
     std::cout<<"incremental suffix prefill positions, budgets, interleaving, events and cleanup passed\n";}

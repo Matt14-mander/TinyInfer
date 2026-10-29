@@ -5,6 +5,11 @@
 #include <vector>
 
 namespace miniprefix {
+class KvCapacityError : public std::runtime_error {
+public: using std::runtime_error::runtime_error;
+};
+enum class KvAdmission { Ready, Wait, Impossible };
+
 struct KvCacheConfig {
     int block_tokens=16;
     int max_blocks=128;

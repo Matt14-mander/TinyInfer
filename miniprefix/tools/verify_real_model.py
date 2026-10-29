@@ -164,19 +164,23 @@ def verify(model_dir, workers, output=None):
                 raise AssertionError("paged configuration not honored")
             paged_checks.append({"backend":backend,"case":"fragmentation/reuse/cross-page/atomic-rejection/retry",
                                  "stats":stats})
-        # Resource exhaustion is explicit: current engine fails all unfinished
-        # requests and releases every page. Preemption/admission is a later step.
+        # Requests larger than the pool fail individually at admission.
+        # The same Engine must remain usable after these terminal events.
         with NativeEngine(worker, root / "model.mpf", backend, 64, 2, 8, 4,
                           block_tokens=4, kv_blocks=1) as engine:
             for key in ("first","second","waiting"):
                 engine.submit(key,[1]*9,2,None)
             events=list(engine.events())
             if len(events)!=3 or any(e["finish_reason"]!="error" or e["token_id"] is not None for e in events):
-                raise AssertionError("exhaustion must terminalize all unfinished requests once")
+                raise AssertionError("oversized requests must each terminate once")
             stats=engine.stats()
             if stats["kv_live_blocks"] or stats["live_sequences"] or stats["block_table_device_bytes"]:
                 raise AssertionError("exhaustion cleanup leaked pages")
-            paged_checks.append({"backend":backend,"case":"engine-pool-exhaustion-cleanup","stats":stats})
+            engine.submit("after-capacity-error",[1],1,None)
+            recovered=list(engine.events())
+            if len(recovered)!=1 or recovered[0]["finish_reason"]!="length":
+                raise AssertionError("capacity error poisoned the Engine")
+            paged_checks.append({"backend":backend,"case":"engine-capacity-rejection-and-recovery","stats":engine.stats()})
     report = {"date": date.today().isoformat(), "model": json.loads((root / "manifest.json").read_text()),
               "native_model_sha256": sha256(root / "model.mpf"), "dtype": "float32", "reference": "Transformers eager full-prefix CPU",
               "torch": torch.__version__, "transformers": transformers.__version__, "platform": platform.platform(),

@@ -36,7 +36,7 @@ void KvBlockPool::reserve(PagedSequence& sequence,int end){
     if(end<sequence.used)throw std::invalid_argument("paged KV cannot truncate through reserve");
     const auto count=static_cast<std::size_t>(end/config_.block_tokens+(end%config_.block_tokens!=0));
     if(count<=sequence.blocks.size())return;
-    if(count-sequence.blocks.size()>free_.size())throw std::runtime_error("paged KV block pool exhausted");
+    if(count-sequence.blocks.size()>free_.size())throw KvCapacityError("paged KV block pool exhausted");
     sequence.blocks.reserve(count);
     while(sequence.blocks.size()<count){const int block=free_.back();sequence.blocks.push_back(block);
         free_.pop_back();references_[block]=1;++live_;}

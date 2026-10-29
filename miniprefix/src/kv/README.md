@@ -24,3 +24,6 @@ evict_one()，仅移除一个缓存引用；活跃请求仍持有的页不会变
 原 KVManager/ExactPrefixCache 实现上通过。真实 CPU/CUDA worker 差分的 94 个检查点、
 491,520 个 FP32 logits、事件/逐轮计数与全部 STATS 字段一致，证据见
 [kv-capacity-differential.json](../../docs/acceptance/kv-capacity-differential.json)。
+
+KVManager 另持有请求最大页数的逻辑预约，协调 Engine 准入和未预约诊断操作，
+不提前分配 payload，不按预期前缀命中打折。见 [容量准入](../../docs/capacity_admission.md)。

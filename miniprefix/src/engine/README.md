@@ -25,3 +25,6 @@ shutdown。持有请求已提交 token 与时间戳，协调 Scheduler、KVManag
 
 首批交付：tokenized submit/step/poll_events、显式状态机、CPU runner 调用和生命周期
 回归。不要将队列逻辑放进模型 forward，或为未实现路径返回伪 token。
+
+容量感知准入已接入：按最大 KV 长度预约，暂时不足保持 FIFO 等待，无进展或超过总容量时只结束该请求。
+KvCapacityError 不毒化 Engine；后端同步/释放错误仍走全局失败路径。详见 [容量准入](../../docs/capacity_admission.md)。

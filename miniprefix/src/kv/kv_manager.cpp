@@ -29,13 +29,39 @@ KVManager::State& KVManager::idle_state(const RequestId& id){
 void KVManager::validate_tokens(const std::vector<TokenId>& tokens) const{
     for(auto token:tokens)if(token<0||token>=vocabulary_)throw std::invalid_argument("invalid token");
 }
+std::size_t KVManager::committed_blocks() const{
+    std::size_t count=0;
+    for(const auto& item:reservations_)count+=item.second;
+    for(const auto& item:sequences_)if(!reservations_.count(item.first))count+=item.second.sequence.blocks.size();
+    return count;
+}
+KvAdmission KVManager::reserve_request(const RequestId& id,std::size_t max_tokens){
+    if(contains(id)||reservations_.count(id))throw std::invalid_argument("duplicate KV reservation");
+    if(!max_tokens||max_tokens>std::size_t(context_))throw std::invalid_argument("invalid KV reservation context");
+    const auto pages=1+(max_tokens-1)/config().block_tokens;
+    const auto total=std::size_t(config().max_blocks);
+    if(pages>total)return KvAdmission::Impossible;
+    const auto committed=committed_blocks();
+    if(committed>total||pages>total-committed)return KvAdmission::Wait;
+    reservations_.emplace(id,pages);return KvAdmission::Ready;
+}
+void KVManager::release_reservation(const RequestId& id) noexcept{reservations_.erase(id);}
 void KVManager::create(const RequestId& id){
     if(!sequences_.emplace(id,State{}).second)throw std::invalid_argument("sequence already exists");
 }
 std::size_t KVManager::reuse_prefix(const RequestId& id,const std::vector<TokenId>& prompt){
     if(prompt.empty()||prompt.size()>std::size_t(context_))throw std::invalid_argument("invalid prefix context");
     for(auto token:prompt)if(token<0||token>=vocabulary_)throw std::invalid_argument("invalid prefix token");
-    return prefix_.reuse(idle_state(id).sequence,prompt);
+    auto& sequence=idle_state(id).sequence;
+    const auto count=prefix_.reuse(sequence,prompt);
+    const auto reservation=reservations_.find(id);
+    if(reservation!=reservations_.end()&&sequence.blocks.size()>reservation->second){
+        pool_.release(sequence);throw KvCapacityError("request exceeds KV reservation");
+    }
+    if(!reservations_.empty()&&committed_blocks()>std::size_t(config().max_blocks)){
+        pool_.release(sequence);throw KvCapacityError("KV capacity reserved by active requests");
+    }
+    return count;
 }
 void KVManager::cache_prefix(const RequestId& id){prefix_.publish(idle_state(id).sequence);}
 void KVManager::clear_prefix_cache(){
@@ -47,10 +73,20 @@ void KVManager::clear_prefix_cache(){
 KVManager::Append KVManager::prepare_append(const RequestId& id,const std::vector<TokenId>& tokens){
     return Append(*this,id,tokens);
 }
-void KVManager::reserve_pages(PagedSequence& sequence,int end){
+void KVManager::reserve_pages(const RequestId& id,PagedSequence& sequence,int end){
     const auto tokens=config().block_tokens;
     const auto count=std::size_t(end/tokens+(end%tokens!=0));
     const auto required=count>sequence.blocks.size()?count-sequence.blocks.size():0;
+    if(!reservations_.empty()){
+        const auto found=reservations_.find(id);
+        if(found!=reservations_.end()){
+            if(count>found->second)throw KvCapacityError("request exceeds KV reservation");
+        }else{
+            const auto committed=committed_blocks(),total=std::size_t(config().max_blocks);
+            if(committed>total||required>total-committed)
+                throw KvCapacityError("KV capacity reserved by active requests");
+        }
+    }
     // Eviction only drops a cache lease. Recheck physical capacity after every
     // victim, including pages still pinned by active sequences. Preserve LRU
     // order and eviction side effects even if reservation ultimately fails.
@@ -64,7 +100,7 @@ KVManager::Append::Append(KVManager& owner,const RequestId& id,const std::vector
         throw std::invalid_argument("context overflow/empty input");
     owner.validate_tokens(tokens);
     sequence.tokens.reserve(sequence.used+tokens.size());
-    owner.reserve_pages(sequence,sequence.used+static_cast<int>(tokens.size()));
+    owner.reserve_pages(id,sequence,sequence.used+static_cast<int>(tokens.size()));
     state_->appending=true;
 }
 KVManager::Append::~Append(){rollback();}
@@ -87,13 +123,13 @@ void KVManager::reset_sequence(const RequestId& id){pool_.release(idle_state(id)
 void KVManager::release(const RequestId& id){
     auto it=sequences_.find(id);if(it==sequences_.end())throw std::invalid_argument("unknown sequence");
     if(it->second.appending)throw std::logic_error("cannot release sequence during KV append");
-    pool_.release(it->second.sequence);sequences_.erase(it);
+    pool_.release(it->second.sequence);sequences_.erase(it);reservations_.erase(id);
 }
 void KVManager::clear(){
     for(const auto& item:sequences_)if(item.second.appending)
         throw std::logic_error("cannot clear sequences during KV append");
     for(auto& item:sequences_)pool_.release(item.second.sequence);
-    sequences_.clear();prefix_.clear();
+    sequences_.clear();prefix_.clear();reservations_.clear();
 }
 KvStats KVManager::stats() const{
     KvStats result;result.live_sequences=sequences_.size();result.forward_tokens=forward_tokens_;

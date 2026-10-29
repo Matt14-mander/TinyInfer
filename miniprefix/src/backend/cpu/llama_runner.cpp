@@ -40,6 +40,8 @@ public:
         keys_.resize(kv_.reserved_bytes()/sizeof(float)/2);values_.resize(keys_.size());}
     const ModelConfig& config() const override{return weights_->config;}
     int context_limit() const override{return kv_.context_limit();}
+    KvAdmission reserve_request(const RequestId& id,std::size_t tokens) override{return kv_.reserve_request(id,tokens);}
+    void release_reservation(const RequestId& id) noexcept override{kv_.release_reservation(id);}
     void create(const RequestId& id) override{
         kv_.create(id);
     }

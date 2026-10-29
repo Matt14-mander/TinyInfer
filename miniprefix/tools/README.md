@@ -17,3 +17,6 @@ requirements-reference.txt 固定参考依赖，CPU PyTorch 单独安装于工�
 后续提供显式触发的权重检查/转换、tokenizer 验证、独立框架参考导出和 fixture 准备。
 记录来源、revision、校验和、许可证与工具版本；参考数据与性能计时分离。
 依赖按工具单独声明，不让配置/构建 TinyInfer 默认安装 Python 包或下载模型。
+
+`verify_capacity_admission.py` 对真实 CPU/CUDA worker 运行小页池准入/取消/EOS/诊断占页回归，
+对照大页池输出并检查最终资源归零。参数与策略见 [容量准入](../docs/capacity_admission.md)。

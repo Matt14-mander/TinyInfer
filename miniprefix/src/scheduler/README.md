@@ -10,7 +10,8 @@
 - Engine 在候选有预算时才创建序列并恢复前缀，然后确定 chunk。前面的请求可在
   同一步发布缓存，供后面的请求使用；复用 token 不消耗输入预算。
 - 完成/取消后的空位只在下一次 step 开始补入；保留现有小预算下的固定优先顺序，
-  不额外引入轮转、公平性、抢占或动态 KV 容量准入。
+  不额外引入轮转、公平性或抢占。Engine 另通过 KVManager 最坏情况预约协调容量准入，
+  容量不足时可少于 admission_count 给出的槽位上限，见 [容量准入](../../docs/capacity_admission.md)。
 
 Engine 继续拥有 waiting/active 状态与生命周期、调用 runner、采样并提交事件；
 Scheduler 不持有请求、KV lease、设备地址，也不执行 kernel。计划中的 active 索引
@@ -18,4 +19,4 @@ Scheduler 不持有请求、KV lease、设备地址，也不执行 kernel。计�
 
 回归：`miniprefix_scheduler_tests` 比较原有两遍排序/预算策略的 756 种组合；
 `miniprefix_engine_prefill_tests` 覆盖跨步轨迹、同一步前缀发布/复用、延迟创建、
-边界补入、取消、终态和统计。更完整的容量试算与抢占属于后续扩展。
+边界补入、取消、终态和统计。基于共享折扣的容量试算与抢占属于后续扩展。
