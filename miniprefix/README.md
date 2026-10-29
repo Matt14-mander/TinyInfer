@@ -80,3 +80,6 @@ M0 检查：MSVC 19.43 / C++17 / Release / CUDA OFF 的独立 CMake consumer 已
 
 当前工作区新增 [KV 容量感知准入](docs/capacity_admission.md)：不抢占，保守预约完整生成所需页，
 普通容量不足不再使整个 Engine 失败；无进展请求以单请求 Error 结束。
+
+2026-10-29 工作区：新增 [长期压力测试与瓶颈测量](docs/long_running_stress.md)，
+直接运行原生 Engine，覆盖持续混合请求与容量压力；与 worker 端到端性能基线分开报告。

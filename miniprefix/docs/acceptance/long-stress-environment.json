@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-29",
+  "git_head": "429fcfdc5e55b8e8fc1ca0ca0e8a649d60fb6d5b",
+  "gpu": [
+    "name, driver_version, memory.total [MiB], pstate, clocks.current.sm [MHz], temperature.gpu, power.draw [W]",
+    "NVIDIA GeForce RTX 4070 Laptop GPU, 555.97, 8188 MiB, P0, 2430 MHz, 68, 37.96 W"
+  ],
+  "note": "One snapshot during CUDA soak; desktop GPU, no clock lock, no claim of independent-run performance or kernel-only timing",
+  "cuda_cache": [
+    "CMAKE_BUILD_TYPE:STRING=Release",
+    "CMAKE_CUDA_ARCHITECTURES:UNINITIALIZED=89-real",
+    "CMAKE_CUDA_COMPILER:STRING=E:/Project Learning/AI Infra/TinyInfer/build-cuda-sdk-12.5.1/toolkit/bin/nvcc.exe",
+    "CMAKE_CXX_COMPILER:STRING=C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.29.30133/bin/HostX64/x64/cl.exe",
+    "TINYINFER_CUDA_REQUIRE_DEVICE:BOOL=ON"
+  ]
+}

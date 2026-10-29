@@ -1,12 +1,12 @@
 # 开发路线与验收
 
-2026-10-27：M0 已完成；M1 已有请求生命周期/配置/原生 runner 和统一 KVManager，
-独立调度与重算未完成；
+2026-10-29：M0 已完成；M1 已有请求生命周期、独立 Scheduler、原生 runner、统一 KVManager，
+已完成保守 KV 容量预约及请求级容量错误隔离，抢占重算未完成；
 M2 已完成首个 SmolLM2-135M-Instruct CPU/CUDA 正确性闭环；M3 已有分页 KV/权重常驻
 GPU、完整 forward 与设备增量页表更新，COW 尚未实现；M4 已建立无缓存 dense/paged FP32 基线，
 已接入最小精确前缀缓存、增量 prefill 与冷/热 paired 实验；共享/混合/零共享八请求流的
 45 进程 CUDA [收益测量](prefix_benefit.md) 已完成。M5 的完整页面共享、页面 LRU 已开始，
-索引优化和长时间负载未完成。验收边界见 [精确前缀缓存](prefix_cache.md)、[真实模型](real_model.md)
+索引优化未完成；新增 [长期压力测试与瓶颈测量](long_running_stress.md)，验收范围与结果单独记录。验收边界见 [精确前缀缓存](prefix_cache.md)、[真实模型](real_model.md)
 和 [基线协议](baseline.md)，不把局部实现当整个阶段全部完成。
 
 | 阶段 | 交付 | 验收门槛 |
@@ -29,6 +29,6 @@ M2/M3 保留这些机制的开关，以便隔离模型与设备问题。M5 优�
 CUDA Graph、CPU/GPU 异步重叠、量化、真实推测解码、HTTP、multi-GPU、PD 分离、
 多模态与 MoE 均在 M4 基线之后按实际瓶颈安排，不纳入第一版承诺。
 
-下一项具体工作：扩展共享 system prefix/多轮负载，测量索引成本，随后引入部分页 COW、
-容量准入与抢占恢复。保留历史 dense/paged 基线与独立框架 oracle，复用基线
+下一项具体工作：依据长期压力与索引规模测量选择执行后端和索引优化，扩展多轮负载，
+随后引入部分页 COW、共享感知容量估算与抢占恢复。保守容量准入已实现。保留历史 dense/paged 基线与独立框架 oracle，复用基线
 对照正确性、实际跳过计算量、显存和端到端收益。

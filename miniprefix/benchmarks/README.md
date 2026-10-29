@@ -14,3 +14,7 @@ prefix_benefit.py 提供真实模型八请求负载的 off/cold/warm 独立进�
 
 原始输出放仓库根目录 benchmark-results/miniprefix/（已被根 .gitignore 忽略），
 经审阅的摘要与验证元数据再放文档目录。模拟轨迹、旧混合后端和新 GPU 常驻模型的数据分开。
+
+`stress.cpp` / `stress.py` 提供同一 Engine 的长期混合压力测试及原生调用级耗时归因，
+包含 watchdog、终态/输出/容量/回收检查及 Windows 进程内存采样。
+协议和口径见 [长期压力测试](../docs/long_running_stress.md)。
