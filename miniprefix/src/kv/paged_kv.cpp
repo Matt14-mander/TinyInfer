@@ -28,6 +28,10 @@ std::size_t KvBlockPool::live_blocks() const{return live_;}
 std::size_t KvBlockPool::peak_blocks() const{return peak_;}
 std::size_t KvBlockPool::free_blocks() const{return free_.size();}
 std::size_t KvBlockPool::references(int block) const{return references_.at(block);}
+int KvBlockPool::allocate(){
+    if(free_.empty())throw KvCapacityError("paged KV block pool exhausted");
+    const int block=free_.back();free_.pop_back();references_[block]=1;++live_;peak_=std::max(peak_,live_);return block;
+}
 void KvBlockPool::retain(int block){++references_.at(block);}
 void KvBlockPool::unref(int block) noexcept{
     if(--references_[block]==0){free_.push_back(block);--live_;}

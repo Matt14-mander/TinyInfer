@@ -16,7 +16,7 @@ struct KvCacheConfig {
     int prefix_cache_blocks=0;
 };
 
-// Only complete immutable pages may be shared; a partial tail stays private.
+// Complete pages are immutable; shared partial tails require transactional COW before writes.
 struct PagedSequence {
     int used=0;
     std::vector<int> blocks;
@@ -41,6 +41,7 @@ public:
     std::size_t peak_blocks() const;
     std::size_t free_blocks() const;
     std::size_t references(int block) const;
+    int allocate();
     void retain(int block);
     void unref(int block) noexcept;
     void reserve(PagedSequence& sequence,int end);

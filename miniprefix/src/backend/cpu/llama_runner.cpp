@@ -45,6 +45,7 @@ public:
     void create(const RequestId& id) override{
         kv_.create(id);
     }
+    void fork_sequence(const RequestId& source,const RequestId& target) override{kv_.fork_sequence(source,target);}
     std::size_t reuse_prefix(const RequestId& id,const std::vector<TokenId>& prompt) override{
         return kv_.reuse_prefix(id,prompt);
     }
@@ -52,6 +53,10 @@ public:
     void clear_prefix_cache() override{kv_.clear_prefix_cache();}
     std::vector<float> append(const RequestId& id,const std::vector<TokenId>& tokens) override{
         auto append=kv_.prepare_append(id,tokens);const auto& s=append.sequence();
+        append.copy_shared_tail([&](std::size_t destination,std::size_t source,std::size_t count){
+            std::copy_n(keys_.data()+source,count,keys_.data()+destination);
+            std::copy_n(values_.data()+source,count,values_.data()+destination);
+        });
         const auto& c=config();const int n=static_cast<int>(tokens.size()),dim=c.head_dimension(),kv=c.kv_width();
         Tensor x({n,c.hidden});const auto& embedding=weights_->get("model.embed_tokens.weight");
         for(int row=0;row<n;++row){

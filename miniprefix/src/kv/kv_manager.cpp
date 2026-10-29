@@ -21,7 +21,11 @@ const PagedSequence& KVManager::sequence(const RequestId& id) const{return seque
 std::size_t KVManager::offset(const PagedSequence& sequence,int layer,int token) const{
     return pool_.offset(sequence,layer,token,layers_,width_);
 }
+void KVManager::require_idle() const{
+    if(append_active_)throw std::logic_error("KV append transaction is active");
+}
 KVManager::State& KVManager::idle_state(const RequestId& id){
+    require_idle();
     auto& state=sequences_.at(id);
     if(state.appending)throw std::logic_error("sequence has an active KV append");
     return state;
@@ -36,6 +40,7 @@ std::size_t KVManager::committed_blocks() const{
     return count;
 }
 KvAdmission KVManager::reserve_request(const RequestId& id,std::size_t max_tokens){
+    require_idle();
     if(contains(id)||reservations_.count(id))throw std::invalid_argument("duplicate KV reservation");
     if(!max_tokens||max_tokens>std::size_t(context_))throw std::invalid_argument("invalid KV reservation context");
     const auto pages=1+(max_tokens-1)/config().block_tokens;
@@ -47,7 +52,24 @@ KvAdmission KVManager::reserve_request(const RequestId& id,std::size_t max_token
 }
 void KVManager::release_reservation(const RequestId& id) noexcept{reservations_.erase(id);}
 void KVManager::create(const RequestId& id){
+    require_idle();
     if(!sequences_.emplace(id,State{}).second)throw std::invalid_argument("sequence already exists");
+}
+void KVManager::fork_sequence(const RequestId& source,const RequestId& target){
+    require_idle();
+    const auto& original=sequences_.at(source).sequence;auto& destination=idle_state(target).sequence;
+    if(source==target||destination.used||!destination.blocks.empty()||!destination.tokens.empty())
+        throw std::invalid_argument("fork requires a distinct empty target");
+    const auto reservation=reservations_.find(target);
+    if(reservation!=reservations_.end()){
+        if(original.blocks.size()>reservation->second)throw KvCapacityError("fork exceeds KV reservation");
+    }else{
+        const auto used=committed_blocks(),total=std::size_t(config().max_blocks);
+        if(used>total||original.blocks.size()>total-used)throw KvCapacityError("fork exceeds unreserved KV capacity");
+    }
+    auto snapshot=original; // Allocate host metadata before acquiring any lease.
+    for(int block:snapshot.blocks)pool_.retain(block);
+    destination=std::move(snapshot);
 }
 std::size_t KVManager::reuse_prefix(const RequestId& id,const std::vector<TokenId>& prompt){
     if(prompt.empty()||prompt.size()>std::size_t(context_))throw std::invalid_argument("invalid prefix context");
@@ -65,6 +87,7 @@ std::size_t KVManager::reuse_prefix(const RequestId& id,const std::vector<TokenI
 }
 void KVManager::cache_prefix(const RequestId& id){prefix_.publish(idle_state(id).sequence);}
 void KVManager::clear_prefix_cache(){
+    require_idle();
     // Even cache-only pages may still be read by an in-flight append kernel.
     for(const auto& item:sequences_)if(item.second.appending)
         throw std::logic_error("cannot clear prefix cache during KV append");
@@ -73,7 +96,7 @@ void KVManager::clear_prefix_cache(){
 KVManager::Append KVManager::prepare_append(const RequestId& id,const std::vector<TokenId>& tokens){
     return Append(*this,id,tokens);
 }
-void KVManager::reserve_pages(const RequestId& id,PagedSequence& sequence,int end){
+void KVManager::reserve_pages(const RequestId& id,PagedSequence& sequence,int end,bool cow){
     const auto tokens=config().block_tokens;
     const auto count=std::size_t(end/tokens+(end%tokens!=0));
     const auto required=count>sequence.blocks.size()?count-sequence.blocks.size():0;
@@ -90,7 +113,8 @@ void KVManager::reserve_pages(const RequestId& id,PagedSequence& sequence,int en
     // Eviction only drops a cache lease. Recheck physical capacity after every
     // victim, including pages still pinned by active sequences. Preserve LRU
     // order and eviction side effects even if reservation ultimately fails.
-    while(pool_.free_blocks()<required&&prefix_.evict_one()){}
+    while(pool_.free_blocks()<required+std::size_t(cow)&&prefix_.evict_one()){}
+    if(cow&&pool_.free_blocks()<required+1)throw KvCapacityError("paged KV block pool exhausted");
     pool_.reserve(sequence,end);
 }
 KVManager::Append::Append(KVManager& owner,const RequestId& id,const std::vector<TokenId>& tokens):
@@ -100,8 +124,17 @@ KVManager::Append::Append(KVManager& owner,const RequestId& id,const std::vector
         throw std::invalid_argument("context overflow/empty input");
     owner.validate_tokens(tokens);
     sequence.tokens.reserve(sequence.used+tokens.size());
-    owner.reserve_pages(id,sequence,sequence.used+static_cast<int>(tokens.size()));
-    state_->appending=true;
+    const int valid=sequence.used%owner.config().block_tokens;
+    const bool cow=valid&&owner.pool_.references(sequence.blocks.back())>1;
+    owner.reserve_pages(id,sequence,sequence.used+static_cast<int>(tokens.size()),cow);
+    if(cow){
+        // reserve_pages guaranteed room for the replacement and all new pages.
+        const int old=sequence.blocks[original_blocks_-1];
+        const int replacement=owner.pool_.allocate();
+        copy_=TailCopy{old,replacement,valid};sequence.blocks[original_blocks_-1]=replacement;
+        // The original target lease stays held by this transaction until commit.
+    }
+    state_->appending=true;owner.append_active_=true;
 }
 KVManager::Append::~Append(){rollback();}
 const PagedSequence& KVManager::Append::sequence() const{
@@ -109,23 +142,43 @@ const PagedSequence& KVManager::Append::sequence() const{
     return state_->sequence;
 }
 std::size_t KVManager::Append::original_blocks() const{return original_blocks_;}
+const std::optional<KVManager::TailCopy>& KVManager::Append::tail_copy() const{return copy_;}
+void KVManager::Append::copy_shared_tail(const std::function<void(std::size_t,std::size_t,std::size_t)>& copier){
+    if(!owner_)throw std::logic_error("KV append already finished");
+    if(!copy_)return;
+    copied_=false;
+    const auto stride=std::size_t(owner_->config().block_tokens)*owner_->width_;
+    const auto count=std::size_t(copy_->valid_tokens)*owner_->width_;
+    for(int layer=0;layer<owner_->layers_;++layer)
+        copier((std::size_t(copy_->destination)*owner_->layers_+layer)*stride,
+               (std::size_t(copy_->source)*owner_->layers_+layer)*stride,count);
+    copied_=true;
+}
 void KVManager::Append::commit(){
     if(!owner_)throw std::logic_error("KV append already finished");
+    if(copy_&&!copied_)throw std::logic_error("shared tail payload was not copied");
     auto& sequence=state_->sequence;
     sequence.tokens.insert(sequence.tokens.end(),tokens_.begin(),tokens_.end());
     sequence.used+=static_cast<int>(tokens_.size());owner_->forward_tokens_+=tokens_.size();
-    state_->appending=false;owner_=nullptr;
+    if(copy_)owner_->pool_.unref(copy_->source);
+    state_->appending=false;owner_->append_active_=false;owner_=nullptr;
 }
 void KVManager::Append::rollback() noexcept{
-    if(owner_){owner_->pool_.rollback(state_->sequence,original_blocks_);state_->appending=false;owner_=nullptr;}
+    if(owner_){
+        owner_->pool_.rollback(state_->sequence,original_blocks_);
+        if(copy_){state_->sequence.blocks[original_blocks_-1]=copy_->source;owner_->pool_.unref(copy_->destination);}
+        state_->appending=false;owner_->append_active_=false;owner_=nullptr;
+    }
 }
 void KVManager::reset_sequence(const RequestId& id){pool_.release(idle_state(id).sequence);}
 void KVManager::release(const RequestId& id){
+    require_idle();
     auto it=sequences_.find(id);if(it==sequences_.end())throw std::invalid_argument("unknown sequence");
     if(it->second.appending)throw std::logic_error("cannot release sequence during KV append");
     pool_.release(it->second.sequence);sequences_.erase(it);reservations_.erase(id);
 }
 void KVManager::clear(){
+    require_idle();
     for(const auto& item:sequences_)if(item.second.appending)
         throw std::logic_error("cannot clear sequences during KV append");
     for(auto& item:sequences_)pool_.release(item.second.sequence);

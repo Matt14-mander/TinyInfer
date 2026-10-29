@@ -43,6 +43,8 @@ public:
     virtual KvAdmission reserve_request(const RequestId&,std::size_t){return KvAdmission::Ready;}
     virtual void release_reservation(const RequestId&) noexcept{}
     virtual void create(const RequestId&)=0;
+    // Share committed history, including a partial tail, into an existing empty target.
+    virtual void fork_sequence(const RequestId&,const RequestId&){throw std::logic_error("fork unsupported");}
     virtual std::size_t reuse_prefix(const RequestId&,const std::vector<TokenId>&){return 0;}
     // Publish complete pages of committed input history only; sampled output has no KV yet.
     virtual void cache_prefix(const RequestId&){}

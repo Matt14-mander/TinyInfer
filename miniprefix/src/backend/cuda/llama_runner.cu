@@ -54,7 +54,8 @@ class CudaRunner final:public ModelRunner {
     Allocation keys_,values_;
     cuda_detail::StreamBlas execution_;
     std::map<std::string,std::unique_ptr<Allocation>> parameters_;
-    std::map<RequestId,std::unique_ptr<Allocation>> block_tables_;
+    struct BlockTable:Allocation {bool dirty=false;};
+    std::map<RequestId,std::unique_ptr<BlockTable>> block_tables_;
     cuda_detail::Workspace workspace_;
     float* parameter(const std::string& name){return parameters_.at(name)->data;}
     void linear(const Allocation& x,const std::string& name,Allocation& out,int rows,int inner,int columns){
@@ -83,9 +84,13 @@ public:
     void release_reservation(const RequestId& id) noexcept override{kv_.release_reservation(id);}
     void create(const RequestId& id) override{
         if(kv_.contains(id))throw std::invalid_argument("sequence already exists");
-        auto table=std::make_unique<Allocation>();table->ensure(kv_.max_sequence_blocks()*sizeof(int),stats_);
+        auto table=std::make_unique<BlockTable>();table->ensure(kv_.max_sequence_blocks()*sizeof(int),stats_);
         kv_.create(id);
         try{block_tables_.emplace(id,std::move(table));}catch(...){kv_.release(id);throw;}}
+    void fork_sequence(const RequestId& source,const RequestId& target) override{
+        execution_.synchronize("fork completion");kv_.fork_sequence(source,target);
+        block_tables_.at(target)->dirty=true; // Publish on the next append, not during fork.
+    }
     std::size_t reuse_prefix(const RequestId& id,const std::vector<TokenId>& prompt) override{
         const auto used=kv_.reuse_prefix(id,prompt);const auto& state=kv_.sequence(id);
         if(used){const auto bytes=state.blocks.size()*sizeof(int);
@@ -101,9 +106,15 @@ public:
         const auto& c=config();const int n=static_cast<int>(tokens.size());
         std::vector<float> result(c.vocabulary);
         const auto original_blocks=append.original_blocks();
+        auto& table_state=*block_tables_.at(id);
         try{
-            if(state.blocks.size()!=original_blocks){const auto bytes=(state.blocks.size()-original_blocks)*sizeof(int);
-                check(cudaMemcpyAsync(reinterpret_cast<int*>(block_tables_.at(id)->data)+original_blocks,state.blocks.data()+original_blocks,
+            append.copy_shared_tail([&](std::size_t destination,std::size_t source,std::size_t count){
+                check(cudaMemcpyAsync(keys_.data+destination,keys_.data+source,count*sizeof(float),cudaMemcpyDeviceToDevice,execution_.stream()),"COW keys");
+                check(cudaMemcpyAsync(values_.data+destination,values_.data+source,count*sizeof(float),cudaMemcpyDeviceToDevice,execution_.stream()),"COW values");
+            });
+            const auto first=table_state.dirty?std::size_t(0):(append.tail_copy()?original_blocks-1:original_blocks);
+            if(state.blocks.size()!=first){const auto bytes=(state.blocks.size()-first)*sizeof(int);
+                check(cudaMemcpyAsync(reinterpret_cast<int*>(table_state.data)+first,state.blocks.data()+first,
                                       bytes,cudaMemcpyHostToDevice,execution_.stream()),"upload block table entries");
                 stats_.block_table_uploaded_bytes+=bytes;}
             workspace_.ensure(n,c,stats_);check(cudaMemcpyAsync(workspace_.tokens.data,tokens.data(),tokens.size()*sizeof(TokenId),cudaMemcpyHostToDevice,execution_.stream()),"upload input tokens");
@@ -134,8 +145,8 @@ public:
             check(cudaMemcpyAsync(result.data(),workspace_.logits.data,result.size()*4,cudaMemcpyDeviceToHost,execution_.stream()),"download logits");
             execution_.synchronize("model completion");
             for(float v:result)if(!std::isfinite(v))throw std::runtime_error("nonfinite CUDA logits");
-        }catch(...){execution_.synchronize_noexcept();append.rollback();throw;}
-        append.commit();stats_.logits_downloaded_bytes+=result.size()*4;return result;
+        }catch(...){execution_.synchronize_noexcept();table_state.dirty=true;append.rollback();throw;}
+        append.commit();table_state.dirty=false;stats_.logits_downloaded_bytes+=result.size()*4;return result;
     }
     void release(const RequestId& id) override{execution_.synchronize("release completion");
         kv_.release(id);block_tables_.erase(id);}

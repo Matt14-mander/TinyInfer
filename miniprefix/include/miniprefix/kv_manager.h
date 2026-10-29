@@ -2,6 +2,8 @@
 #include "request.h"
 #include "prefix_cache.h"
 #include <map>
+#include <functional>
+#include <optional>
 
 namespace miniprefix {
 struct KvStats {
@@ -21,21 +23,26 @@ class KVManager {
     ExactPrefixCache prefix_;
     std::map<RequestId,State> sequences_;
     std::size_t forward_tokens_=0;
+    bool append_active_=false;
+    void require_idle() const;
     std::map<RequestId,std::size_t> reservations_;
     std::size_t committed_blocks() const;
     State& idle_state(const RequestId& id);
     void validate_tokens(const std::vector<TokenId>& tokens) const;
-    void reserve_pages(const RequestId& id,PagedSequence& sequence,int end);
+    void reserve_pages(const RequestId& id,PagedSequence& sequence,int end,bool cow);
 public:
     // The transaction owns an immutable input snapshot. Backend code MUST finish
     // all device accesses before rollback/destruction. It must not outlive its
     // manager; release/reset/clear reject pending transactions.
+    struct TailCopy {int source,destination,valid_tokens;};
     class Append {
         friend class KVManager;
         KVManager* owner_;
         State* state_;
         std::vector<TokenId> tokens_;
         std::size_t original_blocks_;
+        std::optional<TailCopy> copy_;
+        bool copied_=false;
         Append(KVManager& owner,const RequestId& id,const std::vector<TokenId>& tokens);
     public:
         Append(const Append&)=delete;
@@ -45,6 +52,10 @@ public:
         ~Append();
         const PagedSequence& sequence() const;
         std::size_t original_blocks() const;
+        const std::optional<TailCopy>& tail_copy() const;
+        // Element offsets in one K or V pool; copier must copy BOTH payloads.
+        // GPU enqueue is allowed, but completion is mandatory before commit/rollback.
+        void copy_shared_tail(const std::function<void(std::size_t,std::size_t,std::size_t)>& copier);
         void commit();
         void rollback() noexcept;
     };
@@ -64,6 +75,7 @@ public:
     KvAdmission reserve_request(const RequestId& id,std::size_t max_tokens);
     void release_reservation(const RequestId& id) noexcept;
     void create(const RequestId& id);
+    void fork_sequence(const RequestId& source,const RequestId& target);
     std::size_t reuse_prefix(const RequestId& id,const std::vector<TokenId>& prompt);
     void cache_prefix(const RequestId& id);
     void clear_prefix_cache();
