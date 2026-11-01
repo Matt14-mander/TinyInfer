@@ -1,4 +1,5 @@
 #include "miniprefix/engine.h"
+#include <algorithm>
 #include <cassert>
 #include <iostream>
 #include <limits>
@@ -35,10 +36,37 @@ Request request(const std::string& id,std::vector<TokenId> prompt,int count){
 }
 std::vector<TokenId> finish(Engine& e){
     std::vector<TokenId> output;int terminal=0;
-    for(int i=0;!e.idle()&&i<128;++i){e.step();for(auto& event:e.poll_events()){
+    const auto collect=[&]{for(auto& event:e.poll_events()){
         assert(event.finish_reason!=FinishReason::Error);if(event.token_id)output.push_back(*event.token_id);
-        if(event.finish_reason)++terminal;}}
+        if(event.finish_reason)++terminal;}};
+    collect(); // A caller's step may already have completed the request.
+    for(int i=0;!e.idle()&&i<128;++i){e.step();collect();}
     assert(e.idle()&&terminal==1);return output;
+}
+void aligned_single_token_completion(){
+    const std::vector<TokenId> prompt{1,2,3,4,5,6,7,8};
+    for(int cache:{0,16})for(int chunk:{2,4,8}){
+        auto runner=std::make_unique<Runner>(cache);auto* trace=runner.get();
+        Engine e(std::move(runner),{1,8,chunk,128});
+        e.submit(request("seed",prompt,1));assert((finish(e)==std::vector<TokenId>{9}));
+        const auto before=trace->stats();
+        e.submit(request("aligned",prompt,1));e.step();
+        const auto reused=cache?4u:0u;
+        assert(e.last_step_stats().prefix_reused_tokens==reused);
+        assert(e.last_step_stats().prefill_tokens==std::min<std::size_t>(chunk,prompt.size()-reused));
+        assert(e.last_step_stats().decode_tokens==0);
+        // Once the uncached suffix fits, completion and its token are queued
+        // by this first step even though the engine is already idle.
+        assert(e.idle()==(std::size_t(chunk)>=prompt.size()-reused));
+        assert((finish(e)==std::vector<TokenId>{9}));
+        assert(e.poll_events().empty()); // The final event was delivered once.
+        const auto after=trace->stats();
+        assert(after.forward_tokens-before.forward_tokens==prompt.size()-reused);
+        assert(after.prefix_reused_tokens-before.prefix_reused_tokens==reused);
+        assert(trace->published.back()==prompt); // Sampled token 9 has no KV.
+        assert(after.live_sequences==0&&after.kv_cached_blocks==(cache?2u:0u));
+        e.shutdown();assert(trace->stats().kv_live_blocks==0);
+    }
 }
 void history_and_boundaries(){
     auto runner=std::make_unique<Runner>();auto* trace=runner.get();Engine engine(std::move(runner),{2,8,2,128});
@@ -86,4 +114,4 @@ void concurrent_fork_and_off(){
     }
 }
 }
-int main(){history_and_boundaries();cancellation_eos_and_failure();concurrent_fork_and_off();std::cout<<"generation history publication and page boundaries passed\n";}
+int main(){aligned_single_token_completion();history_and_boundaries();cancellation_eos_and_failure();concurrent_fork_and_off();std::cout<<"generation history publication and page boundaries passed\n";}
