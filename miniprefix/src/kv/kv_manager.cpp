@@ -152,14 +152,19 @@ const PagedSequence& KVManager::Append::sequence() const{
 std::size_t KVManager::Append::original_blocks() const{return original_blocks_;}
 const std::optional<KVManager::TailCopy>& KVManager::Append::tail_copy() const{return copy_;}
 void KVManager::Append::copy_shared_tail(const std::function<void(std::size_t,std::size_t,std::size_t)>& copier){
+    copy_shared_tail_region([&](const TailCopyRegion& region){
+        for(std::size_t row=0;row<region.rows;++row)
+            copier(region.destination+row*region.pitch,region.source+row*region.pitch,region.width);
+    });
+}
+void KVManager::Append::copy_shared_tail_region(const std::function<void(const TailCopyRegion&)>& copier){
     if(!owner_)throw std::logic_error("KV append already finished");
     if(!copy_)return;
     copied_=false;
-    const auto stride=std::size_t(owner_->config().block_tokens)*owner_->width_;
-    const auto count=std::size_t(copy_->valid_tokens)*owner_->width_;
-    for(int layer=0;layer<owner_->layers_;++layer)
-        copier((std::size_t(copy_->destination)*owner_->layers_+layer)*stride,
-               (std::size_t(copy_->source)*owner_->layers_+layer)*stride,count);
+    const auto pitch=std::size_t(owner_->config().block_tokens)*owner_->width_;
+    const auto rows=std::size_t(owner_->layers_);
+    copier({std::size_t(copy_->destination)*rows*pitch,std::size_t(copy_->source)*rows*pitch,
+            pitch,std::size_t(copy_->valid_tokens)*owner_->width_,rows});
     copied_=true;
 }
 void KVManager::Append::commit(){

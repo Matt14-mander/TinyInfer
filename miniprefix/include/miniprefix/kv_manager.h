@@ -37,6 +37,8 @@ public:
     // all device accesses before rollback/destruction. It must not outlive its
     // manager; release/reset/clear reject pending transactions.
     struct TailCopy {int source,destination,valid_tokens;};
+    // Float-element offsets/pitch/width; rows are layers in a single K or V pool.
+    struct TailCopyRegion {std::size_t destination,source,pitch,width,rows;};
     class Append {
         friend class KVManager;
         KVManager* owner_;
@@ -58,6 +60,9 @@ public:
         // Element offsets in one K or V pool; copier must copy BOTH payloads.
         // GPU enqueue is allowed, but completion is mandatory before commit/rollback.
         void copy_shared_tail(const std::function<void(std::size_t,std::size_t,std::size_t)>& copier);
+        // One callback for the strided region; copy BOTH K and V. Throwing
+        // leaves commit disabled. Device completion rules are unchanged.
+        void copy_shared_tail_region(const std::function<void(const TailCopyRegion&)>& copier);
         void commit();
         void rollback() noexcept;
     };

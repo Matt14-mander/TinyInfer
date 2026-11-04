@@ -54,7 +54,7 @@ void metadata(){
 }
 // Fail after one layer's real K/V copy; the backend must finish outstanding
 // device work before the transaction releases either source or destination.
-void payload(bool cuda){
+void payload(bool cuda,bool merged=false){
     KVManager m({4,4,0},2,3,16,100);m.create("a");m.create("b");
     {auto tx=m.prepare_append("a",{1,2,3});tx.commit();}m.fork_sequence("a","b");
     const auto original=m.sequence("a").blocks;
@@ -75,7 +75,21 @@ void payload(bool cuda){
     for(bool fail:{true,false}){
         auto tx=m.prepare_append("b",{4,5});int calls=0;
         const auto copy=*tx.tail_copy();bool caught=false;
-        try{tx.copy_shared_tail([&](std::size_t dst,std::size_t src,std::size_t count){
+        try{if(merged){tx.copy_shared_tail_region([&](const KVManager::TailCopyRegion& r){
+            assert(r.rows==2&&r.pitch==12&&r.width==9);
+#ifdef MINIPREFIX_ENABLE_CUDA
+            if(cuda){
+                check(cudaMemcpy2DAsync(k+r.destination,r.pitch*4,k+r.source,r.pitch*4,r.width*4,r.rows,cudaMemcpyDeviceToDevice,device.stream));
+                if(fail)throw std::runtime_error("failure between merged K and V submissions");
+                check(cudaMemcpy2DAsync(v+r.destination,r.pitch*4,v+r.source,r.pitch*4,r.width*4,r.rows,cudaMemcpyDeviceToDevice,device.stream));
+            }else
+#endif
+            {
+                for(std::size_t row=0;row<r.rows;++row)std::copy_n(k+r.source+row*r.pitch,r.width,k+r.destination+row*r.pitch);
+                if(fail)throw std::runtime_error("failure between merged K and V copies");
+                for(std::size_t row=0;row<r.rows;++row)std::copy_n(v+r.source+row*r.pitch,r.width,v+r.destination+row*r.pitch);
+            }
+        });}else tx.copy_shared_tail([&](std::size_t dst,std::size_t src,std::size_t count){
 #ifdef MINIPREFIX_ENABLE_CUDA
             if(cuda){check(cudaMemcpyAsync(k+dst,k+src,count*4,cudaMemcpyDeviceToDevice,device.stream));
                 check(cudaMemcpyAsync(v+dst,v+src,count*4,cudaMemcpyDeviceToDevice,device.stream));}
@@ -89,10 +103,11 @@ void payload(bool cuda){
             check(cudaMemcpy(values.data(),v,elements*4,cudaMemcpyDeviceToHost));}
 #endif
         assert(caught==fail);
-        for(int layer=0;layer<(fail?1:2);++layer)for(int i=0;i<12;++i){
+        for(int layer=0;layer<(fail&&!merged?1:2);++layer)for(int i=0;i<12;++i){
             auto src=(copy.source*2+layer)*12+i,dst=(copy.destination*2+layer)*12+i;
             assert(keys[src]==float(src+1)&&values[src]==-float(src+1));
-            if(i<9)assert(keys[dst]==keys[src]&&values[dst]==values[src]);
+            if(i<9){assert(keys[dst]==keys[src]);
+                assert(values[dst]==((merged&&fail)?-float(dst+1):values[src]));}
             else assert(keys[dst]==float(dst+1)&&values[dst]==-float(dst+1));
         }
         if(fail){rejects([&]{tx.commit();});tx.rollback();assert(m.sequence("b").blocks==original&&m.stats().kv_live_blocks==1);}
@@ -221,7 +236,7 @@ int main(int argc,char** argv){
     assert(!cuda);
 #endif
     metadata();std::cout<<"COW metadata passed"<<std::endl;
-    payload(cuda);std::cout<<"COW payload passed"<<std::endl;
+    payload(cuda);payload(cuda,true);std::cout<<"COW payload passed"<<std::endl;
     runner(cuda);std::cout<<"COW copy, capacity, rollback, retry and release passed"<<std::endl;
     partial_cache(cuda);std::cout<<"Partial prefix cache, COW and capacity passed"<<std::endl;
     costs(cuda);std::cout<<"Cost counters and opt-in timing passed"<<std::endl;

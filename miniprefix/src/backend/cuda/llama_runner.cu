@@ -127,10 +127,13 @@ public:
         if(append.tail_copy())++costs_.cow_pages;
         try{
             if(timed)check(cudaEventRecord(copy_events_->begin,execution_.stream()),"COW timing begin");
-            append.copy_shared_tail([&](std::size_t destination,std::size_t source,std::size_t count){
-                check(cudaMemcpyAsync(keys_.data+destination,keys_.data+source,count*sizeof(float),cudaMemcpyDeviceToDevice,execution_.stream()),"COW keys");
-                check(cudaMemcpyAsync(values_.data+destination,values_.data+source,count*sizeof(float),cudaMemcpyDeviceToDevice,execution_.stream()),"COW values");
-                costs_.cow_bytes+=2*count*sizeof(float);
+            append.copy_shared_tail_region([&](const KVManager::TailCopyRegion& region){
+                const auto pitch=region.pitch*sizeof(float),width=region.width*sizeof(float);
+                check(cudaMemcpy2DAsync(keys_.data+region.destination,pitch,keys_.data+region.source,pitch,
+                    width,region.rows,cudaMemcpyDeviceToDevice,execution_.stream()),"COW keys");
+                check(cudaMemcpy2DAsync(values_.data+region.destination,pitch,values_.data+region.source,pitch,
+                    width,region.rows,cudaMemcpyDeviceToDevice,execution_.stream()),"COW values");
+                costs_.cow_bytes+=2*width*region.rows;
             });
             if(timed)check(cudaEventRecord(copy_events_->end,execution_.stream()),"COW timing end");
             const auto first=table_state.dirty?std::size_t(0):(append.tail_copy()?original_blocks-1:original_blocks);

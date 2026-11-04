@@ -1,0 +1,18 @@
+test_empty_workload_and_nearest_rank (test_baseline.BaselineTests.test_empty_workload_and_nearest_rank) ... ok
+test_hand_calculated_delivery_and_single_token_tpot (test_baseline.BaselineTests.test_hand_calculated_delivery_and_single_token_tpot) ... ok
+test_wrong_reference_is_not_a_performance_sample (test_baseline.BaselineTests.test_wrong_reference_is_not_a_performance_sample) ... ok
+test_paired_ratios_and_profiling_exclusion (test_partial_prefix.CowComparison.test_paired_ratios_and_profiling_exclusion) ... ok
+test_delivery_metrics (test_partial_prefix.Metrics.test_delivery_metrics) ... ok
+test_invalid (test_partial_prefix.Metrics.test_invalid) ... ok
+test_each_workload_rotates_all_modes_independently_of_position (test_prefix_benefit.PrefixBenefitTests.test_each_workload_rotates_all_modes_independently_of_position) ... ok
+test_hits_must_reduce_forward_and_gpu_input (test_prefix_benefit.PrefixBenefitTests.test_hits_must_reduce_forward_and_gpu_input) ... ok
+test_pair_ratios_are_per_round_and_charge_prime (test_prefix_benefit.PrefixBenefitTests.test_pair_ratios_are_per_round_and_charge_prime) ... ok
+test_attribution (test_stress.StressMetricsTests.test_attribution) ... ok
+test_nearest_rank (test_stress.StressMetricsTests.test_nearest_rank) ... ok
+test_reject_partial_and_wrong_counts (test_stress.StressMetricsTests.test_reject_partial_and_wrong_counts) ... ok
+test_reject_wrong_terminal (test_stress.StressMetricsTests.test_reject_wrong_terminal) ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 0.004s
+
+OK

@@ -83,17 +83,11 @@ def generate(engine, key, prompt, observe=False):
                 costs=delta(cost_after, cost_before), before=before, after=after)
 
 
-def run(args):
-    model = args.model_dir/'model.mpf'
-    workers = {'cpu': args.cpu_worker, 'cuda': args.cuda_worker}
-    selected = args.backends.split(',')
-    assert args.repeats >= 3 and all(b in workers for b in selected)
-    config = dict(context=128, batch_size=1, token_budget=16, chunk_size=16,
-                  block_tokens=16, kv_blocks=64)
+def workloads(cpu_worker, model, config):
     seed = ([1, 504, 3575, 282, 260, 905, 30, 198]*4)[:31]
     long_seed = (seed*3)[:65]
     # CPU no-cache reference, outside every measured interval.
-    with NativeEngine(args.cpu_worker, model, prefix_cache_blocks=0, **config) as ref:
+    with NativeEngine(cpu_worker, model, prefix_cache_blocks=0, **config) as ref:
         history = generate(ref, 'history', seed)
         divergent = seed.copy(); divergent[17] += 7
         unrelated = seed.copy(); unrelated[0] += 7
@@ -102,6 +96,17 @@ def run(args):
                  ('in-page-branch', long_seed, long_seed[:17]+divergent[17:], 17),
                  ('zero-sharing', seed, unrelated, 0)]
         golden = {name: generate(ref, name, query) for name, _, query, _ in cases}
+    return cases, golden
+
+
+def run(args):
+    model = args.model_dir/'model.mpf'
+    workers = {'cpu': args.cpu_worker, 'cuda': args.cuda_worker}
+    selected = args.backends.split(',')
+    assert args.repeats >= 3 and all(b in workers for b in selected)
+    config = dict(context=128, batch_size=1, token_budget=16, chunk_size=16,
+                  block_tokens=16, kv_blocks=64)
+    cases, golden = workloads(args.cpu_worker, model, config)
     rows = []
     for backend in selected:
         for profile in (False, True):

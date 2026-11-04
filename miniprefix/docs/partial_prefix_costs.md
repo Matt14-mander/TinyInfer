@@ -23,7 +23,8 @@ CPU/CUDA runner 新增独立的 `CostStats`，原有 `RunnerStats` 25 字段和 
 release、clear、清空前缀也不重置；实验通过区间前后快照作差。复制后模型计算失败不撤销
 已发生的复制成本；若 CUDA 错误导致未完成计时，不能用 cow_pages 假定所有区间都有时间。
 CPU/CUDA 都按两份 payload（K 和 V）计算字节，不计未使用尾部、权重、页表和 token 上传。
-每层 K/V 成对完成提交才累计字节；若 CUDA 的 K 提交成功而 V 提交失败，孤立 K 的字节不计入，
+每个复制回调的 K/V 成对完成提交才累计字节（合并后的 CUDA 回调包含全部层）；
+若 CUDA 的 K 提交成功而 V 提交失败，孤立 K 的字节不计入，
 因此故障场景的 cow_bytes 是已成对提交工作量，不保证涵盖所有失败提交前的设备流量。
 
 CUDA event 在首次启用时创建并在 runner 销毁时释放。事件记录在模型 stream 上，仅包围 D2D
