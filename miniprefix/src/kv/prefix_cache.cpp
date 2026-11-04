@@ -21,10 +21,13 @@ struct ExactPrefixCache::Index {
     };
     struct Node {
         Node* parent=nullptr;
+        std::size_t depth=0;
         const std::vector<std::int32_t>* edge=nullptr; // stable owning map key
-        std::map<std::vector<std::int32_t>,std::unique_ptr<Node>,Less> children;
+        using Children=std::map<std::vector<std::int32_t>,std::unique_ptr<Node>,Less>;
+        Children children;
         // Non-owning keys point into children; only nodes with a cache lease.
-        std::map<const std::vector<std::int32_t>*,Node*,Less> available;
+        using Available=std::map<const std::vector<std::int32_t>*,Node*,Less>;
+        Available available;
         int block=-1;
         Node* previous=nullptr;
         Node* next=nullptr;
@@ -36,6 +39,13 @@ struct ExactPrefixCache::Index {
     Node* oldest=nullptr;
     Node* newest=nullptr;
     std::size_t cached=0,nodes=0,key_tokens=0;
+    // A non-owning hint for the last published path. Every edge is still checked
+    // against the input; this is safe across requests, branches and shorter histories.
+    std::vector<Node*> publication;
+    // Keep only one empty leaf and one lookup allocation for snapshot churn.
+    // Neither spare owns a cache lease; extracted map keys are never searched.
+    Node::Children::node_type spare_node;
+    Node::Available::node_type spare_available;
     void unlink(Node& n) noexcept{
         if(n.previous)n.previous->next=n.next;else oldest=n.next;
         if(n.next)n.next->previous=n.previous;else newest=n.previous;
@@ -51,12 +61,14 @@ struct ExactPrefixCache::Index {
         // Erase only empty leaves: destruction never recursively traverses a deep trie.
         while(n!=&root&&n!=protected_node&&n->block<0&&n->children.empty()){
             auto* parent=n->parent;key_tokens-=n->edge->size();
+            if(n->depth<=publication.size()&&publication[n->depth-1]==n)
+                publication.resize(n->depth-1);
             const auto found=parent->children.find(*n->edge);
-            parent->children.erase(found);--nodes;n=parent;
+            spare_node=parent->children.extract(found);--nodes;n=parent;
         }
     }
     void drop_node(KvBlockPool& pool,Node& node,Node* protected_node=nullptr) noexcept{
-        node.parent->available.erase(node.edge);
+        spare_available=node.parent->available.extract(node.edge);
         --leases[node.block];unlink(node);pool.unref(node.block);node.block=-1;--cached;prune(&node,protected_node);
     }
     void drop(KvBlockPool& pool,Node* protected_node=nullptr) noexcept{drop_node(pool,*oldest,protected_node);}
@@ -94,6 +106,7 @@ void ExactPrefixCache::clear() noexcept{
     // Precompute successors before leaf pruning; no allocation or recursive walk.
     auto* node=index_->root.children.empty()?nullptr:index_->root.children.begin()->second.get();
     while(node){auto* next=index_->successor(node);if(node->block>=0)index_->drop_node(pool_,*node);node=next;}
+    index_->publication.clear();index_->spare_available={};index_->spare_node={};
 }
 int ExactPrefixCache::reuse(PagedSequence& sequence,const std::vector<std::int32_t>& prompt){
     if(sequence.used||!sequence.blocks.empty()||!sequence.tokens.empty())
@@ -134,25 +147,53 @@ void ExactPrefixCache::publish(const PagedSequence& sequence){
     const auto count=std::min(sequence.blocks.size(),std::min((std::size_t(sequence.used)+block_tokens-1)/block_tokens,
                              std::size_t(pool_.config().prefix_cache_blocks)));
     auto* parent=&index_->root;
+    index_->publication.reserve(count);
     for(std::size_t i=0;i<count;++i){
         const auto* begin=sequence.tokens.data()+i*block_tokens;
         const auto length=std::min(block_tokens,std::size_t(sequence.used)-i*block_tokens);
-        auto found=parent->children.find(Index::Page(begin,begin+length));
-        if(found==parent->children.end()){
-            auto node=std::make_unique<Index::Node>();node->parent=parent;
-            found=parent->children.emplace(std::vector<std::int32_t>(begin,begin+length),std::move(node)).first;
-            found->second->edge=&found->first;++index_->nodes;index_->key_tokens+=length;
+        Index::Node* selected=nullptr;
+        if(i<index_->publication.size()){
+            auto* hint=index_->publication[i];
+            if(hint->parent==parent&&hint->edge->size()==length&&std::equal(begin,begin+length,hint->edge->begin()))selected=hint;
+            else index_->publication.resize(i);
         }
-        auto& node=*found->second;
-        if(node.block>=0){index_->touch(node);parent=&node;continue;}
-        const int page=sequence.blocks[i];
-        // Allocate the lookup entry before acquiring a lease or evicting a victim.
-        try{parent->available.emplace(node.edge,&node);pool_.retain(page);}
-        catch(...){parent->available.erase(node.edge);index_->prune(&node);throw;}
-        if(size()==std::size_t(pool_.config().prefix_cache_blocks)){
-            index_->drop(pool_,&node);++evictions_;
+        if(!selected){
+            auto found=parent->children.find(Index::Page(begin,begin+length));
+            if(found==parent->children.end()){
+                if(index_->spare_node){
+                    index_->spare_node.key().assign(begin,begin+length);
+                    found=parent->children.insert(std::move(index_->spare_node)).position;
+                }else{
+                    auto node=std::make_unique<Index::Node>();
+                    found=parent->children.emplace(std::vector<std::int32_t>(begin,begin+length),std::move(node)).first;
+                }
+                found->second->parent=parent;found->second->depth=parent->depth+1;
+                found->second->edge=&found->first;++index_->nodes;index_->key_tokens+=length;
+            }
+            selected=found->second.get();
         }
-        ++index_->leases[page];node.block=page;index_->append(node);++index_->cached;parent=&node;
+        auto& node=*selected;
+        if(node.block>=0)index_->touch(node);
+        else{
+            const int page=sequence.blocks[i];
+            // Prepare lookup metadata before acquiring a lease or evicting a victim.
+            try{
+                if(index_->spare_available){
+                    index_->spare_available.key()=node.edge;index_->spare_available.mapped()=&node;
+                    parent->available.insert(std::move(index_->spare_available));
+                }else parent->available.emplace(node.edge,&node);
+                pool_.retain(page);
+            }
+            catch(...){index_->spare_available=parent->available.extract(node.edge);index_->prune(&node);throw;}
+            if(size()==std::size_t(pool_.config().prefix_cache_blocks)){
+                index_->drop(pool_,&node);++evictions_;
+            }
+            ++index_->leases[page];node.block=page;index_->append(node);++index_->cached;
+        }
+        // Eviction may have truncated the hint. Never leave gaps or stale nodes.
+        if(index_->publication.size()==i)index_->publication.push_back(&node);
+        parent=&node;
     }
+    if(index_->publication.size()>count)index_->publication.resize(count);
 }
 } // namespace miniprefix

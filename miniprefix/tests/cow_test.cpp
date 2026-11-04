@@ -227,6 +227,33 @@ void costs(bool cuda){
         r->clear();
     }
 }
+void publication_snapshots(bool cuda){
+    auto w=weights();auto r=make_cpu_runner(w,16,{4,16,5});
+#ifdef MINIPREFIX_ENABLE_CUDA
+    if(cuda)r=make_cuda_runner(w,16,{4,16,5});
+#endif
+    auto oracle=make_cpu_runner(w,16,{4,8,0});
+    // Repeated growing snapshots exceed cache capacity. Probe after the source
+    // is released, so stale/recycled index pointers cannot hide behind its lease.
+    for(int round=0;round<6;++round){
+        std::vector<TokenId> history={1,2,3,4,5};history[0]+=round%2;
+        r->create("source");r->append("source",history);
+        for(int token:{6,7,8,9,10}){
+            r->cache_prefix("source");r->cache_prefix("source");
+            r->append("source",{token});history.push_back(token);
+        }
+        r->cache_prefix("source");r->release("source");
+        auto prompt=history;prompt.push_back(11);
+        r->create("target");assert(r->reuse_prefix("target",prompt)==history.size());
+        const auto before=r->stats();rejects([&]{r->append("target",{15});});
+        assert(r->stats().kv_live_blocks==before.kv_live_blocks&&r->stats().forward_tokens==before.forward_tokens);
+        oracle->create("ref");same(r->append("target",{11}),oracle->append("ref",prompt));
+        r->cache_prefix("target");r->release("target");oracle->clear();
+        if(round%2){r->clear_prefix_cache();assert(r->stats().kv_live_blocks==0);}
+    }
+    assert(r->stats().prefix_evictions>0);r->clear();
+    assert(r->stats().live_sequences==0&&r->stats().kv_live_blocks==0&&r->stats().block_table_device_bytes==0);
+}
 int main(int argc,char** argv){
     std::cout<<"COW regression started"<<std::endl;
     bool cuda=false,required=false;for(int i=1;i<argc;++i){cuda|=std::string(argv[i])=="--cuda";required|=std::string(argv[i])=="--require-device";}
@@ -240,4 +267,5 @@ int main(int argc,char** argv){
     runner(cuda);std::cout<<"COW copy, capacity, rollback, retry and release passed"<<std::endl;
     partial_cache(cuda);std::cout<<"Partial prefix cache, COW and capacity passed"<<std::endl;
     costs(cuda);std::cout<<"Cost counters and opt-in timing passed"<<std::endl;
+    publication_snapshots(cuda);std::cout<<"Publication snapshot churn, rollback and release passed"<<std::endl;
 }

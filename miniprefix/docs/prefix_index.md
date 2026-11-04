@@ -45,3 +45,7 @@ LRU 每次 min_element 扫描全部缓存条目。新实现使用按页分边的
 不把它作为真实模型吞吐提升或新的长期 soak 结论。
 
 本机结果、原始计时和回归证据见 [2026-10-29 索引优化验收](acceptance/prefix-index-optimization.md)。
+
+后续[发布与快照元数据优化](prefix_publication.md)增加非拥有路径提示及各一个空闲叶/lookup
+节点复用；index_nodes 和 key_token_bytes 仍只统计当前树中的逻辑节点与有效 key，
+不包括空闲节点、vector 容量和 allocator 开销。

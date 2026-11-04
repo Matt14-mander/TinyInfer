@@ -50,6 +50,41 @@ void differential(){
         actual.clear();expected.clear();assert(left.live_blocks()==0&&right.live_blocks()==0&&actual.index_nodes()==0);
     }
 }
+void publication_churn(){
+    // Growing/shrinking tails and interleaved histories exercise publication
+    // hints while eviction recycles the exact same node storage for new keys.
+    for(int capacity:{1,3,16,48}){
+        KvBlockPool left({4,128,capacity},1,1),right({4,128,capacity},1,1);
+        ExactPrefixCache actual(left);PartialPrefixReference expected(right);
+        for(int step=0;step<500;++step){
+            std::vector<std::int32_t> tokens(1+step%63,7);
+            if(step%5==0)tokens[0]=9;
+            tokens.back()=step%17;
+            PagedSequence a,b;
+            append(left,a,tokens);append(right,b,tokens);
+            for(int repeat=0;repeat<2;++repeat){actual.publish(a);expected.publish(b);}
+            if(step%3==0)assert(actual.evict_one()==expected.evict_one());
+            // Republish after eviction, including a missing structural ancestor.
+            actual.publish(a);expected.publish(b);
+            tokens.push_back(99);PagedSequence probe_a,probe_b;
+            assert(actual.reuse(probe_a,tokens)==expected.reuse(probe_b,tokens));
+            assert(probe_a.blocks==probe_b.blocks&&probe_a.tokens==probe_b.tokens);
+            for(int page=0;page<128;++page)assert(left.references(page)==right.references(page));
+            assert(actual.size()==expected.size()&&actual.evictions()==expected.evictions());
+            left.release(probe_a);right.release(probe_b);left.release(a);right.release(b);
+            if(step%19==0){actual.clear();expected.clear();assert(left.live_blocks()==0&&right.live_blocks()==0);}
+        }
+        actual.clear();expected.clear();assert(left.live_blocks()==0&&right.live_blocks()==0);
+    }
+    KvBlockPool pool({4,8,1},1,1);ExactPrefixCache cache(pool);PagedSequence source;
+    append(pool,source,{1,2});cache.publish(source);cache.evict_one();
+    PagedSequence invalid;invalid.used=3;invalid.tokens={4,5,6};invalid.blocks={99};
+    bool rejected=false;try{cache.publish(invalid);}catch(const std::out_of_range&){rejected=true;}
+    assert(rejected&&cache.size()==0&&cache.index_nodes()==0);
+    cache.publish(source);PagedSequence probe;
+    assert(cache.reuse(probe,{1,2,3})==2);
+    pool.release(source);pool.release(probe);cache.clear();assert(pool.live_blocks()==0);
+}
 void missing_ancestor_and_pruning(){
     {
         KvBlockPool pool({2,8,2},1,1);ExactPrefixCache cache(pool);PagedSequence a,b,probe;
@@ -80,7 +115,7 @@ void missing_ancestor_and_pruning(){
 
 }
 int main(){
-    differential();missing_ancestor_and_pruning();deep_path();
+    differential();publication_churn();missing_ancestor_and_pruning();deep_path();
     {
         KvBlockPool pool({4,4,4},1,1);ExactPrefixCache cache(pool);PagedSequence source,shorter,probe;
         append(pool,source,{1,2,3,4});cache.publish(source);

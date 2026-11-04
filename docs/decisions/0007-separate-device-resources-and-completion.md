@@ -8,14 +8,18 @@
 Tensor/Storage expose CPU-readable pointers. ExecutionContext releases handles
 by host execution step, which cannot establish asynchronous device completion.
 Backend OpType support alone cannot express dtype/shape/layout/device constraints.
+无法表达数据类型、形状、布局和设备约束
 Phase 5 needs these contracts before introducing GPU kernels.
 
 ## Decision
 
+1. 数据存储边界：CPU Tensor和GPU Device Memory不能混为一谈
+2. 资源生命周期边界：CPU代码执行结束，不代表GPU异步任务已经结束执行
+3. Backend能力边界：支持某个算子，不代表支持该算子的所有数据类型、形状和内存布局
+
 Keep host Tensor/Buffer semantics and existing CPU execution entry points.
-Introduce DeviceId, pointer-free CapabilityQuery descriptors, and a separate
-DeviceBuffer/DeviceSpan allocation abstraction. GPU resources never expose a
-host pointer through this API, even when a platform supports shared storage.
+Introduce DeviceId, pointer-free CapabilityQuery descriptors, and a separate DeviceBuffer/DeviceSpan allocation abstraction. 
+GPU resources never expose a host pointer through this API, even when a platform supports shared storage.
 Native GPU handles remain inside backend-specific subclasses. Device ordinals
 identify devices within one process, not persistent hardware identity.
 
