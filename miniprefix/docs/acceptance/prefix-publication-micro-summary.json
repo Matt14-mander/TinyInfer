@@ -1,0 +1,1314 @@
+{
+  "passed": true,
+  "compiler": "MSVC 14.29.30133 /O2 /MD /DNDEBUG /EHsc /std:c++17",
+  "before_source_sha256": "bdb385f7f78dd376664a55b3750fedbc0cb823cacb2fdb8e4a1f4af93e21d832",
+  "after_source_sha256": "45193877d09b8333e40beec1d4e353ad740e2d690dffdf2aebf997a90c3596bd",
+  "benchmark_sha256": "fc77c58cb2556fd7a7d83573633639e209c16d0c299d6296bcee66977d463840",
+  "summaries": [
+    {
+      "case": "repeat",
+      "before": {
+        "ns_per_publish": 686.085,
+        "allocations_per_publish": 0.0,
+        "samples": [
+          {
+            "case": "repeat",
+            "repeat": 1,
+            "publications": 10000,
+            "ns_per_publish": 595.33,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 2,
+            "publications": 10000,
+            "ns_per_publish": 579.06,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 3,
+            "publications": 10000,
+            "ns_per_publish": 589.66,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 4,
+            "publications": 10000,
+            "ns_per_publish": 592.71,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 5,
+            "publications": 10000,
+            "ns_per_publish": 584.03,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 6,
+            "publications": 10000,
+            "ns_per_publish": 643.53,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 7,
+            "publications": 10000,
+            "ns_per_publish": 576.26,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 8,
+            "publications": 10000,
+            "ns_per_publish": 571.93,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 9,
+            "publications": 10000,
+            "ns_per_publish": 582.64,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 10,
+            "publications": 10000,
+            "ns_per_publish": 589.95,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 1,
+            "publications": 10000,
+            "ns_per_publish": 635.06,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 2,
+            "publications": 10000,
+            "ns_per_publish": 653.97,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 3,
+            "publications": 10000,
+            "ns_per_publish": 787.21,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 4,
+            "publications": 10000,
+            "ns_per_publish": 638.71,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 5,
+            "publications": 10000,
+            "ns_per_publish": 1205.74,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 6,
+            "publications": 10000,
+            "ns_per_publish": 1224.83,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 7,
+            "publications": 10000,
+            "ns_per_publish": 821.85,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 8,
+            "publications": 10000,
+            "ns_per_publish": 755.34,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 9,
+            "publications": 10000,
+            "ns_per_publish": 712.55,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 10,
+            "publications": 10000,
+            "ns_per_publish": 707.09,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 1,
+            "publications": 10000,
+            "ns_per_publish": 714.08,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 2,
+            "publications": 10000,
+            "ns_per_publish": 738.86,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 3,
+            "publications": 10000,
+            "ns_per_publish": 704.71,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 4,
+            "publications": 10000,
+            "ns_per_publish": 691.85,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 5,
+            "publications": 10000,
+            "ns_per_publish": 682.11,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 6,
+            "publications": 10000,
+            "ns_per_publish": 690.01,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 7,
+            "publications": 10000,
+            "ns_per_publish": 683.07,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 8,
+            "publications": 10000,
+            "ns_per_publish": 764.68,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 9,
+            "publications": 10000,
+            "ns_per_publish": 732.71,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 10,
+            "publications": 10000,
+            "ns_per_publish": 689.1,
+            "allocations_per_publish": 0
+          }
+        ]
+      },
+      "after": {
+        "ns_per_publish": 187.10500000000002,
+        "allocations_per_publish": 0.0,
+        "samples": [
+          {
+            "case": "repeat",
+            "repeat": 1,
+            "publications": 10000,
+            "ns_per_publish": 187.59,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 2,
+            "publications": 10000,
+            "ns_per_publish": 187.34,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 3,
+            "publications": 10000,
+            "ns_per_publish": 187.13,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 4,
+            "publications": 10000,
+            "ns_per_publish": 188.52,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 5,
+            "publications": 10000,
+            "ns_per_publish": 192.83,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 6,
+            "publications": 10000,
+            "ns_per_publish": 186.09,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 7,
+            "publications": 10000,
+            "ns_per_publish": 182.7,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 8,
+            "publications": 10000,
+            "ns_per_publish": 182.53,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 9,
+            "publications": 10000,
+            "ns_per_publish": 182.45,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 10,
+            "publications": 10000,
+            "ns_per_publish": 181.86,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 1,
+            "publications": 10000,
+            "ns_per_publish": 259.89,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 2,
+            "publications": 10000,
+            "ns_per_publish": 259.28,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 3,
+            "publications": 10000,
+            "ns_per_publish": 268.44,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 4,
+            "publications": 10000,
+            "ns_per_publish": 258.98,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 5,
+            "publications": 10000,
+            "ns_per_publish": 260.93,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 6,
+            "publications": 10000,
+            "ns_per_publish": 259.47,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 7,
+            "publications": 10000,
+            "ns_per_publish": 249.08,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 8,
+            "publications": 10000,
+            "ns_per_publish": 248.46,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 9,
+            "publications": 10000,
+            "ns_per_publish": 253.65,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 10,
+            "publications": 10000,
+            "ns_per_publish": 251.22,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 1,
+            "publications": 10000,
+            "ns_per_publish": 164.72,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 2,
+            "publications": 10000,
+            "ns_per_publish": 165.3,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 3,
+            "publications": 10000,
+            "ns_per_publish": 162.83,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 4,
+            "publications": 10000,
+            "ns_per_publish": 175.76,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 5,
+            "publications": 10000,
+            "ns_per_publish": 160.41,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 6,
+            "publications": 10000,
+            "ns_per_publish": 163.44,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 7,
+            "publications": 10000,
+            "ns_per_publish": 182.64,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 8,
+            "publications": 10000,
+            "ns_per_publish": 187.08,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 9,
+            "publications": 10000,
+            "ns_per_publish": 186.27,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "repeat",
+            "repeat": 10,
+            "publications": 10000,
+            "ns_per_publish": 182.98,
+            "allocations_per_publish": 0
+          }
+        ]
+      }
+    },
+    {
+      "case": "snapshots",
+      "before": {
+        "ns_per_publish": 1227.12,
+        "allocations_per_publish": 5.9904,
+        "samples": [
+          {
+            "case": "snapshots",
+            "repeat": 1,
+            "publications": 10000,
+            "ns_per_publish": 1099.08,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 2,
+            "publications": 10000,
+            "ns_per_publish": 1105.16,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 3,
+            "publications": 10000,
+            "ns_per_publish": 1113.7,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 4,
+            "publications": 10000,
+            "ns_per_publish": 1184.86,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 5,
+            "publications": 10000,
+            "ns_per_publish": 1139.88,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 6,
+            "publications": 10000,
+            "ns_per_publish": 1334.06,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 7,
+            "publications": 10000,
+            "ns_per_publish": 1136.04,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 8,
+            "publications": 10000,
+            "ns_per_publish": 1118.01,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 9,
+            "publications": 10000,
+            "ns_per_publish": 1198.14,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 10,
+            "publications": 10000,
+            "ns_per_publish": 1135.39,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 1,
+            "publications": 10000,
+            "ns_per_publish": 1232.9,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 2,
+            "publications": 10000,
+            "ns_per_publish": 1227.32,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 3,
+            "publications": 10000,
+            "ns_per_publish": 1326.09,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 4,
+            "publications": 10000,
+            "ns_per_publish": 1221.53,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 5,
+            "publications": 10000,
+            "ns_per_publish": 1284.91,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 6,
+            "publications": 10000,
+            "ns_per_publish": 1226.92,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 7,
+            "publications": 10000,
+            "ns_per_publish": 1168.92,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 8,
+            "publications": 10000,
+            "ns_per_publish": 1193.44,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 9,
+            "publications": 10000,
+            "ns_per_publish": 1130.66,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 10,
+            "publications": 10000,
+            "ns_per_publish": 1178.31,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 1,
+            "publications": 10000,
+            "ns_per_publish": 1275.87,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 2,
+            "publications": 10000,
+            "ns_per_publish": 1251.11,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 3,
+            "publications": 10000,
+            "ns_per_publish": 1309.84,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 4,
+            "publications": 10000,
+            "ns_per_publish": 1326.65,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 5,
+            "publications": 10000,
+            "ns_per_publish": 1375.8,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 6,
+            "publications": 10000,
+            "ns_per_publish": 1402.68,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 7,
+            "publications": 10000,
+            "ns_per_publish": 1397.04,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 8,
+            "publications": 10000,
+            "ns_per_publish": 1360.29,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 9,
+            "publications": 10000,
+            "ns_per_publish": 1396.93,
+            "allocations_per_publish": 5.9904
+          },
+          {
+            "case": "snapshots",
+            "repeat": 10,
+            "publications": 10000,
+            "ns_per_publish": 1385.35,
+            "allocations_per_publish": 5.9904
+          }
+        ]
+      },
+      "after": {
+        "ns_per_publish": 473.17,
+        "allocations_per_publish": 0.0,
+        "samples": [
+          {
+            "case": "snapshots",
+            "repeat": 1,
+            "publications": 10000,
+            "ns_per_publish": 496.48,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 2,
+            "publications": 10000,
+            "ns_per_publish": 450.96,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 3,
+            "publications": 10000,
+            "ns_per_publish": 451.59,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 4,
+            "publications": 10000,
+            "ns_per_publish": 467.87,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 5,
+            "publications": 10000,
+            "ns_per_publish": 438.06,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 6,
+            "publications": 10000,
+            "ns_per_publish": 441.61,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 7,
+            "publications": 10000,
+            "ns_per_publish": 418.81,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 8,
+            "publications": 10000,
+            "ns_per_publish": 422.28,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 9,
+            "publications": 10000,
+            "ns_per_publish": 446.23,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 10,
+            "publications": 10000,
+            "ns_per_publish": 425.71,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 1,
+            "publications": 10000,
+            "ns_per_publish": 645.22,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 2,
+            "publications": 10000,
+            "ns_per_publish": 714.23,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 3,
+            "publications": 10000,
+            "ns_per_publish": 619.7,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 4,
+            "publications": 10000,
+            "ns_per_publish": 596.7,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 5,
+            "publications": 10000,
+            "ns_per_publish": 577.48,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 6,
+            "publications": 10000,
+            "ns_per_publish": 604.43,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 7,
+            "publications": 10000,
+            "ns_per_publish": 598.98,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 8,
+            "publications": 10000,
+            "ns_per_publish": 573.4,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 9,
+            "publications": 10000,
+            "ns_per_publish": 618.73,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 10,
+            "publications": 10000,
+            "ns_per_publish": 568.03,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 1,
+            "publications": 10000,
+            "ns_per_publish": 494.03,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 2,
+            "publications": 10000,
+            "ns_per_publish": 467.32,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 3,
+            "publications": 10000,
+            "ns_per_publish": 461.47,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 4,
+            "publications": 10000,
+            "ns_per_publish": 505.39,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 5,
+            "publications": 10000,
+            "ns_per_publish": 464.89,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 6,
+            "publications": 10000,
+            "ns_per_publish": 478.47,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 7,
+            "publications": 10000,
+            "ns_per_publish": 467.71,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 8,
+            "publications": 10000,
+            "ns_per_publish": 455.39,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 9,
+            "publications": 10000,
+            "ns_per_publish": 455.14,
+            "allocations_per_publish": 0
+          },
+          {
+            "case": "snapshots",
+            "repeat": 10,
+            "publications": 10000,
+            "ns_per_publish": 548.88,
+            "allocations_per_publish": 0
+          }
+        ]
+      }
+    },
+    {
+      "case": "branches",
+      "before": {
+        "ns_per_publish": 10148.65,
+        "allocations_per_publish": 198.0,
+        "samples": [
+          {
+            "case": "branches",
+            "repeat": 1,
+            "publications": 10000,
+            "ns_per_publish": 9478.99,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 2,
+            "publications": 10000,
+            "ns_per_publish": 9539.37,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 3,
+            "publications": 10000,
+            "ns_per_publish": 9617.24,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 4,
+            "publications": 10000,
+            "ns_per_publish": 10624.5,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 5,
+            "publications": 10000,
+            "ns_per_publish": 9952.55,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 6,
+            "publications": 10000,
+            "ns_per_publish": 9828.83,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 7,
+            "publications": 10000,
+            "ns_per_publish": 10309.7,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 8,
+            "publications": 10000,
+            "ns_per_publish": 12065.9,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 9,
+            "publications": 10000,
+            "ns_per_publish": 20581.8,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 10,
+            "publications": 10000,
+            "ns_per_publish": 21206.4,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 1,
+            "publications": 10000,
+            "ns_per_publish": 10112.5,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 2,
+            "publications": 10000,
+            "ns_per_publish": 10913.2,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 3,
+            "publications": 10000,
+            "ns_per_publish": 10619.5,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 4,
+            "publications": 10000,
+            "ns_per_publish": 10723.4,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 5,
+            "publications": 10000,
+            "ns_per_publish": 12944.8,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 6,
+            "publications": 10000,
+            "ns_per_publish": 12220.7,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 7,
+            "publications": 10000,
+            "ns_per_publish": 10903.4,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 8,
+            "publications": 10000,
+            "ns_per_publish": 9651.05,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 9,
+            "publications": 10000,
+            "ns_per_publish": 9658.06,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 10,
+            "publications": 10000,
+            "ns_per_publish": 9943.66,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 1,
+            "publications": 10000,
+            "ns_per_publish": 10223.7,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 2,
+            "publications": 10000,
+            "ns_per_publish": 9443.17,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 3,
+            "publications": 10000,
+            "ns_per_publish": 10795.7,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 4,
+            "publications": 10000,
+            "ns_per_publish": 10597.5,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 5,
+            "publications": 10000,
+            "ns_per_publish": 9580.17,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 6,
+            "publications": 10000,
+            "ns_per_publish": 9286.38,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 7,
+            "publications": 10000,
+            "ns_per_publish": 9247.78,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 8,
+            "publications": 10000,
+            "ns_per_publish": 9185.17,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 9,
+            "publications": 10000,
+            "ns_per_publish": 9127.02,
+            "allocations_per_publish": 198
+          },
+          {
+            "case": "branches",
+            "repeat": 10,
+            "publications": 10000,
+            "ns_per_publish": 10184.8,
+            "allocations_per_publish": 198
+          }
+        ]
+      },
+      "after": {
+        "ns_per_publish": 9179.415,
+        "allocations_per_publish": 160.0,
+        "samples": [
+          {
+            "case": "branches",
+            "repeat": 1,
+            "publications": 10000,
+            "ns_per_publish": 8407.5,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 2,
+            "publications": 10000,
+            "ns_per_publish": 8255.94,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 3,
+            "publications": 10000,
+            "ns_per_publish": 8406.39,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 4,
+            "publications": 10000,
+            "ns_per_publish": 8929.72,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 5,
+            "publications": 10000,
+            "ns_per_publish": 9313.47,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 6,
+            "publications": 10000,
+            "ns_per_publish": 8887.89,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 7,
+            "publications": 10000,
+            "ns_per_publish": 9961.32,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 8,
+            "publications": 10000,
+            "ns_per_publish": 13472.5,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 9,
+            "publications": 10000,
+            "ns_per_publish": 20159.2,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 10,
+            "publications": 10000,
+            "ns_per_publish": 14998.7,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 1,
+            "publications": 10000,
+            "ns_per_publish": 8737.87,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 2,
+            "publications": 10000,
+            "ns_per_publish": 9160.81,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 3,
+            "publications": 10000,
+            "ns_per_publish": 8973.64,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 4,
+            "publications": 10000,
+            "ns_per_publish": 8458.9,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 5,
+            "publications": 10000,
+            "ns_per_publish": 9198.02,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 6,
+            "publications": 10000,
+            "ns_per_publish": 11494.8,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 7,
+            "publications": 10000,
+            "ns_per_publish": 10933,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 8,
+            "publications": 10000,
+            "ns_per_publish": 9905.16,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 9,
+            "publications": 10000,
+            "ns_per_publish": 8982.21,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 10,
+            "publications": 10000,
+            "ns_per_publish": 8207.26,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 1,
+            "publications": 10000,
+            "ns_per_publish": 7764.13,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 2,
+            "publications": 10000,
+            "ns_per_publish": 8040.54,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 3,
+            "publications": 10000,
+            "ns_per_publish": 9992.78,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 4,
+            "publications": 10000,
+            "ns_per_publish": 11976.3,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 5,
+            "publications": 10000,
+            "ns_per_publish": 12666.1,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 6,
+            "publications": 10000,
+            "ns_per_publish": 10439.6,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 7,
+            "publications": 10000,
+            "ns_per_publish": 9346.63,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 8,
+            "publications": 10000,
+            "ns_per_publish": 8947.43,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 9,
+            "publications": 10000,
+            "ns_per_publish": 8566.68,
+            "allocations_per_publish": 160
+          },
+          {
+            "case": "branches",
+            "repeat": 10,
+            "publications": 10000,
+            "ns_per_publish": 9246.87,
+            "allocations_per_publish": 160
+          }
+        ]
+      }
+    }
+  ]
+}

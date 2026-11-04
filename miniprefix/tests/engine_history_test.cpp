@@ -51,7 +51,9 @@ void aligned_single_token_completion(){
         e.submit(request("seed",prompt,1));assert((finish(e)==std::vector<TokenId>{9}));
         const auto before=trace->stats();
         e.submit(request("aligned",prompt,1));e.step();
-        const auto reused=cache?4u:0u;
+        // Partial-page reuse leaves only the final prompt token for logits,
+        // even when the original prompt ends exactly at a page boundary.
+        const auto reused=cache?7u:0u;
         assert(e.last_step_stats().prefix_reused_tokens==reused);
         assert(e.last_step_stats().prefill_tokens==std::min<std::size_t>(chunk,prompt.size()-reused));
         assert(e.last_step_stats().decode_tokens==0);
