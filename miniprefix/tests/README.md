@@ -54,3 +54,6 @@ prefix_cache_test.cpp 只测试匹配、缓存引用和淘汰策略；测试数�
 
 `miniprefix_engine_history_tests` 检查 decode 完整页发布时机、采样/KV 边界、取消/EOS、
 失败不发布和同轮分叉。真实 CPU/CUDA 多轮验收由 verify_generation_history.py 显式运行。
+页对齐单 token 请求额外覆盖缓存开/关与 prefill chunk 2/4/8：命中后仍重算最后一页，
+核对实际 forward/reused 计数，并收集首个 step 已完成请求的唯一终态及最终 token。
+这些无模型单测不替代真实权重数值或 CUDA 设备验收。
