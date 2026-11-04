@@ -1,4 +1,5 @@
 #include "miniprefix/kv_manager.h"
+#include <set>
 
 namespace miniprefix {
 KVManager::KVManager(KvCacheConfig config,int layers,int width,int context,int vocabulary):
@@ -100,6 +101,25 @@ void KVManager::clear_prefix_cache(){
 KVManager::Append KVManager::prepare_append(const RequestId& id,const std::vector<TokenId>& tokens){
     return Append(*this,id,tokens);
 }
+std::vector<std::unique_ptr<KVManager::Append>> KVManager::prepare_decode_batch(const std::vector<DecodeInput>& inputs){
+    require_idle();
+    if(inputs.size()<2)return {};
+    std::set<RequestId> seen;std::size_t required=0;
+    for(const auto& input:inputs){
+        const auto found=sequences_.find(input.id);
+        if(found==sequences_.end()||!seen.insert(input.id).second||input.token<0||input.token>=vocabulary_)return {};
+        const auto& s=found->second.sequence;
+        if(s.used>=context_)return {};
+        required+=s.used%config().block_tokens==0||pool_.references(s.blocks.back())>1;
+    }
+    // No cache eviction during preparation: publication must remain in Engine's
+    // original order. Under pressure use sequential append/eviction instead.
+    if(required>pool_.free_blocks())return {};
+    std::vector<std::unique_ptr<Append>> result;result.reserve(inputs.size());
+    try{for(const auto& input:inputs)result.emplace_back(new Append(*this,input.id,{input.token},true));}
+    catch(const KvCapacityError&){return {};}
+    return result;
+}
 void KVManager::reserve_pages(const RequestId& id,PagedSequence& sequence,int end,bool& cow){
     const auto tokens=config().block_tokens;
     const auto count=std::size_t(end/tokens+(end%tokens!=0));
@@ -125,8 +145,8 @@ void KVManager::reserve_pages(const RequestId& id,PagedSequence& sequence,int en
     if(cow&&pool_.free_blocks()<required+1)throw KvCapacityError("paged KV block pool exhausted");
     pool_.reserve(sequence,end);
 }
-KVManager::Append::Append(KVManager& owner,const RequestId& id,const std::vector<TokenId>& tokens):
-    owner_(&owner),state_(&owner.idle_state(id)),tokens_(tokens),original_blocks_(state_->sequence.blocks.size()){
+KVManager::Append::Append(KVManager& owner,const RequestId& id,const std::vector<TokenId>& tokens,bool batch):
+    owner_(&owner),state_(batch?&owner.sequences_.at(id):&owner.idle_state(id)),tokens_(tokens),original_blocks_(state_->sequence.blocks.size()){
     auto& sequence=state_->sequence;
     if(tokens.empty()||tokens.size()>std::size_t(owner.context_-sequence.used))
         throw std::invalid_argument("context overflow/empty input");
@@ -142,7 +162,7 @@ KVManager::Append::Append(KVManager& owner,const RequestId& id,const std::vector
         copy_=TailCopy{old,replacement,valid};sequence.blocks[original_blocks_-1]=replacement;
         // The original target lease stays held by this transaction until commit.
     }
-    state_->appending=true;owner.append_active_=true;
+    state_->appending=true;++owner.append_active_;
 }
 KVManager::Append::~Append(){rollback();}
 const PagedSequence& KVManager::Append::sequence() const{
@@ -174,13 +194,13 @@ void KVManager::Append::commit(){
     sequence.tokens.insert(sequence.tokens.end(),tokens_.begin(),tokens_.end());
     sequence.used+=static_cast<int>(tokens_.size());owner_->forward_tokens_+=tokens_.size();
     if(copy_)owner_->pool_.unref(copy_->source);
-    state_->appending=false;owner_->append_active_=false;owner_=nullptr;
+    state_->appending=false;--owner_->append_active_;owner_=nullptr;
 }
 void KVManager::Append::rollback() noexcept{
     if(owner_){
         owner_->pool_.rollback(state_->sequence,original_blocks_);
         if(copy_){state_->sequence.blocks[original_blocks_-1]=copy_->source;owner_->pool_.unref(copy_->destination);}
-        state_->appending=false;owner_->append_active_=false;owner_=nullptr;
+        state_->appending=false;--owner_->append_active_;owner_=nullptr;
     }
 }
 void KVManager::reset_sequence(const RequestId& id){pool_.release(idle_state(id).sequence);}

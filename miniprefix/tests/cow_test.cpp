@@ -254,6 +254,97 @@ void publication_snapshots(bool cuda){
     assert(r->stats().prefix_evictions>0);r->clear();
     assert(r->stats().live_sequences==0&&r->stats().kv_live_blocks==0&&r->stats().block_table_device_bytes==0);
 }
+void decode_transactions(){
+    KVManager m({4,8,4},1,1,16,16);m.create("a");m.create("b");
+    {auto tx=m.prepare_append("a",{1,2,3});tx.commit();}
+    m.fork_sequence("a","b");m.cache_prefix("a");
+    const auto a=m.sequence("a"),b=m.sequence("b");const auto before=m.stats();
+    assert(m.prepare_decode_batch({{"a",4},{"a",5}}).empty());
+    assert(m.prepare_decode_batch({{"a",4},{"b",16}}).empty());
+    {
+        auto group=m.prepare_decode_batch({{"a",4},{"b",5}});assert(group.size()==2);
+        rejects([&]{m.clear();});rejects([&]{m.cache_prefix("a");});rejects([&]{m.prepare_append("a",{1});});
+        for(auto& tx:group)tx->copy_shared_tail([](std::size_t,std::size_t,std::size_t){});
+        group[0]->rollback();rejects([&]{m.clear();});group[1]->rollback();
+    }
+    assert(m.sequence("a").blocks==a.blocks&&m.sequence("b").blocks==b.blocks);
+    assert(m.stats().forward_tokens==before.forward_tokens&&m.stats().kv_live_blocks==before.kv_live_blocks);
+    auto group=m.prepare_decode_batch({{"a",4},{"b",5}});
+    for(auto& tx:group){tx->copy_shared_tail([](std::size_t,std::size_t,std::size_t){});tx->commit();}
+    assert(m.sequence("a").tokens.back()==4&&m.sequence("b").tokens.back()==5);m.clear();
+    KVManager small({4,2,1},1,1,16,16);small.create("a");small.create("b");
+    {auto tx=small.prepare_append("a",{1,2,3});tx.commit();}small.fork_sequence("a","b");small.cache_prefix("a");
+    assert(small.prepare_decode_batch({{"a",4},{"b",5}}).empty());
+    assert(small.stats().prefix_evictions==0&&small.stats().kv_live_blocks==1);small.clear();
+    KVManager bounded({4,4,1},1,1,16,16);
+    assert(bounded.reserve_request("a",8)==KvAdmission::Ready);
+    assert(bounded.reserve_request("b",4)==KvAdmission::Ready);
+    bounded.create("a");bounded.create("b");
+    {auto tx=bounded.prepare_append("a",{1,2,3});tx.commit();}
+    {auto tx=bounded.prepare_append("b",{1,2,3,4});tx.commit();}bounded.cache_prefix("a");
+    const auto original=bounded.sequence("a").blocks;
+    // Row A can prepare, but row B exceeds its reservation. Undo the entire
+    // prepared prefix without evicting or leaving the manager locked.
+    assert(bounded.prepare_decode_batch({{"a",4},{"b",5}}).empty());
+    assert(bounded.sequence("a").blocks==original&&bounded.sequence("a").used==3);
+    assert(bounded.stats().forward_tokens==7&&bounded.stats().kv_live_blocks==2&&bounded.stats().prefix_evictions==0);
+    {auto tx=bounded.prepare_append("a",{4});tx.copy_shared_tail([](std::size_t,std::size_t,std::size_t){});tx.commit();}
+    bounded.clear();assert(bounded.stats().kv_live_blocks==0);
+}
+void batched_decode(bool cuda){
+    auto w=weights();auto r=make_cpu_runner(w,16,{4,32,20});
+#ifdef MINIPREFIX_ENABLE_CUDA
+    if(cuda)r=make_cuda_runner(w,16,{4,32,20});
+#endif
+    auto oracle=make_cpu_runner(w,16,{4,32,0});
+    for(int length:{3,4,7,9}){
+        const auto id=std::to_string(length);std::vector<TokenId> history(length);
+        for(int i=0;i<length;++i)history[i]=i%10+1;
+        r->create(id);oracle->create(id);r->append(id,history);oracle->append(id,history);r->cache_prefix(id);
+    }
+    r->set_cost_timing(true);
+    for(int step=0;step<3;++step){
+        std::vector<DecodeInput> inputs;for(int length:{3,4,7,9})inputs.push_back({std::to_string(length),10+step});
+        const auto before=r->stats();auto result=r->append_decode_batch(inputs);
+        assert(bool(result)==cuda);
+        for(std::size_t row=0;row<inputs.size();++row){const auto& in=inputs[row];
+            same(result?(*result)[row]:r->append(in.id,{in.token}),oracle->append(in.id,{in.token}));r->cache_prefix(in.id);}
+        if(cuda&&step)assert(r->stats().device_allocations==before.device_allocations);
+    }
+    if(cuda){
+        const auto before=r->stats();const auto cost=r->cost_stats();
+        assert(r->decode_batch_stats().batches==3&&r->decode_batch_stats().rows==12);
+        assert(cost.cow_pages>0&&cost.cow_timed_copies==cost.cow_pages);
+        assert(!r->append_decode_batch({{"3",11},{"4",15}})); // rollback all rows, including the good row
+        assert(r->stats().forward_tokens==before.forward_tokens&&r->stats().kv_live_blocks==before.kv_live_blocks);
+        auto retry=r->append_decode_batch({{"3",11},{"4",12}});assert(retry);
+        same((*retry)[0],oracle->append("3",{11}));same((*retry)[1],oracle->append("4",{12}));
+        assert(r->decode_batch_stats().fallbacks==1);
+    }
+    r->clear();oracle->clear();assert(r->stats().kv_live_blocks==0&&r->stats().block_table_device_bytes==0);
+    r->create("seed");r->append("seed",{1,2,3});r->cache_prefix("seed");
+    for(const auto* id:{"x","y"}){r->create(id);assert(r->reuse_prefix(id,{1,2,3,4})==3);}
+    r->release("seed");
+    auto shared=r->append_decode_batch({{"x",4},{"y",5}});assert(bool(shared)==cuda);
+    oracle->create("x");oracle->create("y");
+    same(shared?(*shared)[0]:r->append("x",{4}),oracle->append("x",{1,2,3,4}));
+    same(shared?(*shared)[1]:r->append("y",{5}),oracle->append("y",{1,2,3,5}));
+    r->cache_prefix("x");r->cache_prefix("y");r->release("x");r->release("y");
+    r->create("probe");assert(r->reuse_prefix("probe",{1,2,3,5,6})==4);
+    same(r->append("probe",{6}),oracle->append("y",{6}));r->clear();oracle->clear();
+
+    r=make_cpu_runner(w,16,{4,2,1});
+#ifdef MINIPREFIX_ENABLE_CUDA
+    if(cuda)r=make_cuda_runner(w,16,{4,2,1});
+#endif
+    r->create("a");r->create("b");r->append("a",{1,2,3});r->fork_sequence("a","b");r->cache_prefix("a");
+    const auto before=r->stats();assert(!r->append_decode_batch({{"a",4},{"b",5}}));
+    assert(r->stats().forward_tokens==before.forward_tokens&&r->stats().prefix_evictions==before.prefix_evictions);
+    oracle->create("a");oracle->create("b");
+    same(r->append("a",{4}),oracle->append("a",{1,2,3,4}));r->cache_prefix("a");r->release("a");
+    same(r->append("b",{5}),oracle->append("b",{1,2,3,5}));r->release("b");r->clear();oracle->clear();
+    assert(r->stats().kv_live_blocks==0&&r->stats().block_table_device_bytes==0);
+}
 int main(int argc,char** argv){
     std::cout<<"COW regression started"<<std::endl;
     bool cuda=false,required=false;for(int i=1;i<argc;++i){cuda|=std::string(argv[i])=="--cuda";required|=std::string(argv[i])=="--require-device";}
@@ -268,4 +359,5 @@ int main(int argc,char** argv){
     partial_cache(cuda);std::cout<<"Partial prefix cache, COW and capacity passed"<<std::endl;
     costs(cuda);std::cout<<"Cost counters and opt-in timing passed"<<std::endl;
     publication_snapshots(cuda);std::cout<<"Publication snapshot churn, rollback and release passed"<<std::endl;
+    decode_transactions();batched_decode(cuda);std::cout<<"Batched decode ragged positions, COW, rollback and retry passed"<<std::endl;
 }

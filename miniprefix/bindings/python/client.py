@@ -124,6 +124,12 @@ class NativeEngine:
             raise RuntimeError("invalid cost stats")
         return dict(zip(names, values))
 
+    def decode_batch_stats(self):
+        values = self._command(["DECODE_STATS"])
+        if len(values) != 3:
+            raise RuntimeError("invalid decode batch stats")
+        return dict(zip(("batches", "rows", "fallbacks"), values))
+
     def stats(self):
         names = ("live_sequences", "live_kv_bytes", "peak_kv_bytes", "forward_tokens", "device_weight_bytes",
             "weight_uploaded_bytes", "token_uploaded_bytes", "kv_uploaded_bytes", "logits_downloaded_bytes", "device_allocations", "device_workspace_bytes",

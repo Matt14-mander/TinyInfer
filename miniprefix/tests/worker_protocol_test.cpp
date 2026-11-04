@@ -18,6 +18,7 @@ void parsing(){
     for(const auto& item:errors){bool caught=false;try{protocol::parse(item.first);}
         catch(const std::invalid_argument& e){caught=true;assert(e.what()==item.second);}assert(caught);}
     assert(protocol::parse("COST_STATS").kind==protocol::Kind::CostStats);
+    assert(protocol::parse("DECODE_STATS").kind==protocol::Kind::DecodeStats);
     assert(protocol::parse("COST_TIMING 1").id==1);
     auto c=protocol::parse(" \tSUBMIT +1 2 -1 2 0 3 trailing ignored\r");
     assert(c.kind==protocol::Kind::Submit&&c.request.id=="1"&&c.request.generation.max_new_tokens==2);
@@ -27,6 +28,7 @@ void parsing(){
     assert(protocol::parse("CANCEL 1x").id==1); // formatted integer extraction, not strict token parsing
 }
 void encoding(){
+    std::ostringstream batch;protocol::decode_stats(batch,{2,7,1});assert(batch.str()=="OK 2 7 1\n");
     std::ostringstream out;protocol::ready(out,8,2,16,"cuda");protocol::ok(out);protocol::count(out,4);
     protocol::logits(out,{0.125F,1.23456789F,-0.0F});
     protocol::events(out,{{"1",3,std::nullopt,{}},{"2",std::nullopt,FinishReason::Error,"not on wire"}});
@@ -75,6 +77,8 @@ void transcript(){
     assert(buffer.flushes==14&&trace->creates["reference/1"]==1&&trace->creates["1"]==1);
     assert(trace->creates["reference/2"]==1&&trace->flushes==1&&trace->clears==1);
     std::string remaining;std::getline(in,remaining);assert(remaining=="UNKNOWN");
+    std::istringstream query("DECODE_STATS\n");std::ostringstream reply;
+    protocol::serve(engine,query,reply);assert(reply.str()=="OK 0 0 0\n");
 }
 void recovery_and_eof(){
     auto runner=std::make_unique<Runner>();auto* trace=runner.get();Engine engine(std::move(runner),{1,1,1,16});

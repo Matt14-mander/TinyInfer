@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <limits>
 
 namespace miniprefix {
 namespace {
@@ -20,19 +21,21 @@ __global__ void rms_kernel(const float* x,const float* weight,float* out,int wid
     for(int step=128;step;step/=2){if(lane<step)sums[lane]+=sums[lane+step];__syncthreads();}
     const float scale=1.0F/sqrtf(sums[0]/width+eps);
     for(int d=lane;d<width;d+=256)out[row*width+d]=x[row*width+d]*scale*weight[d];}
-__global__ void rope_kernel(float* x,int count,int heads,int dim,int start,float theta){
+__global__ void rope_kernel(float* x,int count,int heads,int dim,int start,float theta,const int* positions){
     int i=blockIdx.x*blockDim.x+threadIdx.x;if(i>=count*heads*(dim/2))return;
     int d=i%(dim/2),headrow=i/(dim/2),row=headrow/heads;
-    float angle=float(start+row)/powf(theta,float(2*d)/dim);float cs=cosf(angle),sn=sinf(angle);
+    float angle=float(positions?positions[row]:start+row)/powf(theta,float(2*d)/dim);float cs=cosf(angle),sn=sinf(angle);
     int a=headrow*dim+d,b=a+dim/2;float va=x[a],vb=x[b];x[a]=va*cs-vb*sn;x[b]=vb*cs+va*sn;}
 __global__ void append_kernel(const float* k,const float* v,float* keys,float* values,const int* table,
-                              int n,int width,int start,int layer,int layers,int block_tokens){
-    int i=blockIdx.x*blockDim.x+threadIdx.x;if(i<n*width){const int token=start+i/width;
+                              int n,int width,int start,int layer,int layers,int block_tokens,const int* positions,const int* const* tables){
+    int i=blockIdx.x*blockDim.x+threadIdx.x;if(i<n*width){const int row=i/width,token=positions?positions[row]:start+row;
+        if(tables)table=tables[row];
         const auto offset=((std::size_t(table[token/block_tokens])*layers+layer)*block_tokens+token%block_tokens)*width+i%width;
         keys[offset]=k[i];values[offset]=v[i];}}
 __global__ void attention_kernel(const float* q,const float* k,const float* v,float* out,const int* table,
-                                 int heads,int kvheads,int dim,int start,int layer,int layers,int block_tokens){
-    const int row=blockIdx.x,head=blockIdx.y,lane=threadIdx.x,kh=head/(heads/kvheads),length=start+row+1;
+                                 int heads,int kvheads,int dim,int start,int layer,int layers,int block_tokens,const int* positions,const int* const* tables){
+    const int row=blockIdx.x,head=blockIdx.y,lane=threadIdx.x,kh=head/(heads/kvheads),length=(positions?positions[row]:start+row)+1;
+    if(tables)table=tables[row];
     __shared__ float reduction[256];
     float maximum=-CUDART_INF_F,denom=0,numerator=0;
     const float query=lane<dim?q[(row*heads+head)*dim+lane]:0;
@@ -52,6 +55,7 @@ class CudaRunner final:public ModelRunner {
     std::shared_ptr<ModelWeights> weights_;RunnerStats stats_;
     KVManager kv_;
     CostStats costs_;bool cost_timing_=false;
+    DecodeBatchStats decode_stats_;
     struct CopyEvents {
         cudaEvent_t begin=nullptr,end=nullptr;
         CopyEvents(){check(cudaEventCreate(&begin),"COW event begin");
@@ -69,6 +73,33 @@ class CudaRunner final:public ModelRunner {
     void linear(const Allocation& x,const std::string& name,Allocation& out,int rows,int inner,int columns){
         const float alpha=1,beta=0;
         blas(cublasSgemm(execution_.handle(),CUBLAS_OP_N,CUBLAS_OP_N,columns,rows,inner,&alpha,parameter(name),columns,x.data,inner,&beta,out.data,columns));}
+    void forward(int n,int start,const int* table,bool batch=false){
+        const auto& c=config();const int outputs=batch?n:1;
+        const auto* positions=batch?reinterpret_cast<const int*>(workspace_.positions.data):nullptr;
+        const auto* tables=batch?reinterpret_cast<const int* const*>(workspace_.tables.data):nullptr;
+        embedding_kernel<<<(n*c.hidden+255)/256,256,0,execution_.stream()>>>(workspace_.x.data,parameter("model.embed_tokens.weight"),reinterpret_cast<int*>(workspace_.tokens.data),n,c.hidden);
+        for(int l=0;l<c.layers;++l){auto p="model.layers."+std::to_string(l)+".";
+            rms_kernel<<<n,256,0,execution_.stream()>>>(workspace_.x.data,parameter(p+"input_layernorm.weight"),workspace_.norm.data,c.hidden,c.rms_epsilon);
+            linear(workspace_.norm,p+"self_attn.q_proj.weight",workspace_.q,n,c.hidden,c.hidden);
+            linear(workspace_.norm,p+"self_attn.k_proj.weight",workspace_.k,n,c.hidden,c.kv_width());linear(workspace_.norm,p+"self_attn.v_proj.weight",workspace_.v,n,c.hidden,c.kv_width());
+            rope_kernel<<<(n*c.heads*c.head_dimension()/2+255)/256,256,0,execution_.stream()>>>(workspace_.q.data,n,c.heads,c.head_dimension(),start,c.rope_theta,positions);
+            rope_kernel<<<(n*c.kv_width()/2+255)/256,256,0,execution_.stream()>>>(workspace_.k.data,n,c.kv_heads,c.head_dimension(),start,c.rope_theta,positions);
+            append_kernel<<<(n*c.kv_width()+255)/256,256,0,execution_.stream()>>>(workspace_.k.data,workspace_.v.data,keys_.data,values_.data,table,
+                n,c.kv_width(),start,l,c.layers,kv_.config().block_tokens,positions,tables);
+            attention_kernel<<<dim3(n,c.heads),256,0,execution_.stream()>>>(workspace_.q.data,keys_.data,values_.data,workspace_.attention.data,table,
+                c.heads,c.kv_heads,c.head_dimension(),start,l,c.layers,kv_.config().block_tokens,positions,tables);
+            linear(workspace_.attention,p+"self_attn.o_proj.weight",workspace_.projection,n,c.hidden,c.hidden);
+            add_kernel<<<(n*c.hidden+255)/256,256,0,execution_.stream()>>>(workspace_.x.data,workspace_.projection.data,n*c.hidden);
+            rms_kernel<<<n,256,0,execution_.stream()>>>(workspace_.x.data,parameter(p+"post_attention_layernorm.weight"),workspace_.norm.data,c.hidden,c.rms_epsilon);
+            linear(workspace_.norm,p+"mlp.gate_proj.weight",workspace_.gate,n,c.hidden,c.intermediate);linear(workspace_.norm,p+"mlp.up_proj.weight",workspace_.up,n,c.hidden,c.intermediate);
+            swiglu_kernel<<<(n*c.intermediate+255)/256,256,0,execution_.stream()>>>(workspace_.gate.data,workspace_.up.data,n*c.intermediate);
+            linear(workspace_.gate,p+"mlp.down_proj.weight",workspace_.projection,n,c.intermediate,c.hidden);
+            add_kernel<<<(n*c.hidden+255)/256,256,0,execution_.stream()>>>(workspace_.x.data,workspace_.projection.data,n*c.hidden);
+        }
+        rms_kernel<<<outputs,256,0,execution_.stream()>>>(workspace_.x.data+(batch?0:std::size_t(n-1)*c.hidden),parameter("model.norm.weight"),workspace_.norm.data,c.hidden,c.rms_epsilon);
+        linear(workspace_.norm,"lm_head.weight",workspace_.logits,outputs,c.hidden,c.vocabulary);
+        check(cudaGetLastError(),"model kernel launch");
+    }
     void upload_parameter(const std::string& name,const tinyinfer::Tensor& input){
         auto data=input;data.contiguous();auto memory=std::make_unique<Allocation>();memory->ensure(data.size_bytes(),stats_);
         check(cudaMemcpyAsync(memory->data,data.data<float>(),data.size_bytes(),cudaMemcpyHostToDevice,execution_.stream()),"upload weights");
@@ -87,6 +118,7 @@ public:
     }
     ~CudaRunner() override{execution_.synchronize_noexcept();block_tables_.clear();parameters_.clear();execution_.reset();}
     const ModelConfig& config() const override{return weights_->config;}
+    DecodeBatchStats decode_batch_stats() const override{return decode_stats_;}
     CostStats cost_stats() const override{
         auto result=kv_.cost_stats();result.cow_pages=costs_.cow_pages;result.cow_bytes=costs_.cow_bytes;
         result.cow_copy_ns=costs_.cow_copy_ns;result.cow_timed_copies=costs_.cow_timed_copies;return result;
@@ -143,29 +175,7 @@ public:
                 stats_.block_table_uploaded_bytes+=bytes;}
             workspace_.ensure(n,c,stats_);check(cudaMemcpyAsync(workspace_.tokens.data,tokens.data(),tokens.size()*sizeof(TokenId),cudaMemcpyHostToDevice,execution_.stream()),"upload input tokens");
             stats_.token_uploaded_bytes+=tokens.size()*sizeof(TokenId);
-            embedding_kernel<<<(n*c.hidden+255)/256,256,0,execution_.stream()>>>(workspace_.x.data,parameter("model.embed_tokens.weight"),reinterpret_cast<int*>(workspace_.tokens.data),n,c.hidden);
-            for(int l=0;l<c.layers;++l){auto p="model.layers."+std::to_string(l)+".";
-                rms_kernel<<<n,256,0,execution_.stream()>>>(workspace_.x.data,parameter(p+"input_layernorm.weight"),workspace_.norm.data,c.hidden,c.rms_epsilon);
-                linear(workspace_.norm,p+"self_attn.q_proj.weight",workspace_.q,n,c.hidden,c.hidden);
-                linear(workspace_.norm,p+"self_attn.k_proj.weight",workspace_.k,n,c.hidden,c.kv_width());linear(workspace_.norm,p+"self_attn.v_proj.weight",workspace_.v,n,c.hidden,c.kv_width());
-                rope_kernel<<<(n*c.heads*c.head_dimension()/2+255)/256,256,0,execution_.stream()>>>(workspace_.q.data,n,c.heads,c.head_dimension(),state.used,c.rope_theta);
-                rope_kernel<<<(n*c.kv_width()/2+255)/256,256,0,execution_.stream()>>>(workspace_.k.data,n,c.kv_heads,c.head_dimension(),state.used,c.rope_theta);
-                const auto* table=reinterpret_cast<const int*>(block_tables_.at(id)->data);
-                append_kernel<<<(n*c.kv_width()+255)/256,256,0,execution_.stream()>>>(workspace_.k.data,workspace_.v.data,keys_.data,values_.data,table,
-                    n,c.kv_width(),state.used,l,c.layers,kv_.config().block_tokens);
-                attention_kernel<<<dim3(n,c.heads),256,0,execution_.stream()>>>(workspace_.q.data,keys_.data,values_.data,workspace_.attention.data,table,
-                    c.heads,c.kv_heads,c.head_dimension(),state.used,l,c.layers,kv_.config().block_tokens);
-                linear(workspace_.attention,p+"self_attn.o_proj.weight",workspace_.projection,n,c.hidden,c.hidden);
-                add_kernel<<<(n*c.hidden+255)/256,256,0,execution_.stream()>>>(workspace_.x.data,workspace_.projection.data,n*c.hidden);
-                rms_kernel<<<n,256,0,execution_.stream()>>>(workspace_.x.data,parameter(p+"post_attention_layernorm.weight"),workspace_.norm.data,c.hidden,c.rms_epsilon);
-                linear(workspace_.norm,p+"mlp.gate_proj.weight",workspace_.gate,n,c.hidden,c.intermediate);linear(workspace_.norm,p+"mlp.up_proj.weight",workspace_.up,n,c.hidden,c.intermediate);
-                swiglu_kernel<<<(n*c.intermediate+255)/256,256,0,execution_.stream()>>>(workspace_.gate.data,workspace_.up.data,n*c.intermediate);
-                linear(workspace_.gate,p+"mlp.down_proj.weight",workspace_.projection,n,c.intermediate,c.hidden);
-                add_kernel<<<(n*c.hidden+255)/256,256,0,execution_.stream()>>>(workspace_.x.data,workspace_.projection.data,n*c.hidden);
-            }
-            rms_kernel<<<1,256,0,execution_.stream()>>>(workspace_.x.data+std::size_t(n-1)*c.hidden,parameter("model.norm.weight"),workspace_.norm.data,c.hidden,c.rms_epsilon);
-            linear(workspace_.norm,"lm_head.weight",workspace_.logits,1,c.hidden,c.vocabulary);
-            check(cudaGetLastError(),"model kernel launch");
+            forward(n,state.used,reinterpret_cast<const int*>(table_state.data));
             check(cudaMemcpyAsync(result.data(),workspace_.logits.data,result.size()*4,cudaMemcpyDeviceToHost,execution_.stream()),"download logits");
             execution_.synchronize("model completion");
             if(timed){float milliseconds=0;check(cudaEventElapsedTime(&milliseconds,copy_events_->begin,copy_events_->end),"COW elapsed");
@@ -173,6 +183,62 @@ public:
             for(float v:result)if(!std::isfinite(v))throw std::runtime_error("nonfinite CUDA logits");
         }catch(...){execution_.synchronize_noexcept();table_state.dirty=true;append.rollback();throw;}
         append.commit();table_state.dirty=false;stats_.logits_downloaded_bytes+=result.size()*4;return result;
+    }
+    std::optional<std::vector<std::vector<float>>> append_decode_batch(const std::vector<DecodeInput>& inputs) override{
+        const auto& c=config();
+        if(inputs.size()<2)return std::nullopt;
+        if(inputs.size()>std::size_t(std::numeric_limits<int>::max()/std::max({c.hidden,c.intermediate,c.vocabulary}))){
+            ++decode_stats_.fallbacks;return std::nullopt;}
+        const int n=static_cast<int>(inputs.size());
+        std::vector<std::vector<float>> result(n,std::vector<float>(c.vocabulary));
+        std::vector<float> flat(std::size_t(n)*c.vocabulary);
+        std::vector<int> tokens(n),positions(n);std::vector<const int*> tables(n);
+        auto transactions=kv_.prepare_decode_batch(inputs);
+        if(transactions.empty()){++decode_stats_.fallbacks;return std::nullopt;}
+        std::vector<std::unique_ptr<CopyEvents>> timing(n);
+        auto rollback=[&]{
+            for(int row=n-1;row>=0;--row){block_tables_.at(inputs[row].id)->dirty=true;transactions[row]->rollback();}
+        };
+        try{
+            workspace_.ensure(n,c,stats_,true);
+            for(int row=0;row<n;++row){
+                auto& tx=*transactions[row];const auto& state=tx.sequence();
+                auto& table=*block_tables_.at(inputs[row].id);
+                tokens[row]=inputs[row].token;positions[row]=state.used;
+                tables[row]=reinterpret_cast<const int*>(table.data);
+                if(tx.tail_copy()){
+                    ++costs_.cow_pages;
+                    if(cost_timing_){timing[row]=std::make_unique<CopyEvents>();check(cudaEventRecord(timing[row]->begin,execution_.stream()),"batch COW begin");}
+                }
+                tx.copy_shared_tail_region([&](const KVManager::TailCopyRegion& r){
+                    const auto pitch=r.pitch*sizeof(float),width=r.width*sizeof(float);
+                    check(cudaMemcpy2DAsync(keys_.data+r.destination,pitch,keys_.data+r.source,pitch,width,r.rows,cudaMemcpyDeviceToDevice,execution_.stream()),"batch COW keys");
+                    check(cudaMemcpy2DAsync(values_.data+r.destination,pitch,values_.data+r.source,pitch,width,r.rows,cudaMemcpyDeviceToDevice,execution_.stream()),"batch COW values");
+                    costs_.cow_bytes+=2*width*r.rows;
+                });
+                if(timing[row])check(cudaEventRecord(timing[row]->end,execution_.stream()),"batch COW end");
+                const auto first=table.dirty?std::size_t(0):(tx.tail_copy()?tx.original_blocks()-1:tx.original_blocks());
+                if(state.blocks.size()!=first){const auto bytes=(state.blocks.size()-first)*sizeof(int);
+                    check(cudaMemcpyAsync(reinterpret_cast<int*>(table.data)+first,state.blocks.data()+first,bytes,cudaMemcpyHostToDevice,execution_.stream()),"batch table entries");
+                    stats_.block_table_uploaded_bytes+=bytes;}
+            }
+            check(cudaMemcpyAsync(workspace_.tokens.data,tokens.data(),n*sizeof(int),cudaMemcpyHostToDevice,execution_.stream()),"batch tokens");
+            check(cudaMemcpyAsync(workspace_.positions.data,positions.data(),n*sizeof(int),cudaMemcpyHostToDevice,execution_.stream()),"batch positions");
+            check(cudaMemcpyAsync(workspace_.tables.data,tables.data(),n*sizeof(const int*),cudaMemcpyHostToDevice,execution_.stream()),"batch tables");
+            stats_.token_uploaded_bytes+=n*sizeof(int);
+            forward(n,0,nullptr,true);
+            check(cudaMemcpyAsync(flat.data(),workspace_.logits.data,flat.size()*sizeof(float),cudaMemcpyDeviceToHost,execution_.stream()),"batch logits");
+            execution_.synchronize("batch completion");
+            for(const auto& t:timing)if(t){float ms=0;check(cudaEventElapsedTime(&ms,t->begin,t->end),"batch COW elapsed");
+                costs_.cow_copy_ns+=static_cast<std::uint64_t>(ms*1e6);++costs_.cow_timed_copies;}
+            // Replay row-specific numerical failures through ordinary append,
+            // preserving successful earlier events and the original error order.
+            for(float v:flat)if(!std::isfinite(v)){rollback();++decode_stats_.fallbacks;return std::nullopt;}
+            for(int row=0;row<n;++row)std::copy_n(flat.data()+std::size_t(row)*c.vocabulary,c.vocabulary,result[row].data());
+        }catch(...){execution_.synchronize_noexcept();rollback();throw;}
+        for(int row=0;row<n;++row){transactions[row]->commit();block_tables_.at(inputs[row].id)->dirty=false;}
+        stats_.logits_downloaded_bytes+=flat.size()*sizeof(float);
+        ++decode_stats_.batches;decode_stats_.rows+=n;return result;
     }
     void release(const RequestId& id) override{execution_.synchronize("release completion");
         kv_.release(id);block_tables_.erase(id);}

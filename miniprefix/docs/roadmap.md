@@ -34,5 +34,6 @@ CUDA Graph、CPU/GPU 异步重叠、量化、真实推测解码、HTTP、multi-G
 已完成[非整页缓存成本观测与收益测量](partial_prefix_costs.md)，结果与异常样本见[验收](acceptance/partial-prefix-cost-review.md)。
 已完成[CUDA COW 跨层合并复制](merged_cuda_cow.md)，同机旧/新对比见[验收](acceptance/merged-cow-review.md)。
 已优化[前缀发布路径与快照元数据分配](prefix_publication.md)，保持逐步发布及历史快照语义，测量结果见[验收](acceptance/prefix-publication-review.md)。
-下一项具体工作：推进跨请求批量计算；共享感知容量估算与抢占恢复仍后置。保守容量准入已实现。保留历史 dense/paged 基线与独立框架 oracle，复用基线
+已接入首版[CUDA 跨请求 batched decode](batched_decode.md)，不改变 Scheduler 顺序，容量不足时回退逐请求执行。
+下一项具体工作：依据合批后的瓶颈推进 prefill 批处理、调度与执行重叠；共享感知容量估算与抢占恢复仍后置。保守容量准入已实现。保留历史 dense/paged 基线与独立框架 oracle，复用基线
 对照正确性、实际跳过计算量、显存和端到端收益。

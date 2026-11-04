@@ -34,14 +34,15 @@ void StreamBlas::reset() noexcept{
     if(handle_){cublasDestroy(handle_);handle_=nullptr;}
     if(stream_){cudaStreamSynchronize(stream_);cudaStreamDestroy(stream_);stream_=nullptr;}
 }
-void Workspace::ensure(int rows,const ModelConfig& c,RunnerStats& stats){
+void Workspace::ensure(int rows,const ModelConfig& c,RunnerStats& stats,bool decode_batch){
     const auto hidden=std::size_t(rows)*c.hidden*4,kv=std::size_t(rows)*c.kv_width()*4,ff=std::size_t(rows)*c.intermediate*4;
     x.ensure(hidden,stats);norm.ensure(hidden,stats);q.ensure(hidden,stats);k.ensure(kv,stats);v.ensure(kv,stats);
     attention.ensure(hidden,stats);projection.ensure(hidden,stats);gate.ensure(ff,stats);up.ensure(ff,stats);
-    logits.ensure(std::size_t(c.vocabulary)*4,stats);tokens.ensure(std::size_t(rows)*sizeof(int),stats);
+    logits.ensure(std::size_t(decode_batch?rows:1)*c.vocabulary*4,stats);tokens.ensure(std::size_t(rows)*sizeof(int),stats);
+    if(decode_batch){positions.ensure(std::size_t(rows)*sizeof(int),stats);tables.ensure(std::size_t(rows)*sizeof(const int*),stats);}
 }
 std::size_t Workspace::bytes() const{
-    return x.bytes+norm.bytes+q.bytes+k.bytes+v.bytes+attention.bytes+projection.bytes+gate.bytes+up.bytes+logits.bytes+tokens.bytes;
+    return x.bytes+norm.bytes+q.bytes+k.bytes+v.bytes+attention.bytes+projection.bytes+gate.bytes+up.bytes+logits.bytes+tokens.bytes+positions.bytes+tables.bytes;
 }
 } // namespace cuda_detail
 } // namespace miniprefix

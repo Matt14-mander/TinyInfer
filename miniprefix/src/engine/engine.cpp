@@ -78,6 +78,17 @@ bool Engine::step(){
         std::vector<SchedulePhase> phases;
         for(const auto& state:active_)phases.push_back(state.output.empty()?SchedulePhase::Prefill:SchedulePhase::Decode);
         auto plan=scheduler_.plan(phases);
+        // Batch only the stable decode prefix already selected by this plan.
+        // Probe a copy so fallback retains the original budget and error order.
+        auto probe=plan;std::vector<DecodeInput> decode;
+        for(const auto& work:plan.order()){
+            if(work.phase!=SchedulePhase::Decode||!probe.has_budget())break;
+            const auto& s=active_[work.active_index];
+            probe.take_input(work.phase,0);decode.push_back({s.request.id,s.output.back()});
+        }
+        auto decoded=decode.size()>1?runner_->append_decode_batch(decode):std::nullopt;
+        if(decoded&&decoded->size()!=decode.size())throw std::runtime_error("invalid decode batch arity");
+        std::size_t decode_row=0;
         for(const auto& work:plan.order()){
             if(!plan.has_budget())break;auto& s=active_[work.active_index];auto& r=s.request;
             try{
@@ -87,7 +98,7 @@ bool Engine::step(){
                 std::vector<TokenId> input;
                 if(!prefilling)input={s.output.back()};
                 else input.assign(r.prompt_token_ids.begin()+s.prefilled,r.prompt_token_ids.begin()+s.prefilled+count);
-                auto logits=runner_->append(r.id,input);
+                auto logits=!prefilling&&decoded?std::move((*decoded)[decode_row++]):runner_->append(r.id,input);
                 if(prefilling){s.prefilled+=input.size();step_stats_.prefill_tokens+=input.size();}
                 else step_stats_.decode_tokens+=input.size();
                 if(s.prefilled<r.prompt_token_ids.size())continue;

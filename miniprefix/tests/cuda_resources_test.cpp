@@ -39,6 +39,12 @@ void workspace(){
     assert(stats.device_allocations==11&&work.x.data==first&&work.bytes()==expected(2));
     work.ensure(4,c,stats);assert(stats.device_allocations==21&&work.bytes()==expected(4)&&work.logits.data==logits);
     assert(stats.device_weight_bytes==0&&stats.live_kv_bytes==0&&stats.block_table_device_bytes==0);
+    work.ensure(4,c,stats,true);
+    const auto batched=expected(4)+3*c.vocabulary*4+4*(sizeof(int)+sizeof(const int*));
+    assert(work.bytes()==batched&&stats.device_allocations==24);
+    const auto allocations=stats.device_allocations;
+    work.ensure(2,c,stats,true);work.ensure(4,c,stats);
+    assert(work.bytes()==batched&&stats.device_allocations==allocations);
 }
 void execution_resources(){
     StreamBlas execution;

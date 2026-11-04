@@ -11,6 +11,7 @@ public:
     KVManager kv;
     std::vector<std::vector<TokenId>> published;
     bool fail_publish=false,invalid_logits=false;
+    bool batch_enabled=false;int batches=0;
     Runner(int cache=16):kv({4,32,cache},1,1,128,128){config_.context=128;config_.vocabulary=128;}
     const ModelConfig& config() const override{return config_;}
     int context_limit() const override{return 128;}
@@ -28,6 +29,16 @@ public:
         if(invalid_logits)logits[0]=std::numeric_limits<float>::quiet_NaN();return logits;
     }
     void release(const RequestId& id) override{kv.release(id);}
+    std::optional<std::vector<std::vector<float>>> append_decode_batch(const std::vector<DecodeInput>& inputs) override{
+        if(!batch_enabled)return std::nullopt;
+        auto group=kv.prepare_decode_batch(inputs);if(group.empty())return std::nullopt;
+        std::vector<std::vector<float>> result(inputs.size(),std::vector<float>(128,0));
+        for(std::size_t i=0;i<inputs.size();++i){
+            group[i]->copy_shared_tail([](std::size_t,std::size_t,std::size_t){});group[i]->commit();
+            result[i][(inputs[i].token+1)%128]=1;
+        }
+        ++batches;return result;
+    }
     void clear() override{kv.clear();}
     RunnerStats stats() const override{RunnerStats s;s.update_kv_stats(kv.stats());return s;}
 };
@@ -117,4 +128,28 @@ void concurrent_fork_and_off(){
     }
 }
 }
-int main(){aligned_single_token_completion();history_and_boundaries();cancellation_eos_and_failure();concurrent_fork_and_off();std::cout<<"generation history publication and page boundaries passed\n";}
+void batch_schedule_equivalence(){
+    for(bool eos:{false,true})for(int budget:{1,2,6}){
+        std::vector<std::string> reference;
+        std::vector<std::vector<TokenId>> published;
+        for(bool batch:{false,true}){
+            auto runner=std::make_unique<Runner>();auto* trace=runner.get();trace->batch_enabled=batch;
+            Engine e(std::move(runner),{3,budget,3,128});std::vector<std::string> observed;
+            auto collect=[&]{for(const auto& event:e.poll_events())observed.push_back(event.request_id+":"+
+                std::to_string(event.token_id.value_or(-1))+":"+std::to_string(event.finish_reason?int(*event.finish_reason):-1));};
+            e.submit(request("a",{1,2,3},4));auto b=request("b",{1,2},3);
+            if(eos)b.generation.eos_token_id=4;e.submit(b);
+            for(int step=0;!e.idle()&&step<64;++step){
+                if(step==2)e.submit(request("follower",{1,2,3,4,5,9},4));
+                e.step();collect();const auto stats=e.last_step_stats();
+                observed.push_back("step:"+std::to_string(stats.decode_tokens)+":"+std::to_string(stats.prefill_tokens)+":"+std::to_string(stats.prefix_reused_tokens));
+                if(step==2){e.cancel("follower");collect();}
+            }
+            assert(e.idle()&&!e.failed());
+            if(!batch){reference=observed;published=trace->published;}
+            else{assert(observed==reference&&trace->published==published);assert((trace->batches>0)==(budget>1));}
+            e.shutdown();assert(trace->stats().kv_live_blocks==0);
+        }
+    }
+}
+int main(){aligned_single_token_completion();history_and_boundaries();cancellation_eos_and_failure();concurrent_fork_and_off();batch_schedule_equivalence();std::cout<<"generation history publication and page boundaries passed\n";}

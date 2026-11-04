@@ -7,6 +7,7 @@
 #include <optional>
 
 namespace miniprefix {
+struct DecodeInput {RequestId id;TokenId token;};
 struct KvStats {
     std::size_t live_sequences=0,live_kv_bytes=0,peak_kv_bytes=0,forward_tokens=0;
     std::size_t kv_block_tokens=0,kv_total_blocks=0,kv_live_blocks=0,kv_peak_blocks=0;
@@ -24,7 +25,7 @@ class KVManager {
     ExactPrefixCache prefix_;
     std::map<RequestId,State> sequences_;
     std::size_t forward_tokens_=0;
-    bool append_active_=false;
+    std::size_t append_active_=0;
     bool cost_timing_=false;CostStats costs_;
     void require_idle() const;
     std::map<RequestId,std::size_t> reservations_;
@@ -47,7 +48,7 @@ public:
         std::size_t original_blocks_;
         std::optional<TailCopy> copy_;
         bool copied_=false;
-        Append(KVManager& owner,const RequestId& id,const std::vector<TokenId>& tokens);
+        Append(KVManager& owner,const RequestId& id,const std::vector<TokenId>& tokens,bool batch=false);
     public:
         Append(const Append&)=delete;
         Append& operator=(const Append&)=delete;
@@ -87,6 +88,10 @@ public:
     void cache_prefix(const RequestId& id);
     void clear_prefix_cache();
     Append prepare_append(const RequestId& id,const std::vector<TokenId>& tokens);
+    // Non-evicting group reservation. Empty means use the ordinary sequential
+    // path; committed histories/cache references remain unchanged. All device
+    // accesses must finish before any transaction commits or rolls back.
+    std::vector<std::unique_ptr<Append>> prepare_decode_batch(const std::vector<DecodeInput>& inputs);
     void reset_sequence(const RequestId& id);
     void release(const RequestId& id);
     void clear();

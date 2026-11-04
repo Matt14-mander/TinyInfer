@@ -32,6 +32,7 @@ struct RunnerStats {
     // Preserve the original field order/layout and map common metadata once.
     void update_kv_stats(const KvStats& stats);
 };
+struct DecodeBatchStats {std::size_t batches=0,rows=0,fallbacks=0;};
 class ModelRunner {
 public:
     virtual ~ModelRunner()=default;
@@ -50,6 +51,12 @@ public:
     virtual void cache_prefix(const RequestId&){}
     virtual void clear_prefix_cache(){}
     virtual std::vector<float> append(const RequestId&,const std::vector<TokenId>&)=0;
+    // Optional acceleration of the already scheduled decode prefix. A result
+    // commits all rows, in input order; nullopt leaves committed histories and
+    // cache references unchanged so Engine can use ordinary append. Never
+    // publishes prefixes or samples tokens. CPU/reference runners fall back.
+    virtual std::optional<std::vector<std::vector<float>>> append_decode_batch(const std::vector<DecodeInput>&){return std::nullopt;}
+    virtual DecodeBatchStats decode_batch_stats() const{return {};}
     virtual void release(const RequestId&)=0;
     virtual void clear()=0;
     virtual RunnerStats stats() const=0;
