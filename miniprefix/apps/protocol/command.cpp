@@ -32,7 +32,8 @@ Command parse(const std::string& line){
     if(op=="COST_STATS")return {Kind::CostStats};
     if(op=="PREFILL_STATS")return {Kind::PrefillStats};
     if(op=="DECODE_STATS")return {Kind::DecodeStats};
-    if(op=="COST_TIMING"){Command c{Kind::CostTiming};c.id=integer(in);
+    if(op=="EXEC_STATS")return {Kind::ExecutionStats};
+    if(op=="COST_TIMING" || op=="EXEC_TIMING"){Command c{op=="COST_TIMING"?Kind::CostTiming:Kind::ExecutionTiming};c.id=integer(in);
         if(c.id!=0&&c.id!=1)throw std::invalid_argument("invalid timing flag");return c;}
     if(op=="STATS")return {Kind::Stats};
     if(op=="QUIT")return {Kind::Quit};

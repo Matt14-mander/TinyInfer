@@ -7,6 +7,7 @@ void ok(std::ostream&);
 void count(std::ostream&,std::size_t);
 void logits(std::ostream&,const std::vector<float>&);
 void events(std::ostream&,const std::vector<GenerationEvent>&);
+void execution_stats(std::ostream&,const ExecutionStats&);
 void cost_stats(std::ostream&,const CostStats&);
 void prefill_stats(std::ostream&,const PrefillBatchStats&);
 void decode_stats(std::ostream&,const DecodeBatchStats&);

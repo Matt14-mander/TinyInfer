@@ -20,6 +20,8 @@ public:
     void shutdown();
     bool idle() const;
     bool failed() const;
+    void set_execution_timing(bool enabled);
+    ExecutionStats execution_stats() const;
     ModelRunner& runner(){return *runner_;}
     const EngineStepStats& last_step_stats() const{return step_stats_;}
 private:
@@ -29,6 +31,8 @@ private:
     std::deque<State> waiting_;std::vector<State> active_;std::set<RequestId> seen_;
     std::vector<GenerationEvent> events_;bool failed_=false;
     EngineStepStats step_stats_;
+    bool execution_timing_=false;
+    std::uint64_t admission_plan_ns_=0;
     bool prefix_cache_enabled_=true;
     void restore_prefix(State&);
     void terminal(State&,FinishReason,std::optional<TokenId> token=std::nullopt,

@@ -48,6 +48,7 @@ MiniPrefix 是建立在 TinyInfer 之上的原生 LLM 生成引擎，面向单�
 | CUDA COW 优化 | [同机旧/新对比](docs/acceptance/merged-cow-review.md)：复制阶段显著下降，端到端收益随负载波动 |
 | 发布元数据优化 | [实现与测量方法](docs/prefix_publication.md)、[原始对比](docs/acceptance/prefix-publication-comparison.json)、[CPU](docs/acceptance/prefix-publication-cpu-tests.log) / [CUDA](docs/acceptance/prefix-publication-cuda-tests.log) 回归日志 |
 | 持续压力与瓶颈 | [原生 Engine 压测](docs/long_running_stress.md)，与 worker IPC 端到端测量分别报告 |
+| 持续到达与饱和吞吐 | [CUDA worker 到达速率扫描、尾延迟与调度重叠评估](docs/acceptance/sustained-arrivals.md) |
 
 2026-11-04 的 CUDA 合并复制报告记录 CPU 56/56、CUDA 65/65 测试通过，CUDA memcheck
 零错误/零泄漏，以及 44 个真实多轮用例和 196,608 个 logits 的独立对照。

@@ -1,6 +1,7 @@
 #include "miniprefix/engine.h"
 #include <algorithm>
 #include <cmath>
+#include <chrono>
 #include <exception>
 
 namespace miniprefix {
@@ -56,11 +57,22 @@ void Engine::restore_prefix(State& state){
         throw std::runtime_error("invalid reusable prefix range");
     state.kv_block_tokens=block_tokens;state.prefilled=reused;step_stats_.prefix_reused_tokens+=reused;
 }
+void Engine::set_execution_timing(bool enabled){
+    runner_->set_execution_timing(enabled);
+    execution_timing_=enabled;
+}
+ExecutionStats Engine::execution_stats() const{
+    auto stats=runner_->execution_stats();
+    stats.admission_plan_ns=admission_plan_ns_;
+    return stats;
+}
 bool Engine::step(){
     step_stats_={};
     if(failed_)throw std::runtime_error("engine failed");
     bool progressed=false;
     try{
+        using Clock=std::chrono::steady_clock;
+        const auto begin=execution_timing_?Clock::now():Clock::time_point{};
         auto slots=scheduler_.admission_count(active_.size(),waiting_.size());
         while(slots&&!waiting_.empty()){
             auto& state=waiting_.front();
@@ -81,6 +93,7 @@ bool Engine::step(){
         std::vector<SchedulePhase> phases;
         for(const auto& state:active_)phases.push_back(state.output.empty()?SchedulePhase::Prefill:SchedulePhase::Decode);
         auto plan=scheduler_.plan(phases);
+        if(execution_timing_)admission_plan_ns_+=std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now()-begin).count();
         using Results=std::vector<std::vector<float>>;
         std::optional<Results> results;
         std::size_t group_begin=0,group_end=0;

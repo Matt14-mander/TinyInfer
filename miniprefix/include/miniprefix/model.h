@@ -32,6 +32,10 @@ struct RunnerStats {
     // Preserve the original field order/layout and map common metadata once.
     void update_kv_stats(const KvStats& stats);
 };
+struct ExecutionStats {
+    std::uint64_t forwards=0, forward_download_ns=0, host_forward_ns=0, stream_forward_ns=0;
+    std::uint64_t admission_plan_ns=0; // Filled by Engine.
+};
 struct DecodeBatchStats {std::size_t batches=0,rows=0,fallbacks=0;};
 struct PrefillBatchStats {
     std::size_t prefill_batches=0,mixed_batches=0,prefill_tokens=0,decode_tokens=0,fallbacks=0;
@@ -75,6 +79,8 @@ public:
     virtual void release(const RequestId&)=0;
     virtual void clear()=0;
     virtual RunnerStats stats() const=0;
+    virtual ExecutionStats execution_stats() const{return {};}
+    virtual void set_execution_timing(bool){}
     virtual CostStats cost_stats() const{return {};}
     virtual void set_cost_timing(bool){}
 };

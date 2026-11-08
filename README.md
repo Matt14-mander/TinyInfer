@@ -192,10 +192,10 @@ the exact parser, importer, dtype, operator, and rejection matrix.
 
 ## Next milestone
 
-The next MiniPrefix measurement targets sustained arrivals to evaluate overlap
-between scheduling and execution. Sharing-aware admission and preemption/recompute
-remain later work. See the [roadmap](miniprefix/docs/roadmap.md) and the
-[packed prefill and mixed batch measurements](miniprefix/docs/acceptance/packed-prefill-review.md).
+Under sustained arrivals, CUDA forward and logits delivery dominate step time.
+The next profiling target is the forward launch sequence and GPU sampling.
+See the [load sweep and overlap assessment](miniprefix/docs/acceptance/sustained-arrivals.md)
+and the [roadmap](miniprefix/docs/roadmap.md).
 
 The completed core Phase 4/5 foundations remain available for this work; their
 scope and results are recorded in the [CPU optimization acceptance](docs/benchmarks/rog-cpu-phase4.5-selection.md)

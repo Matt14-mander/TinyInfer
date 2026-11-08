@@ -22,3 +22,5 @@ prefix_benefit.py 提供真实模型八请求负载的 off/cold/warm 独立进�
 `partial_prefix.py` 是当前非整页缓存的 off/cold/hot 配对测量入口：
 正式延迟测量关闭耗时插桩，独立 profiling 轮次收集主机索引成本与 CUDA event COW 时间，
 输出可复核 JSON 和 Markdown。详见 [成本观测与测量协议](../docs/partial_prefix_costs.md)。
+
+`sustained.py` 用预定时间表向同一 worker 持续提交请求。`--summarize` 从原始 token 时间戳汇总延迟与吞吐，`--profile` 单独启用 CUDA forward 和主机准入/计划计时。负载配置、复现命令及实测见[持续到达基线](../docs/acceptance/sustained-arrivals.md)。

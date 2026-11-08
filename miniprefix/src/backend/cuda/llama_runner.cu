@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <chrono>
 #include <limits>
 
 namespace miniprefix {
@@ -58,13 +59,14 @@ class CudaRunner final:public ModelRunner {
     CostStats costs_;bool cost_timing_=false;
     DecodeBatchStats decode_stats_;
     PrefillBatchStats prefill_stats_;
-    struct CopyEvents {
+    struct TimingEvents {
         cudaEvent_t begin=nullptr,end=nullptr;
-        CopyEvents(){check(cudaEventCreate(&begin),"COW event begin");
-            try{check(cudaEventCreate(&end),"COW event end");}catch(...){cudaEventDestroy(begin);throw;}}
-        ~CopyEvents(){cudaEventDestroy(begin);cudaEventDestroy(end);}
+        TimingEvents(){check(cudaEventCreate(&begin),"create timing start event");
+            try{check(cudaEventCreate(&end),"create timing end event");}catch(...){cudaEventDestroy(begin);throw;}}
+        ~TimingEvents(){cudaEventDestroy(begin);cudaEventDestroy(end);}
     };
-    std::unique_ptr<CopyEvents> copy_events_;
+    std::unique_ptr<TimingEvents> copy_events_,forward_events_;
+    ExecutionStats execution_stats_;
     Allocation keys_,values_;
     cuda_detail::StreamBlas execution_;
     std::map<std::string,std::unique_ptr<Allocation>> parameters_;
@@ -103,6 +105,33 @@ class CudaRunner final:public ModelRunner {
         linear(workspace_.norm,"lm_head.weight",workspace_.logits,outputs,c.hidden,c.vocabulary);
         check(cudaGetLastError(),"model kernel launch");
     }
+    // CUDA events bound the forward stream interval. Host submission overlaps
+    // it. The outer wall timer includes pageable logits D2H and completion.
+    void forward_download(int rows,int start,const int* table,bool batch,int outputs,
+                          std::vector<float>& logits){
+        using Clock=std::chrono::steady_clock;
+        Clock::time_point begin,submitted;
+        if(forward_events_){
+            begin=Clock::now();
+            check(cudaEventRecord(forward_events_->begin,execution_.stream()),"forward timer begin");
+        }
+        forward(rows,start,table,batch,outputs);
+        if(forward_events_){
+            submitted=Clock::now();
+            check(cudaEventRecord(forward_events_->end,execution_.stream()),"forward timer end");
+        }
+        check(cudaMemcpyAsync(logits.data(),workspace_.logits.data,logits.size()*sizeof(float),cudaMemcpyDeviceToHost,execution_.stream()),"download logits");
+        execution_.synchronize("model completion");
+        if(forward_events_){
+            const auto end=Clock::now();
+            float elapsed=0;
+            check(cudaEventElapsedTime(&elapsed,forward_events_->begin,forward_events_->end),"forward elapsed");
+            ++execution_stats_.forwards;
+            execution_stats_.host_forward_ns+=std::chrono::duration_cast<std::chrono::nanoseconds>(submitted-begin).count();
+            execution_stats_.forward_download_ns+=std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count();
+            execution_stats_.stream_forward_ns+=static_cast<std::uint64_t>(elapsed*1e6);
+        }
+    }
     void upload_parameter(const std::string& name,const tinyinfer::Tensor& input){
         auto data=input;data.contiguous();auto memory=std::make_unique<Allocation>();memory->ensure(data.size_bytes(),stats_);
         check(cudaMemcpyAsync(memory->data,data.data<float>(),data.size_bytes(),cudaMemcpyHostToDevice,execution_.stream()),"upload weights");
@@ -124,12 +153,17 @@ public:
     DecodeBatchStats decode_batch_stats() const override{return decode_stats_;}
     bool supports_packed_prefill() const override{return true;}
     PrefillBatchStats prefill_batch_stats() const override{return prefill_stats_;}
+    ExecutionStats execution_stats() const override{return execution_stats_;}
+    void set_execution_timing(bool on) override{
+        if(on && !forward_events_)forward_events_=std::make_unique<TimingEvents>();
+        if(!on)forward_events_.reset();
+    }
     CostStats cost_stats() const override{
         auto result=kv_.cost_stats();result.cow_pages=costs_.cow_pages;result.cow_bytes=costs_.cow_bytes;
         result.cow_copy_ns=costs_.cow_copy_ns;result.cow_timed_copies=costs_.cow_timed_copies;return result;
     }
     void set_cost_timing(bool enabled) override{
-        if(enabled&&!copy_events_)copy_events_=std::make_unique<CopyEvents>();
+        if(enabled&&!copy_events_)copy_events_=std::make_unique<TimingEvents>();
         cost_timing_=enabled;kv_.set_cost_timing(enabled);
     }
     int context_limit() const override{return kv_.context_limit();}
@@ -180,9 +214,7 @@ public:
                 stats_.block_table_uploaded_bytes+=bytes;}
             workspace_.ensure(n,c,stats_);check(cudaMemcpyAsync(workspace_.tokens.data,tokens.data(),tokens.size()*sizeof(TokenId),cudaMemcpyHostToDevice,execution_.stream()),"upload input tokens");
             stats_.token_uploaded_bytes+=tokens.size()*sizeof(TokenId);
-            forward(n,state.used,reinterpret_cast<const int*>(table_state.data));
-            check(cudaMemcpyAsync(result.data(),workspace_.logits.data,result.size()*4,cudaMemcpyDeviceToHost,execution_.stream()),"download logits");
-            execution_.synchronize("model completion");
+            forward_download(n,state.used,reinterpret_cast<const int*>(table_state.data),false,1,result);
             if(timed){float milliseconds=0;check(cudaEventElapsedTime(&milliseconds,copy_events_->begin,copy_events_->end),"COW elapsed");
                 costs_.cow_copy_ns+=static_cast<std::uint64_t>(milliseconds*1e6);++costs_.cow_timed_copies;}
             for(float v:result)if(!std::isfinite(v))throw std::runtime_error("nonfinite CUDA logits");
@@ -216,7 +248,7 @@ public:
         std::vector<int> tokens,positions,last_rows;
         std::vector<const int*> tables;
         tokens.reserve(rows);positions.reserve(rows);tables.reserve(rows);last_rows.reserve(n);
-        std::vector<std::unique_ptr<CopyEvents>> timing(n);
+        std::vector<std::unique_ptr<TimingEvents>> timing(n);
         auto rollback=[&]{
             for(int row=n-1;row>=0;--row){block_tables_.at(inputs[row].id)->dirty=true;transactions[row]->rollback();}
         };
@@ -234,7 +266,7 @@ public:
                 last_rows.push_back(static_cast<int>(tokens.size()-1));
                 if(tx.tail_copy()){
                     ++costs_.cow_pages;
-                    if(cost_timing_){timing[row]=std::make_unique<CopyEvents>();check(cudaEventRecord(timing[row]->begin,execution_.stream()),"batch COW begin");}
+                    if(cost_timing_){timing[row]=std::make_unique<TimingEvents>();check(cudaEventRecord(timing[row]->begin,execution_.stream()),"batch COW begin");}
                 }
                 tx.copy_shared_tail_region([&](const KVManager::TailCopyRegion& r){
                     const auto pitch=r.pitch*sizeof(float),width=r.width*sizeof(float);
@@ -253,9 +285,7 @@ public:
             check(cudaMemcpyAsync(workspace_.tables.data,tables.data(),rows*sizeof(const int*),cudaMemcpyHostToDevice,execution_.stream()),"batch tables");
             if(rows!=inputs.size())check(cudaMemcpyAsync(workspace_.last_rows.data,last_rows.data(),n*sizeof(int),cudaMemcpyHostToDevice,execution_.stream()),"batch output indices");
             stats_.token_uploaded_bytes+=rows*sizeof(int);
-            forward(static_cast<int>(rows),0,nullptr,true,n);
-            check(cudaMemcpyAsync(flat.data(),workspace_.logits.data,flat.size()*sizeof(float),cudaMemcpyDeviceToHost,execution_.stream()),"batch logits");
-            execution_.synchronize("batch completion");
+            forward_download(static_cast<int>(rows),0,nullptr,true,n,flat);
             for(const auto& t:timing)if(t){float ms=0;check(cudaEventElapsedTime(&ms,t->begin,t->end),"batch COW elapsed");
                 costs_.cow_copy_ns+=static_cast<std::uint64_t>(ms*1e6);++costs_.cow_timed_copies;}
             // Replay row-specific numerical failures through ordinary append,

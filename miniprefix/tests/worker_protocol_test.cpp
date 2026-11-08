@@ -79,8 +79,8 @@ void transcript(){
     assert(buffer.flushes==14&&trace->creates["reference/1"]==1&&trace->creates["1"]==1);
     assert(trace->creates["reference/2"]==1&&trace->flushes==1&&trace->clears==1);
     std::string remaining;std::getline(in,remaining);assert(remaining=="UNKNOWN");
-    std::istringstream query("DECODE_STATS\n");std::ostringstream reply;
-    protocol::serve(engine,query,reply);assert(reply.str()=="OK 0 0 0\n");
+    std::istringstream query("DECODE_STATS\nEXEC_TIMING 1\nEXEC_STATS\nEXEC_TIMING 0\nEXEC_TIMING 2\n");std::ostringstream reply;
+    protocol::serve(engine,query,reply);assert(reply.str()=="OK 0 0 0\nOK\nOK 0 0 0 0 0\nOK\nERROR invalid timing flag\n");
 }
 void recovery_and_eof(){
     auto runner=std::make_unique<Runner>();auto* trace=runner.get();Engine engine(std::move(runner),{1,1,1,16});

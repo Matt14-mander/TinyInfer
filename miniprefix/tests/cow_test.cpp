@@ -365,13 +365,22 @@ void packed_prefill(bool cuda){
             runner->cache_prefix(chunk.id);
         }
     };
+    assert(runner->execution_stats().forwards==0);
+    runner->set_execution_timing(true);
     compare({{"a",{4,5,6,7,8,9}},{"b",{10},true},{"c",{6,5,4}}});
+    const auto timed=runner->execution_stats();
+    if(cuda){
+        assert(timed.forwards==1 && timed.stream_forward_ns>0);
+        assert(timed.forward_download_ns>=timed.host_forward_ns && timed.host_forward_ns>0);
+    }
+    runner->set_execution_timing(false);
     if(cuda){
         const auto before=runner->stats();
         assert(!runner->append_batch({{"a",{4,3}},{"c",{2,15,1}}}));
         assert(runner->stats().forward_tokens==before.forward_tokens && runner->stats().kv_live_blocks==before.kv_live_blocks);
     }
     compare({{"c",{2,3,4,5}},{"a",{10,11}}});
+    assert(runner->execution_stats().forwards==timed.forwards);
     if(cuda){
         const auto stats=runner->prefill_batch_stats();
         assert(stats.prefill_batches==1 && stats.mixed_batches==1 && stats.prefill_tokens==15 && stats.decode_tokens==1 && stats.fallbacks==1);

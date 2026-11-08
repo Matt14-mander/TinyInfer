@@ -116,6 +116,18 @@ class NativeEngine:
             raise ValueError("enabled must be bool")
         self._command(["COST_TIMING", int(enabled)])
 
+    def set_execution_timing(self, enabled):
+        if type(enabled) is not bool:
+            raise ValueError("enabled must be bool")
+        self._command(["EXEC_TIMING", int(enabled)])
+
+    def execution_stats(self):
+        fields = ("forwards", "forward_download_ns", "host_forward_ns", "stream_forward_ns", "admission_plan_ns")
+        values = self._command(["EXEC_STATS"])
+        if len(fields) != len(values):
+            raise RuntimeError("invalid execution stats")
+        return dict(zip(fields, values))
+
     def cost_stats(self):
         names = ("lookup_calls", "lookup_ns", "publish_calls", "publish_ns",
                  "cow_pages", "cow_bytes", "cow_copy_ns", "cow_timed_copies")
