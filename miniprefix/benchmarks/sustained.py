@@ -1,5 +1,6 @@
 """Open-loop CUDA serving benchmark. All arrivals are scheduled before the first STEP."""
 import argparse
+from contextlib import ExitStack
 import gzip
 import json
 import math
@@ -102,6 +103,49 @@ def counters(engine):
             **{'decode_' + k: v for k, v in engine.decode_batch_stats().items()}}
 
 
+def measure_cell(args, worker, model, config, header, workload, unique, rep, rate, mode, check_ids):
+    requests = arrivals(unique, args.requests, rate, args.seed+rep)
+    capacity = 0 if mode == 'off' else header['prefix_capacity']
+    with NativeEngine(worker, model, backend='cuda', prefix_cache_blocks=capacity, **config) as e:
+        warm = [dict(r, request_id=f'w{i}', arrival_ms=0) for i, r in enumerate(workload)]
+        measure(e, warm)
+        e.clear_prefix_cache()
+        if mode == 'hot':
+            for i, r in enumerate(unique):
+                if generate(e, f'prime{i}', r['prompt_tokens']) != r['expected_tokens']:
+                    raise RuntimeError('incorrect hot-cache priming output')
+        if args.profile:
+            e.set_execution_timing(True)
+        id_bytes = e.sampled_id_downloaded_bytes() if check_ids else 0
+        before = counters(e)
+        sample = measure(e, requests)
+        after = counters(e)
+        delta = {k: after[k] - v for k, v in before.items()}
+        if check_ids:
+            delta['sampled_id_downloaded_bytes'] = e.sampled_id_downloaded_bytes() - id_bytes
+            if delta['logits_downloaded_bytes'] or delta['sampled_id_downloaded_bytes'] < sample['output_tokens'] * 4:
+                raise RuntimeError('generation result transfer mismatch')
+        expected = sum(len(r['prompt_tokens']) + r['max_new_tokens'] - 1 for r in requests)
+        if delta['forward_tokens'] + delta['prefix_reused_tokens'] != expected:
+            raise RuntimeError('forward and reuse token accounting mismatch')
+        if (mode == 'off' and delta['prefix_reused_tokens']) or delta['weight_uploaded_bytes'] or delta['kv_uploaded_bytes']:
+            raise RuntimeError('unexpected prefix reuse or device upload')
+        if after['live_sequences'] or after['block_table_device_bytes']:
+            raise RuntimeError('live request resources after drain')
+        e.clear_prefix_cache()
+        if e.stats()['kv_live_blocks']:
+            raise RuntimeError('live KV pages after cache clear')
+        record = dict(repeat=rep, rate=rate, mode=mode, metrics=metrics(sample, config['batch_size']),
+                      counters=delta, requests=sample['requests'],
+                      steps=[[s['start_ms'], s['end_ms']] for s in sample['steps']])
+        if args.profile:
+            profile = e.execution_stats()
+            if not (profile['forwards'] and profile['stream_forward_ns'] and profile['admission_plan_ns']):
+                raise RuntimeError('missing native timing samples')
+            record['execution_ns'] = profile
+        return record
+
+
 def run(args):
     workload, oracle = prepare_workload(args.model_dir)
     unique = list({tuple(r['prompt_tokens']): r for r in workload}.values())
@@ -109,51 +153,25 @@ def run(args):
     config = dict(context=256, batch_size=4, token_budget=32, chunk_size=16, block_tokens=16, kv_blocks=128)
     header = dict(config=config, prefix_capacity=48, rates=args.rates, requests=args.requests,
                   repeats=args.repeats, seed=args.seed, oracle=oracle, prompts=unique,
-                  model_sha256=sha256(model), worker_sha256=sha256(args.worker), gpu=gpu_snapshot(),
+                  model_sha256=sha256(model), gpu=gpu_snapshot(),
                   profile=args.profile)
-    # Each line after the header is an independently verified run.
-    with gzip.open(args.output, 'wt', encoding='utf-8') as output:
-        print(json.dumps(header), file=output)
+    workers = [('current', args.worker, args.output)]
+    if args.reference_worker:
+        workers.insert(0, ('reference', args.reference_worker, args.reference_output))
+    with ExitStack() as stack:
+        streams = {}
+        for version, worker, path in workers:
+            streams[version] = stack.enter_context(gzip.open(path, 'wt', encoding='utf-8'))
+            print(json.dumps(dict(header, worker_sha256=sha256(worker))), file=streams[version])
         for rep in range(args.repeats):
             cells = [(rate, mode) for rate in args.rates for mode in ('off', 'cold', 'hot')]
             random.Random(args.seed+rep).shuffle(cells)
-            for rate, mode in cells:
-                requests = arrivals(unique, args.requests, rate, args.seed+rep)
-                capacity = 0 if mode == 'off' else header['prefix_capacity']
-                with NativeEngine(args.worker, model, backend='cuda', prefix_cache_blocks=capacity, **config) as e:
-                    warm = [dict(r, request_id=f'w{i}', arrival_ms=0) for i, r in enumerate(workload)]
-                    measure(e, warm)
-                    e.clear_prefix_cache()
-                    if mode == 'hot':
-                        for i, r in enumerate(unique):
-                            if generate(e, f'prime{i}', r['prompt_tokens']) != r['expected_tokens']:
-                                raise RuntimeError('incorrect hot-cache priming output')
-                    if args.profile:
-                        e.set_execution_timing(True)
-                    before = counters(e)
-                    sample = measure(e, requests)
-                    after = counters(e)
-                    delta = {k: after[k] - v for k, v in before.items()}
-                    expected = sum(len(r['prompt_tokens']) + r['max_new_tokens'] - 1 for r in requests)
-                    if delta['forward_tokens'] + delta['prefix_reused_tokens'] != expected:
-                        raise RuntimeError('forward and reuse token accounting mismatch')
-                    if (mode == 'off' and delta['prefix_reused_tokens']) or delta['weight_uploaded_bytes'] or delta['kv_uploaded_bytes']:
-                        raise RuntimeError('unexpected prefix reuse or device upload')
-                    if after['live_sequences'] or after['block_table_device_bytes']:
-                        raise RuntimeError('live request resources after drain')
-                    e.clear_prefix_cache()
-                    if e.stats()['kv_live_blocks']:
-                        raise RuntimeError('live KV pages after cache clear')
-                    record = dict(repeat=rep, rate=rate, mode=mode, metrics=metrics(sample, config['batch_size']),
-                                  counters=delta, requests=sample['requests'],
-                                  steps=[[s['start_ms'], s['end_ms']] for s in sample['steps']])
-                    if args.profile:
-                        profile = e.execution_stats()
-                        if not (profile['forwards'] and profile['stream_forward_ns'] and profile['admission_plan_ns']):
-                            raise RuntimeError('missing native timing samples')
-                        record['execution_ns'] = profile
-                    print(json.dumps(record, separators=(',', ':')), file=output, flush=True)
-                    print(rep, rate, mode, round(record['metrics']['interior_tok_s'], 1), flush=True)
+            for cell, (rate, mode) in enumerate(cells):
+                for version, worker, _ in (workers if (cell+rep)%2==0 else reversed(workers)):
+                    record = measure_cell(args, worker, model, config, header, workload, unique, rep, rate, mode,
+                                          bool(args.reference_worker) and version == 'current')
+                    print(json.dumps(record, separators=(',', ':')), file=streams[version], flush=True)
+                    print(rep, rate, mode, version, round(record['metrics']['interior_tok_s'], 1), flush=True)
 
 
 if __name__ == '__main__':
@@ -162,6 +180,8 @@ if __name__ == '__main__':
     p.add_argument('--worker', type=Path)
     p.add_argument('--model-dir', type=Path)
     p.add_argument('--output', type=Path)
+    p.add_argument('--reference-worker', type=Path, help='interleave an older worker on the identical arrival traces')
+    p.add_argument('--reference-output', type=Path)
     p.add_argument('--rates', type=float, nargs='+', default=[10, 24, 48, 96])
     p.add_argument('--requests', type=int, default=96)
     p.add_argument('--repeats', type=int, default=3)
@@ -177,4 +197,8 @@ if __name__ == '__main__':
         p.error('require at least eight requests, positive rates and repeats')
     if len(set(args.rates)) != len(args.rates):
         p.error('rates must be distinct')
+    if bool(args.reference_worker) != bool(args.reference_output):
+        p.error('paired measurement requires both reference options')
+    if args.reference_output and args.reference_output.resolve() == args.output.resolve():
+        p.error('current and reference outputs must differ')
     run(args)

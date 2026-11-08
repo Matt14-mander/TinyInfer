@@ -35,6 +35,7 @@ Command parse(const std::string& line){
     if(op=="EXEC_STATS")return {Kind::ExecutionStats};
     if(op=="COST_TIMING" || op=="EXEC_TIMING"){Command c{op=="COST_TIMING"?Kind::CostTiming:Kind::ExecutionTiming};c.id=integer(in);
         if(c.id!=0&&c.id!=1)throw std::invalid_argument("invalid timing flag");return c;}
+    if(op=="SAMPLE_BYTES")return {Kind::SampleBytes};
     if(op=="STATS")return {Kind::Stats};
     if(op=="QUIT")return {Kind::Quit};
     throw std::invalid_argument("unknown command");

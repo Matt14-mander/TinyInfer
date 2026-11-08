@@ -29,6 +29,7 @@ int serve(Engine& engine,std::istream& in,std::ostream& out){
             case Kind::PrefillStats:prefill_stats(out,engine.runner().prefill_batch_stats());break;
             case Kind::DecodeStats:decode_stats(out,engine.runner().decode_batch_stats());break;
             case Kind::CostTiming:engine.runner().set_cost_timing(command.id!=0);ok(out);break;
+            case Kind::SampleBytes:count(out,engine.runner().sampled_id_downloaded_bytes());break;
             case Kind::Stats:stats(out,engine.runner().stats());break;
             case Kind::Quit:engine.shutdown();ok(out);out<<std::flush;return 0;
             }

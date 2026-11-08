@@ -149,6 +149,12 @@ class NativeEngine:
             raise RuntimeError("invalid prefill batch stats")
         return dict(zip(names, values))
 
+    def sampled_id_downloaded_bytes(self):
+        values = self._command(["SAMPLE_BYTES"])
+        if len(values) != 1:
+            raise RuntimeError("invalid sampled ID byte count")
+        return values[0]
+
     def stats(self):
         names = ("live_sequences", "live_kv_bytes", "peak_kv_bytes", "forward_tokens", "device_weight_bytes",
             "weight_uploaded_bytes", "token_uploaded_bytes", "kv_uploaded_bytes", "logits_downloaded_bytes", "device_allocations", "device_workspace_bytes",

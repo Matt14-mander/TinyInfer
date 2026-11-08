@@ -1,9 +1,24 @@
 import unittest
 from miniprefix.benchmarks.sustained import arrivals, window_metrics
+from miniprefix.benchmarks.launch_gaps import summarize as summarize_gaps
 from miniprefix.bindings.python.client import NativeEngine
 
 
 class SustainedMeasurements(unittest.TestCase):
+    def test_kernel_gaps_exclude_between_forward_waits(self):
+        kernels = []
+        for call in (0, 1):
+            offset = call * 10000
+            for name, start, end, api in [('embedding_kernel', 2, 12, 0),
+                                         ('rms_kernel', 20, 30, 16), ('gemm', 32, 42, 24)]:
+                kernels.append(dict(mode='logits', phase='decode4', call=call, stream=7, name=name,
+                                    start_ns=offset+start, end_ns=offset+end, api_start_ns=offset+api,
+                                    call_ns=60, d2h_ns=1, d2h_bytes=16))
+        result, = summarize_gaps(kernels)
+        self.assertEqual(result['calls'], 2)
+        self.assertEqual(result['gap_pct'], 25)
+        self.assertEqual(result['api_late_pct_of_gaps'], 40)
+
     def test_same_open_loop_schedule_across_cache_modes(self):
         prompts = [{'prompt_tokens': [1]}, {'prompt_tokens': [2]}]
         requests = arrivals(prompts, 10, 20, 9)
@@ -35,3 +50,14 @@ class SustainedMeasurements(unittest.TestCase):
         engine._command = lambda _: []
         with self.assertRaises(RuntimeError):
             engine.execution_stats()
+
+    def test_sampled_id_byte_count(self):
+        engine = NativeEngine.__new__(NativeEngine)
+        def respond(fields):
+            self.assertEqual(fields, ['SAMPLE_BYTES'])
+            return [16]
+        engine._command = respond
+        self.assertEqual(engine.sampled_id_downloaded_bytes(), 16)
+        engine._command = lambda _: [16, 4]
+        with self.assertRaises(RuntimeError):
+            engine.sampled_id_downloaded_bytes()

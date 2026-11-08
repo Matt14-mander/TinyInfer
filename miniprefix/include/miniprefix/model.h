@@ -4,6 +4,7 @@
 #include "tinyinfer/core/tensor.h"
 #include <map>
 #include <memory>
+#include <variant>
 
 namespace miniprefix {
 struct ModelConfig {
@@ -40,6 +41,8 @@ struct DecodeBatchStats {std::size_t batches=0,rows=0,fallbacks=0;};
 struct PrefillBatchStats {
     std::size_t prefill_batches=0,mixed_batches=0,prefill_tokens=0,decode_tokens=0,fallbacks=0;
 };
+// Reference runners return logits; accelerated generation can return the selected ID.
+using GenerationResult=std::variant<TokenId,std::vector<float>>;
 class ModelRunner {
 public:
     virtual ~ModelRunner()=default;
@@ -76,9 +79,14 @@ public:
         }
         return append_decode_batch(decode);
     }
+    virtual GenerationResult append_generation(const RequestId& id,const std::vector<TokenId>& tokens){
+        return append(id,tokens);
+    }
+    virtual std::optional<std::vector<GenerationResult>> append_generation_batch(const std::vector<BatchInput>&);
     virtual void release(const RequestId&)=0;
     virtual void clear()=0;
     virtual RunnerStats stats() const=0;
+    virtual std::size_t sampled_id_downloaded_bytes() const{return 0;}
     virtual ExecutionStats execution_stats() const{return {};}
     virtual void set_execution_timing(bool){}
     virtual CostStats cost_stats() const{return {};}

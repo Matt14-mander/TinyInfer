@@ -94,7 +94,7 @@ bool Engine::step(){
         for(const auto& state:active_)phases.push_back(state.output.empty()?SchedulePhase::Prefill:SchedulePhase::Decode);
         auto plan=scheduler_.plan(phases);
         if(execution_timing_)admission_plan_ns_+=std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now()-begin).count();
-        using Results=std::vector<std::vector<float>>;
+        using Results=std::vector<GenerationResult>;
         std::optional<Results> results;
         std::size_t group_begin=0,group_end=0;
         std::exception_ptr restore_failure;
@@ -139,23 +139,29 @@ bool Engine::step(){
                         }
                         if(chunks.size()>1){
                             group_end=i+chunks.size();
-                            results=runner_->append_batch(chunks);
+                            results=runner_->append_generation_batch(chunks);
                             if(results && results->size()!=chunks.size())throw std::runtime_error("invalid batch arity");
                         }
                     }
                 }
                 const bool prefilling=work.phase==SchedulePhase::Prefill;
                 const auto count=plan.take_input(work.phase,r.prompt_token_ids.size()-s.prefilled);
-                auto logits=results?std::move((*results)[i-group_begin]):runner_->append(r.id,input_for(s,work.phase,count));
+                auto result=results?std::move((*results)[i-group_begin]):runner_->append_generation(r.id,input_for(s,work.phase,count));
                 if(prefilling){s.prefilled+=count;step_stats_.prefill_tokens+=count;}
                 else step_stats_.decode_tokens+=count;
                 if(s.prefilled<r.prompt_token_ids.size())continue;
-                if(logits.size()!=std::size_t(runner_->config().vocabulary))throw std::runtime_error("invalid logits arity");
-                for(float v:logits)if(!std::isfinite(v))throw std::runtime_error("nonfinite model result");
+                TokenId token;
+                if(auto* logits=std::get_if<std::vector<float>>(&result)){
+                    if(logits->size()!=std::size_t(runner_->config().vocabulary))throw std::runtime_error("invalid logits arity");
+                    for(float v:*logits)if(!std::isfinite(v))throw std::runtime_error("nonfinite model result");
+                    token=static_cast<TokenId>(std::max_element(logits->begin(),logits->end())-logits->begin());
+                }else{
+                    token=std::get<TokenId>(result);
+                    if(token<0 || token>=runner_->config().vocabulary)throw std::runtime_error("invalid sampled token");
+                }
                 // append committed the prompt or the PREVIOUS sampled token.
-                // Publish before sampling: the new output has no KV yet.
+                // Publish committed history before delivering the selected token.
                 runner_->cache_prefix(r.id);
-                auto token=static_cast<TokenId>(std::max_element(logits.begin(),logits.end())-logits.begin());
                 s.output.push_back(token);std::optional<FinishReason> finish;
                 if(r.generation.eos_token_id&&token==*r.generation.eos_token_id)finish=FinishReason::Eos;
                 else if(s.output.size()==r.generation.max_new_tokens)finish=FinishReason::Length;

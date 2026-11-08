@@ -6,6 +6,14 @@
 #include <set>
 
 namespace miniprefix {
+std::optional<std::vector<GenerationResult>> ModelRunner::append_generation_batch(const std::vector<BatchInput>& inputs){
+    auto rows=append_batch(inputs);
+    if(!rows)return std::nullopt;
+    std::vector<GenerationResult> result;
+    result.reserve(rows->size());
+    for(auto& row:*rows)result.emplace_back(std::move(row));
+    return result;
+}
 void ModelConfig::validate() const {
     if(layers<1||layers>128||hidden<2||hidden>8192||intermediate<1||intermediate>65536||heads<1||kv_heads<1||
        hidden%heads||heads%kv_heads||(hidden/heads)%2||hidden/heads>256||vocabulary<2||vocabulary>262144||

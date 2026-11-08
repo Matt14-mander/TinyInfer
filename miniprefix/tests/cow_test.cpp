@@ -394,6 +394,70 @@ void packed_prefill(bool cuda){
     assert(small.prepare_batch({{"a",{4,5,6,7,8,9,10,11,12}},{"b",{4,5}}}).empty());
     assert(small.stats().kv_live_blocks==1 && small.stats().prefix_evictions==0 && small.stats().forward_tokens==3);
 }
+void generation_results(bool cuda){
+    auto w=weights();
+    auto make=[&](){
+#ifdef MINIPREFIX_ENABLE_CUDA
+        if(cuda)return make_cuda_runner(w,32,{4,32,16});
+#endif
+        return make_cpu_runner(w,32,{4,32,16});
+    };
+    auto runner=make();
+    auto oracle=make_cpu_runner(w,32,{4,32,16});
+    for(auto* r:{runner.get(),oracle.get()}){
+        r->create("a");r->create("b");
+        r->append("a",{1,2,3});r->fork_sequence("a","b");
+    }
+    auto before=runner->stats();
+    auto compare=[&](const GenerationResult& result,const std::vector<float>& logits){
+        if(cuda)assert(std::get<TokenId>(result)==std::max_element(logits.begin(),logits.end())-logits.begin());
+        else same(std::get<std::vector<float>>(result),logits);
+    };
+    if(cuda){
+        const std::vector<BatchInput> bad={{"a",{4,5}},{"b",{15},true}};
+        assert(!runner->append_generation_batch(bad));
+        assert(runner->stats().forward_tokens==before.forward_tokens);
+        assert(runner->stats().kv_live_blocks==before.kv_live_blocks);
+    }
+    const std::vector<BatchInput> mixed={{"b",{7},true},{"a",{4,5}}};
+    auto result=runner->append_generation_batch(mixed);
+    assert(bool(result)==cuda);
+    for(size_t i=0;i<mixed.size();++i){
+        const auto& row=mixed[i];
+        compare(result?result->at(i):runner->append_generation(row.id,row.tokens),oracle->append(row.id,row.tokens));
+        runner->cache_prefix(row.id);
+    }
+    rejects([&]{runner->append_generation("a",{15});});
+    compare(runner->append_generation("a",{8}),oracle->append("a",{8}));
+    assert(runner->stats().logits_downloaded_bytes==before.logits_downloaded_bytes);
+    if(cuda)assert(runner->sampled_id_downloaded_bytes()==6*sizeof(TokenId));
+    same(runner->append("a",{3}),oracle->append("a",{3}));
+    runner->clear();
+    assert(runner->stats().kv_live_blocks==0);
+
+    // The first maximum can be in a higher lane (2 vs 257 in lane 1).
+    w->config.vocabulary=513;
+    tinyinfer::Tensor embeddings({513,8});
+    for(int i=0;i<513*8;++i)embeddings.at(i)=1.0F;
+    w->tensors.at("model.embed_tokens.weight")=std::move(embeddings);
+    tinyinfer::Tensor head({8,513});
+    for(int i=0;i<8*513;++i)head.at(i)=0;
+    head.at(2)=head.at(257)=1.0F;
+    w->tensors.at("lm_head.weight")=std::move(head);
+    auto ties=make();ties->create("tie");
+    auto logits=ties->append("tie",{1});
+    assert(std::max_element(logits.begin(),logits.end())-logits.begin()==2);
+    ties->create("again");
+    compare(ties->append_generation("again",{1}),logits);
+    // Only one losing column is nonfinite. A plain maximum could otherwise
+    // silently ignore it, particularly on a different lane from the winner.
+    for(float invalid:{std::numeric_limits<float>::quiet_NaN(),-std::numeric_limits<float>::infinity()}){
+        w->tensors.at("lm_head.weight").at(512)=invalid;
+        auto damaged=make();damaged->create("bad");
+        rejects([&]{damaged->append_generation("bad",{1});});
+        assert(damaged->stats().forward_tokens==0 && damaged->stats().kv_live_blocks==0);
+    }
+}
 int main(int argc,char** argv){
     std::cout<<"COW regression started"<<std::endl;
     bool cuda=false,required=false;for(int i=1;i<argc;++i){cuda|=std::string(argv[i])=="--cuda";required|=std::string(argv[i])=="--require-device";}
@@ -409,5 +473,6 @@ int main(int argc,char** argv){
     costs(cuda);std::cout<<"Cost counters and opt-in timing passed"<<std::endl;
     publication_snapshots(cuda);std::cout<<"Publication snapshot churn, rollback and release passed"<<std::endl;
     decode_transactions();batched_decode(cuda);std::cout<<"Batched decode ragged positions, COW, rollback and retry passed"<<std::endl;
+    generation_results(cuda);
     packed_prefill(cuda);std::cout<<"Packed prefill and mixed chunks passed"<<std::endl;
 }

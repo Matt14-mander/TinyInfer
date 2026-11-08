@@ -192,9 +192,8 @@ the exact parser, importer, dtype, operator, and rejection matrix.
 
 ## Next milestone
 
-Under sustained arrivals, CUDA forward and logits delivery dominate step time.
-The next profiling target is the forward launch sequence and GPU sampling.
-See the [load sweep and overlap assessment](miniprefix/docs/acceptance/sustained-arrivals.md)
+CUDA generation now selects greedy tokens on the GPU and downloads one ID per
+output row. See the [kernel timeline and sustained-load comparison](miniprefix/docs/acceptance/gpu-greedy.md)
 and the [roadmap](miniprefix/docs/roadmap.md).
 
 The completed core Phase 4/5 foundations remain available for this work; their

@@ -8,6 +8,7 @@
 #include <cstring>
 #include <chrono>
 #include <limits>
+#include <type_traits>
 
 namespace miniprefix {
 namespace {
@@ -53,6 +54,37 @@ __global__ void attention_kernel(const float* q,const float* k,const float* v,fl
 }
 __global__ void add_kernel(float* x,const float* y,int count){int i=blockIdx.x*blockDim.x+threadIdx.x;if(i<count)x[i]+=y[i];}
 __global__ void swiglu_kernel(float* gate,const float* up,int count){int i=blockIdx.x*blockDim.x+threadIdx.x;if(i<count){float v=gate[i];gate[i]=(v/(1+expf(-v)))*up[i];}}
+// One block per output row. Any nonfinite logit invalidates the whole row.
+__global__ void greedy_kernel(const float* logits,int vocabulary,TokenId* ids){
+    const int lane=threadIdx.x;
+    const float* row=logits+std::size_t(blockIdx.x)*vocabulary;
+    float best=-CUDART_INF_F;
+    int id=0;
+    bool invalid=false;
+    for(int i=lane;i<vocabulary;i+=blockDim.x){
+        const float value=row[i];
+        invalid|=!isfinite(value);
+        if(value>best){best=value;id=i;}
+    }
+    if(__syncthreads_or(invalid)){
+        if(lane==0)ids[blockIdx.x]=-1;
+        return;
+    }
+    __shared__ float values[256];
+    __shared__ int indices[256];
+    values[lane]=best;indices[lane]=id;
+    __syncthreads();
+    for(int stride=128;stride;stride/=2){
+        if(lane<stride){
+            const int other=lane+stride;
+            if(values[other]>values[lane] || (values[other]==values[lane] && indices[other]<indices[lane])){
+                values[lane]=values[other];indices[lane]=indices[other];
+            }
+        }
+        __syncthreads();
+    }
+    if(lane==0)ids[blockIdx.x]=indices[0];
+}
 class CudaRunner final:public ModelRunner {
     std::shared_ptr<ModelWeights> weights_;RunnerStats stats_;
     KVManager kv_;
@@ -67,6 +99,7 @@ class CudaRunner final:public ModelRunner {
     };
     std::unique_ptr<TimingEvents> copy_events_,forward_events_;
     ExecutionStats execution_stats_;
+    std::size_t sampled_bytes_=0;
     Allocation keys_,values_;
     cuda_detail::StreamBlas execution_;
     std::map<std::string,std::unique_ptr<Allocation>> parameters_;
@@ -107,8 +140,8 @@ class CudaRunner final:public ModelRunner {
     }
     // CUDA events bound the forward stream interval. Host submission overlaps
     // it. The outer wall timer includes pageable logits D2H and completion.
-    void forward_download(int rows,int start,const int* table,bool batch,int outputs,
-                          std::vector<float>& logits){
+    template<class T> void forward_download(int rows,int start,const int* table,bool batch,int outputs,
+                          std::vector<T>& host){
         using Clock=std::chrono::steady_clock;
         Clock::time_point begin,submitted;
         if(forward_events_){
@@ -120,8 +153,18 @@ class CudaRunner final:public ModelRunner {
             submitted=Clock::now();
             check(cudaEventRecord(forward_events_->end,execution_.stream()),"forward timer end");
         }
-        check(cudaMemcpyAsync(logits.data(),workspace_.logits.data,logits.size()*sizeof(float),cudaMemcpyDeviceToHost,execution_.stream()),"download logits");
+        const void* source=workspace_.logits.data;
+        if constexpr(std::is_same_v<T,TokenId>){
+            // Embedding consumed the input IDs earlier on this stream. There are
+            // at least as many input rows as output rows, even for packed prefill.
+            auto* ids=reinterpret_cast<TokenId*>(workspace_.tokens.data);
+            greedy_kernel<<<outputs,256,0,execution_.stream()>>>(workspace_.logits.data,config().vocabulary,ids);
+            check(cudaGetLastError(),"greedy kernel launch");
+            source=ids;
+        }
+        check(cudaMemcpyAsync(host.data(),source,host.size()*sizeof(T),cudaMemcpyDeviceToHost,execution_.stream()),"download forward result");
         execution_.synchronize("model completion");
+        if constexpr(std::is_same_v<T,TokenId>)sampled_bytes_+=host.size()*sizeof(T);
         if(forward_events_){
             const auto end=Clock::now();
             float elapsed=0;
@@ -153,6 +196,7 @@ public:
     DecodeBatchStats decode_batch_stats() const override{return decode_stats_;}
     bool supports_packed_prefill() const override{return true;}
     PrefillBatchStats prefill_batch_stats() const override{return prefill_stats_;}
+    std::size_t sampled_id_downloaded_bytes() const override{return sampled_bytes_;}
     ExecutionStats execution_stats() const override{return execution_stats_;}
     void set_execution_timing(bool on) override{
         if(on && !forward_events_)forward_events_=std::make_unique<TimingEvents>();
@@ -189,9 +233,19 @@ public:
     void cache_prefix(const RequestId& id) override{kv_.cache_prefix(id);}
     void clear_prefix_cache() override{execution_.synchronize("clear prefix completion");kv_.clear_prefix_cache();}
     std::vector<float> append(const RequestId& id,const std::vector<TokenId>& tokens) override{
+        return append_one<float>(id,tokens);
+    }
+    GenerationResult append_generation(const RequestId& id,const std::vector<TokenId>& tokens) override{
+        return append_one<TokenId>(id,tokens).front();
+    }
+    template<class T> bool valid_result(const std::vector<T>& host) const{
+        if constexpr(std::is_same_v<T,TokenId>)return std::all_of(host.begin(),host.end(),[](TokenId id){return id>=0;});
+        else return std::all_of(host.begin(),host.end(),[](float value){return std::isfinite(value);});
+    }
+    template<class T> std::vector<T> append_one(const RequestId& id,const std::vector<TokenId>& tokens){
         auto append=kv_.prepare_append(id,tokens);const auto& state=append.sequence();
         const auto& c=config();const int n=static_cast<int>(tokens.size());
-        std::vector<float> result(c.vocabulary);
+        std::vector<T> result(std::is_same_v<T,TokenId>?1:c.vocabulary);
         const auto original_blocks=append.original_blocks();
         auto& table_state=*block_tables_.at(id);
         const bool timed=cost_timing_&&bool(append.tail_copy());
@@ -217,9 +271,11 @@ public:
             forward_download(n,state.used,reinterpret_cast<const int*>(table_state.data),false,1,result);
             if(timed){float milliseconds=0;check(cudaEventElapsedTime(&milliseconds,copy_events_->begin,copy_events_->end),"COW elapsed");
                 costs_.cow_copy_ns+=static_cast<std::uint64_t>(milliseconds*1e6);++costs_.cow_timed_copies;}
-            for(float v:result)if(!std::isfinite(v))throw std::runtime_error("nonfinite CUDA logits");
+            if(!valid_result(result))throw std::runtime_error("nonfinite CUDA logits");
         }catch(...){execution_.synchronize_noexcept();table_state.dirty=true;append.rollback();throw;}
-        append.commit();table_state.dirty=false;stats_.logits_downloaded_bytes+=result.size()*4;return result;
+        append.commit();table_state.dirty=false;
+        if constexpr(std::is_same_v<T,float>)stats_.logits_downloaded_bytes+=result.size()*sizeof(float);
+        return result;
     }
     std::optional<std::vector<std::vector<float>>> append_decode_batch(const std::vector<DecodeInput>& inputs) override{
         std::vector<BatchInput> chunks;
@@ -227,6 +283,12 @@ public:
         return append_batch(chunks);
     }
     std::optional<std::vector<std::vector<float>>> append_batch(const std::vector<BatchInput>& inputs) override{
+        return append_group<float,std::vector<float>>(inputs);
+    }
+    std::optional<std::vector<GenerationResult>> append_generation_batch(const std::vector<BatchInput>& inputs) override{
+        return append_group<TokenId,GenerationResult>(inputs);
+    }
+    template<class T,class Row> std::optional<std::vector<Row>> append_group(const std::vector<BatchInput>& inputs){
         const auto& c=config();
         if(inputs.size()<2)return std::nullopt;
         const auto decodes=std::count_if(inputs.begin(),inputs.end(),[](const BatchInput& input){return input.decode;});
@@ -243,8 +305,8 @@ public:
         const int n=static_cast<int>(inputs.size());
         auto transactions=kv_.prepare_batch(inputs);
         if(transactions.empty()){++fallbacks;return std::nullopt;}
-        std::vector<std::vector<float>> result(n,std::vector<float>(c.vocabulary));
-        std::vector<float> flat(std::size_t(n)*c.vocabulary);
+        std::vector<Row> result;result.reserve(n);
+        std::vector<T> flat(std::size_t(n)*(std::is_same_v<T,TokenId>?1:c.vocabulary));
         std::vector<int> tokens,positions,last_rows;
         std::vector<const int*> tables;
         tokens.reserve(rows);positions.reserve(rows);tables.reserve(rows);last_rows.reserve(n);
@@ -290,11 +352,17 @@ public:
                 costs_.cow_copy_ns+=static_cast<std::uint64_t>(ms*1e6);++costs_.cow_timed_copies;}
             // Replay row-specific numerical failures through ordinary append,
             // preserving successful earlier events and the original error order.
-            for(float v:flat)if(!std::isfinite(v)){rollback();++fallbacks;return std::nullopt;}
-            for(int row=0;row<n;++row)std::copy_n(flat.data()+std::size_t(row)*c.vocabulary,c.vocabulary,result[row].data());
+            if(!valid_result(flat)){rollback();++fallbacks;return std::nullopt;}
+            for(int row=0;row<n;++row){
+                if constexpr(std::is_same_v<T,TokenId>)result.emplace_back(flat[row]);
+                else{
+                    auto begin=flat.begin()+std::size_t(row)*c.vocabulary;
+                    result.emplace_back(begin,begin+c.vocabulary);
+                }
+            }
         }catch(...){execution_.synchronize_noexcept();rollback();throw;}
         for(int row=0;row<n;++row){transactions[row]->commit();block_tables_.at(inputs[row].id)->dirty=false;}
-        stats_.logits_downloaded_bytes+=flat.size()*sizeof(float);
+        if constexpr(std::is_same_v<T,float>)stats_.logits_downloaded_bytes+=flat.size()*sizeof(float);
         if(pure_decode){
             ++decode_stats_.batches;decode_stats_.rows+=n;
         }else{

@@ -31,6 +31,13 @@ if(TINYINFER_ENABLE_CUDA)
     target_compile_options(miniprefix_cuda PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:--fmad=false>)
     add_executable(miniprefix_cuda_worker apps/worker.cpp)
     target_link_libraries(miniprefix_cuda_worker PRIVATE miniprefix_cuda miniprefix_worker_protocol)
+    set(MINIPREFIX_CUPTI_ROOT "" CACHE PATH "Optional CUDA 12.5 CUPTI root for the kernel timeline benchmark")
+    if(MINIPREFIX_CUPTI_ROOT)
+        find_library(MINIPREFIX_CUPTI_LIBRARY cupti REQUIRED PATHS "${MINIPREFIX_CUPTI_ROOT}/lib" "${MINIPREFIX_CUPTI_ROOT}/lib64" NO_DEFAULT_PATH)
+        add_executable(miniprefix_launch_trace benchmarks/launch_trace.cpp)
+        target_include_directories(miniprefix_launch_trace PRIVATE "${MINIPREFIX_CUPTI_ROOT}/include")
+        target_link_libraries(miniprefix_launch_trace PRIVATE miniprefix_cuda CUDA::cudart "${MINIPREFIX_CUPTI_LIBRARY}")
+    endif()
 endif()
 
 # Explicit native stress/profiling entry point; no model download or CTest dependency.
