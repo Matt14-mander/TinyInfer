@@ -345,6 +345,46 @@ void batched_decode(bool cuda){
     same(r->append("b",{5}),oracle->append("b",{1,2,3,5}));r->release("b");r->clear();oracle->clear();
     assert(r->stats().kv_live_blocks==0&&r->stats().block_table_device_bytes==0);
 }
+void packed_prefill(bool cuda){
+    auto w=weights();
+    auto runner=make_cpu_runner(w,32,{4,32,16});
+#ifdef MINIPREFIX_ENABLE_CUDA
+    if(cuda)runner=make_cuda_runner(w,32,{4,32,16});
+#endif
+    auto oracle=make_cpu_runner(w,32,{4,32,0});
+    runner->create("a");runner->create("b");runner->create("c");
+    runner->append("a",{1,2,3});runner->fork_sequence("a","b");
+    for(const auto* id:{"a","b","c"})oracle->create(id);
+    oracle->append("a",{1,2,3});oracle->append("b",{1,2,3});
+    auto compare=[&](const std::vector<BatchInput>& chunks){
+        auto result=runner->append_batch(chunks);
+        assert(bool(result)==cuda);
+        for(std::size_t i=0;i<chunks.size();++i){
+            const auto& chunk=chunks[i];
+            same(result?result->at(i):runner->append(chunk.id,chunk.tokens),oracle->append(chunk.id,chunk.tokens));
+            runner->cache_prefix(chunk.id);
+        }
+    };
+    compare({{"a",{4,5,6,7,8,9}},{"b",{10},true},{"c",{6,5,4}}});
+    if(cuda){
+        const auto before=runner->stats();
+        assert(!runner->append_batch({{"a",{4,3}},{"c",{2,15,1}}}));
+        assert(runner->stats().forward_tokens==before.forward_tokens && runner->stats().kv_live_blocks==before.kv_live_blocks);
+    }
+    compare({{"c",{2,3,4,5}},{"a",{10,11}}});
+    if(cuda){
+        const auto stats=runner->prefill_batch_stats();
+        assert(stats.prefill_batches==1 && stats.mixed_batches==1 && stats.prefill_tokens==15 && stats.decode_tokens==1 && stats.fallbacks==1);
+    }
+    runner->clear();assert(runner->stats().kv_live_blocks==0 && runner->stats().block_table_device_bytes==0);
+
+    KVManager small({4,5,2},1,1,32,16);
+    small.create("a");small.create("b");
+    {auto tx=small.prepare_append("a",{1,2,3});tx.commit();}
+    small.fork_sequence("a","b");small.cache_prefix("a");
+    assert(small.prepare_batch({{"a",{4,5,6,7,8,9,10,11,12}},{"b",{4,5}}}).empty());
+    assert(small.stats().kv_live_blocks==1 && small.stats().prefix_evictions==0 && small.stats().forward_tokens==3);
+}
 int main(int argc,char** argv){
     std::cout<<"COW regression started"<<std::endl;
     bool cuda=false,required=false;for(int i=1;i<argc;++i){cuda|=std::string(argv[i])=="--cuda";required|=std::string(argv[i])=="--require-device";}
@@ -360,4 +400,5 @@ int main(int argc,char** argv){
     costs(cuda);std::cout<<"Cost counters and opt-in timing passed"<<std::endl;
     publication_snapshots(cuda);std::cout<<"Publication snapshot churn, rollback and release passed"<<std::endl;
     decode_transactions();batched_decode(cuda);std::cout<<"Batched decode ragged positions, COW, rollback and retry passed"<<std::endl;
+    packed_prefill(cuda);std::cout<<"Packed prefill and mixed chunks passed"<<std::endl;
 }

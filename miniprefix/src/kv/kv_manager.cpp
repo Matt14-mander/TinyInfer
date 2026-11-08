@@ -102,21 +102,30 @@ KVManager::Append KVManager::prepare_append(const RequestId& id,const std::vecto
     return Append(*this,id,tokens);
 }
 std::vector<std::unique_ptr<KVManager::Append>> KVManager::prepare_decode_batch(const std::vector<DecodeInput>& inputs){
+    std::vector<BatchInput> chunks;
+    for(const auto& input:inputs)chunks.push_back({input.id,{input.token},true});
+    return prepare_batch(chunks);
+}
+std::vector<std::unique_ptr<KVManager::Append>> KVManager::prepare_batch(const std::vector<BatchInput>& inputs){
     require_idle();
     if(inputs.size()<2)return {};
     std::set<RequestId> seen;std::size_t required=0;
     for(const auto& input:inputs){
         const auto found=sequences_.find(input.id);
-        if(found==sequences_.end()||!seen.insert(input.id).second||input.token<0||input.token>=vocabulary_)return {};
+        if(found==sequences_.end()||!seen.insert(input.id).second||input.tokens.empty())return {};
         const auto& s=found->second.sequence;
-        if(s.used>=context_)return {};
-        required+=s.used%config().block_tokens==0||pool_.references(s.blocks.back())>1;
+        if(input.tokens.size()>std::size_t(context_-s.used))return {};
+        for(auto token:input.tokens)if(token<0||token>=vocabulary_)return {};
+        const auto end=std::size_t(s.used)+input.tokens.size();
+        const auto pages=1+(end-1)/config().block_tokens;
+        required+=pages-s.blocks.size();
+        if(s.used%config().block_tokens && pool_.references(s.blocks.back())>1)++required;
+        if(required>pool_.free_blocks())return {};
     }
     // No cache eviction during preparation: publication must remain in Engine's
     // original order. Under pressure use sequential append/eviction instead.
-    if(required>pool_.free_blocks())return {};
     std::vector<std::unique_ptr<Append>> result;result.reserve(inputs.size());
-    try{for(const auto& input:inputs)result.emplace_back(new Append(*this,input.id,{input.token},true));}
+    try{for(const auto& input:inputs)result.emplace_back(new Append(*this,input.id,input.tokens,true));}
     catch(const KvCapacityError&){return {};}
     return result;
 }

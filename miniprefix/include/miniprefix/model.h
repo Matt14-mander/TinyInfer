@@ -33,6 +33,9 @@ struct RunnerStats {
     void update_kv_stats(const KvStats& stats);
 };
 struct DecodeBatchStats {std::size_t batches=0,rows=0,fallbacks=0;};
+struct PrefillBatchStats {
+    std::size_t prefill_batches=0,mixed_batches=0,prefill_tokens=0,decode_tokens=0,fallbacks=0;
+};
 class ModelRunner {
 public:
     virtual ~ModelRunner()=default;
@@ -57,6 +60,18 @@ public:
     // publishes prefixes or samples tokens. CPU/reference runners fall back.
     virtual std::optional<std::vector<std::vector<float>>> append_decode_batch(const std::vector<DecodeInput>&){return std::nullopt;}
     virtual DecodeBatchStats decode_batch_stats() const{return {};}
+    virtual bool supports_packed_prefill() const{return false;}
+    virtual PrefillBatchStats prefill_batch_stats() const{return {};}
+    // One final logit vector per chunk, in scheduler order. Same transaction
+    // and fallback contract as append_decode_batch.
+    virtual std::optional<std::vector<std::vector<float>>> append_batch(const std::vector<BatchInput>& chunks){
+        std::vector<DecodeInput> decode;
+        for(const auto& chunk:chunks){
+            if(!chunk.decode || chunk.tokens.size()!=1)return std::nullopt;
+            decode.push_back({chunk.id,chunk.tokens.front()});
+        }
+        return append_decode_batch(decode);
+    }
     virtual void release(const RequestId&)=0;
     virtual void clear()=0;
     virtual RunnerStats stats() const=0;

@@ -42,8 +42,8 @@ public:
 
 // Model temporaries only: excludes weights, KV payload and device block tables.
 struct Workspace {
-    Allocation x,norm,q,k,v,attention,projection,gate,up,logits,tokens,positions,tables;
-    void ensure(int rows,const ModelConfig& config,RunnerStats& stats,bool decode_batch=false);
+    Allocation x,norm,q,k,v,attention,projection,gate,up,logits,tokens,positions,tables,last_rows;
+    void ensure(int rows,const ModelConfig& config,RunnerStats& stats,bool batch=false,int output_rows=0);
     std::size_t bytes() const;
 };
 } // namespace cuda_detail

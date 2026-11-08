@@ -27,3 +27,15 @@ class BatchedDecodeMetrics(unittest.TestCase):
         engine._command = lambda _: [2, 7]
         with self.assertRaises(RuntimeError):
             engine.decode_batch_stats()
+
+    def test_prefill_stats_protocol(self):
+        engine = NativeEngine.__new__(NativeEngine)
+        def command(fields):
+            self.assertEqual(fields, ['PREFILL_STATS'])
+            return [2, 3, 12, 4, 1]
+        engine._command = command
+        self.assertEqual(engine.prefill_batch_stats(), dict(prefill_batches=2, mixed_batches=3,
+                         prefill_tokens=12, decode_tokens=4, fallbacks=1))
+        engine._command = lambda _: [2, 3]
+        with self.assertRaises(RuntimeError):
+            engine.prefill_batch_stats()

@@ -15,12 +15,13 @@ using cuda_detail::blas;
 using cuda_detail::Allocation;
 __global__ void embedding_kernel(float* x,const float* weights,const int* tokens,int rows,int width){
     int i=blockIdx.x*blockDim.x+threadIdx.x;if(i<rows*width)x[i]=weights[std::size_t(tokens[i/width])*width+i%width];}
-__global__ void rms_kernel(const float* x,const float* weight,float* out,int width,float eps){
+__global__ void rms_kernel(const float* x,const float* weight,float* out,int width,float eps,const int* source_rows=nullptr){
     __shared__ float sums[256];const int row=blockIdx.x,lane=threadIdx.x;float sum=0;
-    for(int d=lane;d<width;d+=256){float v=x[row*width+d];sum+=v*v;}sums[lane]=sum;__syncthreads();
+    const float* source=x+(source_rows?source_rows[row]:row)*width;
+    for(int d=lane;d<width;d+=256){float v=source[d];sum+=v*v;}sums[lane]=sum;__syncthreads();
     for(int step=128;step;step/=2){if(lane<step)sums[lane]+=sums[lane+step];__syncthreads();}
     const float scale=1.0F/sqrtf(sums[0]/width+eps);
-    for(int d=lane;d<width;d+=256)out[row*width+d]=x[row*width+d]*scale*weight[d];}
+    for(int d=lane;d<width;d+=256)out[row*width+d]=source[d]*scale*weight[d];}
 __global__ void rope_kernel(float* x,int count,int heads,int dim,int start,float theta,const int* positions){
     int i=blockIdx.x*blockDim.x+threadIdx.x;if(i>=count*heads*(dim/2))return;
     int d=i%(dim/2),headrow=i/(dim/2),row=headrow/heads;
@@ -56,6 +57,7 @@ class CudaRunner final:public ModelRunner {
     KVManager kv_;
     CostStats costs_;bool cost_timing_=false;
     DecodeBatchStats decode_stats_;
+    PrefillBatchStats prefill_stats_;
     struct CopyEvents {
         cudaEvent_t begin=nullptr,end=nullptr;
         CopyEvents(){check(cudaEventCreate(&begin),"COW event begin");
@@ -73,8 +75,8 @@ class CudaRunner final:public ModelRunner {
     void linear(const Allocation& x,const std::string& name,Allocation& out,int rows,int inner,int columns){
         const float alpha=1,beta=0;
         blas(cublasSgemm(execution_.handle(),CUBLAS_OP_N,CUBLAS_OP_N,columns,rows,inner,&alpha,parameter(name),columns,x.data,inner,&beta,out.data,columns));}
-    void forward(int n,int start,const int* table,bool batch=false){
-        const auto& c=config();const int outputs=batch?n:1;
+    void forward(int n,int start,const int* table,bool batch=false,int outputs=1){
+        const auto& c=config();
         const auto* positions=batch?reinterpret_cast<const int*>(workspace_.positions.data):nullptr;
         const auto* tables=batch?reinterpret_cast<const int* const*>(workspace_.tables.data):nullptr;
         embedding_kernel<<<(n*c.hidden+255)/256,256,0,execution_.stream()>>>(workspace_.x.data,parameter("model.embed_tokens.weight"),reinterpret_cast<int*>(workspace_.tokens.data),n,c.hidden);
@@ -96,7 +98,8 @@ class CudaRunner final:public ModelRunner {
             linear(workspace_.gate,p+"mlp.down_proj.weight",workspace_.projection,n,c.intermediate,c.hidden);
             add_kernel<<<(n*c.hidden+255)/256,256,0,execution_.stream()>>>(workspace_.x.data,workspace_.projection.data,n*c.hidden);
         }
-        rms_kernel<<<outputs,256,0,execution_.stream()>>>(workspace_.x.data+(batch?0:std::size_t(n-1)*c.hidden),parameter("model.norm.weight"),workspace_.norm.data,c.hidden,c.rms_epsilon);
+        const int* last_rows=batch && outputs!=n?reinterpret_cast<const int*>(workspace_.last_rows.data):nullptr;
+        rms_kernel<<<outputs,256,0,execution_.stream()>>>(workspace_.x.data+(batch?0:std::size_t(n-1)*c.hidden),parameter("model.norm.weight"),workspace_.norm.data,c.hidden,c.rms_epsilon,last_rows);
         linear(workspace_.norm,"lm_head.weight",workspace_.logits,outputs,c.hidden,c.vocabulary);
         check(cudaGetLastError(),"model kernel launch");
     }
@@ -119,6 +122,8 @@ public:
     ~CudaRunner() override{execution_.synchronize_noexcept();block_tables_.clear();parameters_.clear();execution_.reset();}
     const ModelConfig& config() const override{return weights_->config;}
     DecodeBatchStats decode_batch_stats() const override{return decode_stats_;}
+    bool supports_packed_prefill() const override{return true;}
+    PrefillBatchStats prefill_batch_stats() const override{return prefill_stats_;}
     CostStats cost_stats() const override{
         auto result=kv_.cost_stats();result.cow_pages=costs_.cow_pages;result.cow_bytes=costs_.cow_bytes;
         result.cow_copy_ns=costs_.cow_copy_ns;result.cow_timed_copies=costs_.cow_timed_copies;return result;
@@ -185,27 +190,48 @@ public:
         append.commit();table_state.dirty=false;stats_.logits_downloaded_bytes+=result.size()*4;return result;
     }
     std::optional<std::vector<std::vector<float>>> append_decode_batch(const std::vector<DecodeInput>& inputs) override{
+        std::vector<BatchInput> chunks;
+        for(const auto& input:inputs)chunks.push_back({input.id,{input.token},true});
+        return append_batch(chunks);
+    }
+    std::optional<std::vector<std::vector<float>>> append_batch(const std::vector<BatchInput>& inputs) override{
         const auto& c=config();
         if(inputs.size()<2)return std::nullopt;
-        if(inputs.size()>std::size_t(std::numeric_limits<int>::max()/std::max({c.hidden,c.intermediate,c.vocabulary}))){
-            ++decode_stats_.fallbacks;return std::nullopt;}
+        const auto decodes=std::count_if(inputs.begin(),inputs.end(),[](const BatchInput& input){return input.decode;});
+        const bool pure_decode=std::size_t(decodes)==inputs.size();
+        auto& fallbacks=pure_decode?decode_stats_.fallbacks:prefill_stats_.fallbacks;
+        const auto limit=std::size_t((std::numeric_limits<int>::max()-255)/std::max({c.hidden,c.intermediate,c.vocabulary}));
+        std::size_t rows=0;
+        for(const auto& input:inputs){
+            if(input.tokens.empty() || (input.decode && input.tokens.size()!=1) || input.tokens.size()>limit-rows){
+                ++fallbacks;return std::nullopt;
+            }
+            rows+=input.tokens.size();
+        }
         const int n=static_cast<int>(inputs.size());
+        auto transactions=kv_.prepare_batch(inputs);
+        if(transactions.empty()){++fallbacks;return std::nullopt;}
         std::vector<std::vector<float>> result(n,std::vector<float>(c.vocabulary));
         std::vector<float> flat(std::size_t(n)*c.vocabulary);
-        std::vector<int> tokens(n),positions(n);std::vector<const int*> tables(n);
-        auto transactions=kv_.prepare_decode_batch(inputs);
-        if(transactions.empty()){++decode_stats_.fallbacks;return std::nullopt;}
+        std::vector<int> tokens,positions,last_rows;
+        std::vector<const int*> tables;
+        tokens.reserve(rows);positions.reserve(rows);tables.reserve(rows);last_rows.reserve(n);
         std::vector<std::unique_ptr<CopyEvents>> timing(n);
         auto rollback=[&]{
             for(int row=n-1;row>=0;--row){block_tables_.at(inputs[row].id)->dirty=true;transactions[row]->rollback();}
         };
         try{
-            workspace_.ensure(n,c,stats_,true);
+            workspace_.ensure(static_cast<int>(rows),c,stats_,true,n);
             for(int row=0;row<n;++row){
                 auto& tx=*transactions[row];const auto& state=tx.sequence();
                 auto& table=*block_tables_.at(inputs[row].id);
-                tokens[row]=inputs[row].token;positions[row]=state.used;
-                tables[row]=reinterpret_cast<const int*>(table.data);
+                int position=state.used;
+                for(auto token:inputs[row].tokens){
+                    tokens.push_back(token);
+                    positions.push_back(position++);
+                    tables.push_back(reinterpret_cast<const int*>(table.data));
+                }
+                last_rows.push_back(static_cast<int>(tokens.size()-1));
                 if(tx.tail_copy()){
                     ++costs_.cow_pages;
                     if(cost_timing_){timing[row]=std::make_unique<CopyEvents>();check(cudaEventRecord(timing[row]->begin,execution_.stream()),"batch COW begin");}
@@ -222,23 +248,32 @@ public:
                     check(cudaMemcpyAsync(reinterpret_cast<int*>(table.data)+first,state.blocks.data()+first,bytes,cudaMemcpyHostToDevice,execution_.stream()),"batch table entries");
                     stats_.block_table_uploaded_bytes+=bytes;}
             }
-            check(cudaMemcpyAsync(workspace_.tokens.data,tokens.data(),n*sizeof(int),cudaMemcpyHostToDevice,execution_.stream()),"batch tokens");
-            check(cudaMemcpyAsync(workspace_.positions.data,positions.data(),n*sizeof(int),cudaMemcpyHostToDevice,execution_.stream()),"batch positions");
-            check(cudaMemcpyAsync(workspace_.tables.data,tables.data(),n*sizeof(const int*),cudaMemcpyHostToDevice,execution_.stream()),"batch tables");
-            stats_.token_uploaded_bytes+=n*sizeof(int);
-            forward(n,0,nullptr,true);
+            check(cudaMemcpyAsync(workspace_.tokens.data,tokens.data(),rows*sizeof(int),cudaMemcpyHostToDevice,execution_.stream()),"batch tokens");
+            check(cudaMemcpyAsync(workspace_.positions.data,positions.data(),rows*sizeof(int),cudaMemcpyHostToDevice,execution_.stream()),"batch positions");
+            check(cudaMemcpyAsync(workspace_.tables.data,tables.data(),rows*sizeof(const int*),cudaMemcpyHostToDevice,execution_.stream()),"batch tables");
+            if(rows!=inputs.size())check(cudaMemcpyAsync(workspace_.last_rows.data,last_rows.data(),n*sizeof(int),cudaMemcpyHostToDevice,execution_.stream()),"batch output indices");
+            stats_.token_uploaded_bytes+=rows*sizeof(int);
+            forward(static_cast<int>(rows),0,nullptr,true,n);
             check(cudaMemcpyAsync(flat.data(),workspace_.logits.data,flat.size()*sizeof(float),cudaMemcpyDeviceToHost,execution_.stream()),"batch logits");
             execution_.synchronize("batch completion");
             for(const auto& t:timing)if(t){float ms=0;check(cudaEventElapsedTime(&ms,t->begin,t->end),"batch COW elapsed");
                 costs_.cow_copy_ns+=static_cast<std::uint64_t>(ms*1e6);++costs_.cow_timed_copies;}
             // Replay row-specific numerical failures through ordinary append,
             // preserving successful earlier events and the original error order.
-            for(float v:flat)if(!std::isfinite(v)){rollback();++decode_stats_.fallbacks;return std::nullopt;}
+            for(float v:flat)if(!std::isfinite(v)){rollback();++fallbacks;return std::nullopt;}
             for(int row=0;row<n;++row)std::copy_n(flat.data()+std::size_t(row)*c.vocabulary,c.vocabulary,result[row].data());
         }catch(...){execution_.synchronize_noexcept();rollback();throw;}
         for(int row=0;row<n;++row){transactions[row]->commit();block_tables_.at(inputs[row].id)->dirty=false;}
         stats_.logits_downloaded_bytes+=flat.size()*sizeof(float);
-        ++decode_stats_.batches;decode_stats_.rows+=n;return result;
+        if(pure_decode){
+            ++decode_stats_.batches;decode_stats_.rows+=n;
+        }else{
+            if(decodes)++prefill_stats_.mixed_batches;
+            else ++prefill_stats_.prefill_batches;
+            prefill_stats_.decode_tokens+=decodes;
+            prefill_stats_.prefill_tokens+=rows-decodes;
+        }
+        return result;
     }
     void release(const RequestId& id) override{execution_.synchronize("release completion");
         kv_.release(id);block_tables_.erase(id);}

@@ -1,7 +1,7 @@
 # Engine
 
 状态：engine.cpp 已有 submit/step/poll_events/cancel/shutdown、decode 优先与分块 prefill、
-EOS/长度/错误终态。active 请求的 runner 调用仍逐个执行；高级调度与重算迁移待完成。
+EOS/长度/错误终态。CUDA runner 按预算合并相邻请求的 decode 与 prefill chunk，并按原顺序发布结果。缓存开启时，新请求的前缀查询形成批次边界。详见[混合批次验收](../../docs/acceptance/packed-prefill-review.md)。
 已校验命中范围并从命中位置分块执行剩余 prompt；last_step_stats 分开报告复用、实际
 prefill/decode token。长 suffix 与 decode 混合验证见 ../../docs/incremental_prefill.md。
 

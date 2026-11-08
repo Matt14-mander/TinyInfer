@@ -59,22 +59,28 @@ def run(a):
                         measure(e, [dict(r, request_id='warm-'+r['request_id']) for r in workload])
                         seed('measure')
                         before, costs = e.stats(), e.cost_stats()
-                        batches = e.decode_batch_stats() if version == 'after' else dict(batches=0, rows=0, fallbacks=0)
+                        decode_supported = version == 'after' or a.compare_prefill
+                        batches = e.decode_batch_stats() if decode_supported else dict(batches=0, rows=0, fallbacks=0)
+                        packed = e.prefill_batch_stats() if a.compare_prefill and version == 'after' else {}
                         row = measure(e, workload)
                         after = e.stats();delta = {k: after[k]-before[k] for k in before}
-                        decode = e.decode_batch_stats() if version == 'after' else batches
+                        decode = e.decode_batch_stats() if decode_supported else batches
                         decode = {k: decode[k]-batches[k] for k in batches}
+                        if packed:
+                            measured = e.prefill_batch_stats()
+                            packed = {k: measured[k]-v for k,v in packed.items()}
                         assert delta['forward_tokens'] == sum(len(r['prompt_tokens'])+7 for r in workload)-delta['prefix_reused_tokens']
                         assert after['live_sequences'] == after['block_table_device_bytes'] == 0
                         assert after['kv_live_blocks'] == after['kv_cache_only_blocks']
                         assert delta['weight_uploaded_bytes'] == delta['kv_uploaded_bytes'] == delta['device_workspace_bytes'] == 0
                         if version == 'after':
-                            assert (decode['batches'] > 0) == (batch > 1)
-                            assert decode['rows'] <= 56 and decode['fallbacks'] == 0
+                            assert bool(decode['batches'] + packed.get('mixed_batches', 0)) == (batch > 1)
+                            assert decode['rows'] + packed.get('decode_tokens', 0) <= 56 and decode['fallbacks'] == 0
                         if mode == 'off':assert delta['prefix_reused_tokens'] == after['kv_live_blocks'] == 0
                         row.update(batch=batch, mode=mode, version=version, repeat=repeat, before=before, after=after,
                                    counters=delta, decode=decode, costs={k: v-costs[k] for k, v in e.cost_stats().items()})
                         pair[version] = row;samples.append(row)
+                        if packed:row['packed'] = packed
                         e.clear_prefix_cache();assert e.stats()['kv_live_blocks'] == 0
                     a.output.write_text(json.dumps(dict(complete=False, samples=samples), indent=2)+'\n')
                     print(f'{repeat=} {batch=} {mode} {version} passed', flush=True)
@@ -83,6 +89,9 @@ def run(a):
                 assert trace(pair['before']) == trace(pair['after']), 'scheduler/event trace changed'
                 for field in ('forward_tokens', 'prefix_hits', 'prefix_misses', 'prefix_reused_tokens', 'prefix_evictions'):
                     assert pair['before']['counters'][field] == pair['after']['counters'][field], field
+    if a.compare_prefill:
+        for kind in ('prefill_batches', 'mixed_batches'):
+            assert any(row.get('packed', {}).get(kind, 0) for row in samples), kind
     sha = lambda p: hashlib.sha256(Path(p).read_bytes()).hexdigest()
     result = dict(complete=True, passed=True, config=config, cache_blocks=48, repeats=a.repeats,
         scope='Eight fixed all-at-once requests; arrival-to-delivery TTFT, per-request mean TPOT, aggregate output throughput; no startup/warmup/prime/stats inside timing',
@@ -97,5 +106,6 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--model-dir', type=Path, required=True)
     p.add_argument('--before', required=True);p.add_argument('--after', required=True)
+    p.add_argument('--compare-prefill', action='store_true', help='compare decode-only and packed prefill/mixed CUDA workers')
     p.add_argument('--repeats', type=int, default=5);p.add_argument('--output', type=Path, required=True)
     run(p.parse_args())

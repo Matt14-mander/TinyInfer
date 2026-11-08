@@ -6,7 +6,7 @@ MiniPrefix 是建立在 TinyInfer 之上的原生 LLM 生成引擎，面向单�
 
 ## 当前开发阶段
 
-以下状态按 **2026-11-05 的 main 分支**核对。当前处于 **M5 前缀复用优化及执行路径优化**；
+以下状态按 **2026-11-08 的 main 分支**核对。当前处于 **M5 前缀复用优化及执行路径优化**；
 完整路线和验收门槛见 [开发路线](docs/roadmap.md)。
 
 | 阶段 | 当前进展 |
@@ -60,12 +60,12 @@ MiniPrefix 是建立在 TinyInfer 之上的原生 LLM 生成引擎，面向单�
 
 ## 当前边界与下一步
 
-- 同轮可以有多个活跃请求，但 runner 按 sequence 顺序执行；**跨请求矩阵批量计算是下一项计划**。
+- CUDA runner 支持跨请求 decode、变长 prefill 和两者混合计算。CPU runner 保留逐请求参考路径。执行边界与同机对照见[验收报告](docs/acceptance/packed-prefill-review.md)。
 - 多轮复用由调用方提交完整历史 token 和新的 request ID；尚无自动会话存储或历史拼接。
 - 最多复用 `prompt.size() - 1` 个 token，至少留下一个 token 计算 logits；没有 cached-logits 路径。
 - 共享感知容量估算、抢占重算、HTTP、量化、CUDA Graph、异步流水与多 GPU 仍待实现。
 - [serving_scheduler](../examples/serving_scheduler/README.md) 保留教学和高级算法参考，
-  其跨请求 batching、抢占重算等能力尚未全部迁入真实模型路径。
+  可用于研究尚待迁入真实模型路径的抢占重算。
 
 ## 目录
 

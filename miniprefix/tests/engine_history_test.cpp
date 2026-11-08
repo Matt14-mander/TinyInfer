@@ -12,13 +12,36 @@ public:
     std::vector<std::vector<TokenId>> published;
     bool fail_publish=false,invalid_logits=false;
     bool batch_enabled=false;int batches=0;
+    bool packed=false;int prefills=0,mixed=0;
+    bool supports_packed_prefill() const override{return packed;}
+    std::optional<std::vector<std::vector<float>>> append_batch(const std::vector<BatchInput>& chunks) override{
+        if(!packed)return ModelRunner::append_batch(chunks);
+        auto tx=kv.prepare_batch(chunks);
+        if(tx.empty())return std::nullopt;
+        std::vector<std::vector<float>> result(chunks.size(),std::vector<float>(128,0));
+        bool has_decode=false,has_prefill=false;
+        for(std::size_t i=0;i<chunks.size();++i){
+            tx[i]->copy_shared_tail([](std::size_t,std::size_t,std::size_t){});
+            tx[i]->commit();
+            result[i][(chunks[i].tokens.back()+1)%128]=1;
+            has_decode|=chunks[i].decode;
+            has_prefill|=!chunks[i].decode;
+        }
+        if(has_prefill && has_decode)++mixed;
+        else if(has_prefill)++prefills;
+        return result;
+    }
     Runner(int cache=16):kv({4,32,cache},1,1,128,128){config_.context=128;config_.vocabulary=128;}
     const ModelConfig& config() const override{return config_;}
     int context_limit() const override{return 128;}
     KvAdmission reserve_request(const RequestId& id,std::size_t n) override{return kv.reserve_request(id,n);}
     void release_reservation(const RequestId& id) noexcept override{kv.release_reservation(id);}
     void create(const RequestId& id) override{kv.create(id);}
-    std::size_t reuse_prefix(const RequestId& id,const std::vector<TokenId>& p) override{return kv.reuse_prefix(id,p);}
+    bool fail_restore=false;
+    std::size_t reuse_prefix(const RequestId& id,const std::vector<TokenId>& p) override{
+        if(fail_restore && id=="bad")throw KvCapacityError("restore failed");
+        return kv.reuse_prefix(id,p);
+    }
     void cache_prefix(const RequestId& id) override{
         if(fail_publish)throw std::runtime_error("publish failed");
         published.push_back(kv.sequence(id).tokens);kv.cache_prefix(id);
@@ -152,4 +175,52 @@ void batch_schedule_equivalence(){
         }
     }
 }
-int main(){aligned_single_token_completion();history_and_boundaries();cancellation_eos_and_failure();concurrent_fork_and_off();batch_schedule_equivalence();std::cout<<"generation history publication and page boundaries passed\n";}
+void packed_schedule_equivalence(){
+    for(int cache:{0,16}){
+        std::vector<std::string> reference;
+        std::vector<std::vector<TokenId>> publications;
+        for(bool packed:{false,true}){
+            auto runner=std::make_unique<Runner>(cache);
+            auto* trace=runner.get();trace->packed=packed;
+            Engine engine(std::move(runner),{4,8,2,128});
+            engine.submit(request("a",{1,2,3},4));
+            engine.submit(request("b",{10,11,12,13,14,15,16,17,18},3));
+            engine.submit(request("c",{20,21,22,23,24,25,26,27,28,29},3));
+            std::vector<std::string> observed;
+            for(int step=0;!engine.idle() && step<32;++step){
+                if(step==2)engine.submit(request("follow",{1,2,3,4,9},2));
+                engine.step();
+                const auto stats=engine.last_step_stats();
+                if(step==2)assert(stats.prefix_reused_tokens==(cache?4:0));
+                observed.push_back(std::to_string(stats.prefill_tokens)+"/"+std::to_string(stats.decode_tokens)+"/"+std::to_string(stats.prefix_reused_tokens));
+                for(const auto& event:engine.poll_events()){
+                    observed.push_back(event.request_id+"/"+std::to_string(event.token_id.value_or(-1))+"/"+std::to_string(event.finish_reason?int(*event.finish_reason):-1));
+                }
+            }
+            assert(engine.idle() && !engine.failed());
+            if(packed){
+                assert(trace->prefills>0 && trace->mixed>0);
+                assert(observed==reference && trace->published==publications);
+            }else{reference=observed;publications=trace->published;}
+            engine.shutdown();assert(trace->stats().kv_live_blocks==0);
+        }
+    }
+}
+void restore_failure_preserves_order(){
+    for(bool packed:{false,true}){
+        auto runner=std::make_unique<Runner>(0);
+        auto* trace=runner.get();trace->packed=packed;trace->fail_restore=true;
+        Engine engine(std::move(runner),{4,8,2,128});
+        const std::vector<RequestId> ids={"a","b","bad","d"};
+        for(const auto& id:ids)engine.submit(request(id,{1},1));
+        engine.step();
+        const auto events=engine.poll_events();
+        assert(engine.idle() && !engine.failed() && events.size()==ids.size());
+        for(std::size_t i=0;i<ids.size();++i){
+            assert(events[i].request_id==ids[i]);
+            assert(events[i].finish_reason==(ids[i]=="bad"?FinishReason::Error:FinishReason::Length));
+        }
+        assert(trace->stats().live_sequences==0 && trace->stats().kv_live_blocks==0);
+    }
+}
+int main(){aligned_single_token_completion();history_and_boundaries();cancellation_eos_and_failure();concurrent_fork_and_off();batch_schedule_equivalence();packed_schedule_equivalence();restore_failure_preserves_order();std::cout<<"generation history publication and page boundaries passed\n";}

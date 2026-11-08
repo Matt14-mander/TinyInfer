@@ -8,6 +8,11 @@
 
 namespace miniprefix {
 struct DecodeInput {RequestId id;TokenId token;};
+struct BatchInput {
+    RequestId id;
+    std::vector<TokenId> tokens;
+    bool decode = false;
+};
 struct KvStats {
     std::size_t live_sequences=0,live_kv_bytes=0,peak_kv_bytes=0,forward_tokens=0;
     std::size_t kv_block_tokens=0,kv_total_blocks=0,kv_live_blocks=0,kv_peak_blocks=0;
@@ -92,6 +97,7 @@ public:
     // path; committed histories/cache references remain unchanged. All device
     // accesses must finish before any transaction commits or rolls back.
     std::vector<std::unique_ptr<Append>> prepare_decode_batch(const std::vector<DecodeInput>& inputs);
+    std::vector<std::unique_ptr<Append>> prepare_batch(const std::vector<BatchInput>& inputs);
     void reset_sequence(const RequestId& id);
     void release(const RequestId& id);
     void clear();

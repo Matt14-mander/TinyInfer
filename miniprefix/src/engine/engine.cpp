@@ -1,6 +1,7 @@
 #include "miniprefix/engine.h"
 #include <algorithm>
 #include <cmath>
+#include <exception>
 
 namespace miniprefix {
 namespace {
@@ -48,7 +49,9 @@ void Engine::restore_prefix(State& state){
     // No cached logits are returned by ModelRunner: at least one prompt token
     // must remain. Reject a broken runner contract before forming a suffix or
     // executing an empty append. A reusable prefix may end inside a page.
-    const auto block_tokens=runner_->stats().kv_block_tokens;
+    const auto stats=runner_->stats();
+    prefix_cache_enabled_=stats.prefix_cache_capacity!=0;
+    const auto block_tokens=stats.kv_block_tokens;
     if(reused>=request.prompt_token_ids.size()||(reused&&!block_tokens))
         throw std::runtime_error("invalid reusable prefix range");
     state.kv_block_tokens=block_tokens;state.prefilled=reused;step_stats_.prefix_reused_tokens+=reused;
@@ -78,29 +81,61 @@ bool Engine::step(){
         std::vector<SchedulePhase> phases;
         for(const auto& state:active_)phases.push_back(state.output.empty()?SchedulePhase::Prefill:SchedulePhase::Decode);
         auto plan=scheduler_.plan(phases);
-        // Batch only the stable decode prefix already selected by this plan.
-        // Probe a copy so fallback retains the original budget and error order.
-        auto probe=plan;std::vector<DecodeInput> decode;
-        for(const auto& work:plan.order()){
-            if(work.phase!=SchedulePhase::Decode||!probe.has_budget())break;
-            const auto& s=active_[work.active_index];
-            probe.take_input(work.phase,0);decode.push_back({s.request.id,s.output.back()});
-        }
-        auto decoded=decode.size()>1?runner_->append_decode_batch(decode):std::nullopt;
-        if(decoded&&decoded->size()!=decode.size())throw std::runtime_error("invalid decode batch arity");
-        std::size_t decode_row=0;
-        for(const auto& work:plan.order()){
-            if(!plan.has_budget())break;auto& s=active_[work.active_index];auto& r=s.request;
+        using Results=std::vector<std::vector<float>>;
+        std::optional<Results> results;
+        std::size_t group_begin=0,group_end=0;
+        std::exception_ptr restore_failure;
+        std::size_t failed_restore_at=0;
+        const auto& order=plan.order();
+        auto input_for=[](const State& state,SchedulePhase phase,std::size_t count){
+            if(phase==SchedulePhase::Decode)return std::vector<TokenId>{state.output.back()};
+            auto begin=state.request.prompt_token_ids.begin()+state.prefilled;
+            return std::vector<TokenId>(begin,begin+count);
+        };
+        for(std::size_t i=0;i<order.size() && plan.has_budget();++i){
+            const auto& work=order[i];
+            auto& s=active_[work.active_index];auto& r=s.request;
             try{
+                if(restore_failure && i==failed_restore_at)std::rethrow_exception(restore_failure);
                 if(!s.resident)restore_prefix(s);
+                if(i>=group_end){
+                    results.reset();
+                    group_begin=i;
+                    group_end=i+1;
+                    const bool packed=runner_->supports_packed_prefill();
+                    if(i+1<order.size() && (packed || work.phase==SchedulePhase::Decode)){
+                        auto probe=plan;
+                        std::vector<BatchInput> chunks;
+                        for(std::size_t j=i;j<order.size() && probe.has_budget();++j){
+                            const auto phase=order[j].phase;
+                            auto& candidate=active_[order[j].active_index];
+                            if(!packed && phase!=SchedulePhase::Decode)break;
+                            if(!candidate.resident){
+                                // A prior row may publish or evict the exact prefix
+                                // this request will restore. Flush before its lookup.
+                                if(prefix_cache_enabled_ || !packed)break;
+                                try{restore_prefix(candidate);}
+                                catch(...){
+                                    restore_failure=std::current_exception();
+                                    failed_restore_at=j;
+                                    break;
+                                }
+                            }
+                            const auto count=probe.take_input(phase,candidate.request.prompt_token_ids.size()-candidate.prefilled);
+                            chunks.push_back({candidate.request.id,input_for(candidate,phase,count),phase==SchedulePhase::Decode});
+                        }
+                        if(chunks.size()>1){
+                            group_end=i+chunks.size();
+                            results=runner_->append_batch(chunks);
+                            if(results && results->size()!=chunks.size())throw std::runtime_error("invalid batch arity");
+                        }
+                    }
+                }
                 const bool prefilling=work.phase==SchedulePhase::Prefill;
                 const auto count=plan.take_input(work.phase,r.prompt_token_ids.size()-s.prefilled);
-                std::vector<TokenId> input;
-                if(!prefilling)input={s.output.back()};
-                else input.assign(r.prompt_token_ids.begin()+s.prefilled,r.prompt_token_ids.begin()+s.prefilled+count);
-                auto logits=!prefilling&&decoded?std::move((*decoded)[decode_row++]):runner_->append(r.id,input);
-                if(prefilling){s.prefilled+=input.size();step_stats_.prefill_tokens+=input.size();}
-                else step_stats_.decode_tokens+=input.size();
+                auto logits=results?std::move((*results)[i-group_begin]):runner_->append(r.id,input_for(s,work.phase,count));
+                if(prefilling){s.prefilled+=count;step_stats_.prefill_tokens+=count;}
+                else step_stats_.decode_tokens+=count;
                 if(s.prefilled<r.prompt_token_ids.size())continue;
                 if(logits.size()!=std::size_t(runner_->config().vocabulary))throw std::runtime_error("invalid logits arity");
                 for(float v:logits)if(!std::isfinite(v))throw std::runtime_error("nonfinite model result");

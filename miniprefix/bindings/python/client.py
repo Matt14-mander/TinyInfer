@@ -130,6 +130,13 @@ class NativeEngine:
             raise RuntimeError("invalid decode batch stats")
         return dict(zip(("batches", "rows", "fallbacks"), values))
 
+    def prefill_batch_stats(self):
+        names = ("prefill_batches", "mixed_batches", "prefill_tokens", "decode_tokens", "fallbacks")
+        values = self._command(["PREFILL_STATS"])
+        if len(values) != len(names):
+            raise RuntimeError("invalid prefill batch stats")
+        return dict(zip(names, values))
+
     def stats(self):
         names = ("live_sequences", "live_kv_bytes", "peak_kv_bytes", "forward_tokens", "device_weight_bytes",
             "weight_uploaded_bytes", "token_uploaded_bytes", "kv_uploaded_bytes", "logits_downloaded_bytes", "device_allocations", "device_workspace_bytes",

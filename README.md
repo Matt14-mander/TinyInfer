@@ -6,7 +6,7 @@ TinyInfer has completed its measured static FP32 CPU optimization and initial Me
 
 ## Current development stage
 
-Status checked against the main branch on **2026-11-05**. The core runtime and
+Status checked against the main branch on **2026-11-08**. The core runtime and
 MiniPrefix have separate roadmaps:
 
 | Track | Current status |
@@ -19,9 +19,9 @@ MiniPrefix have separate roadmaps:
 | MiniPrefix M3–M4 | GPU forward, resident paged KV, partial-page COW, local generation, and scoped FP32 baselines implemented |
 | MiniPrefix M5 | In progress: exact partial-page prefix reuse, multi-turn history snapshots, cost measurement, and COW/publication optimizations implemented |
 
-The next planned MiniPrefix execution step is cross-request batched computation.
-Current scheduling supports multiple active requests, but runners execute their
-chunks sequentially. See the [MiniPrefix overview](miniprefix/README.md) and
+MiniPrefix batches CUDA decode, variable-length prefill chunks and mixed steps
+across requests. The CPU runner provides the sequential reference.
+See the [MiniPrefix overview](miniprefix/README.md) and
 [detailed roadmap](miniprefix/docs/roadmap.md) for capabilities and acceptance boundaries.
 
 The current graph execution path is:
@@ -52,7 +52,7 @@ validation.
 | v0.3 Model Runtime | Complete: protobuf parser, real Gemm MLP fixture, restricted ONNX import, diagnostics, compatibility profile, and Mac/ROG CPU baselines |
 | v0.4 Optimization Engine | Complete for the measured static FP32 CPU slice: graph simplification, lifetime planning, buffer reuse, CPU SIMD MatMul, Gemm + ReLU fusion, and prepared CPU execution; threading and quantization remain deferred |
 | v0.5 Hardware Backends | Complete for the initial static FP32 scope: Mac Metal and ROG CUDA correctness and frozen-target performance gates passed |
-| MiniPrefix M0–M5 | Active LLM track: real-model CPU/CUDA generation, paged KV, partial-page prefix reuse/COW, and measured cache costs; cross-request batched computation is next |
+| MiniPrefix M0–M5 | Real-model CPU/CUDA generation, paged KV, partial-page prefix reuse/COW, measured cache costs and cross-request CUDA batching |
 
 See the [documentation index](docs/README.md) for an overview. The current
 system design lives under `docs/architecture`, learning-oriented walkthroughs
@@ -152,8 +152,8 @@ are in the [real-model guide](miniprefix/docs/real_model.md).
 - **Cost-driven optimization:** independent lookup/publication/COW counters and optional timing, [CUDA COW copies merged across layers](miniprefix/docs/merged_cuda_cow.md), and [publication-path and metadata reuse](miniprefix/docs/prefix_publication.md).
 - **Validation and measurement:** lifecycle and differential tests, [native stress measurement](miniprefix/docs/long_running_stress.md), [off/cold/hot cache experiments](miniprefix/docs/partial_prefix_costs.md), and independent real-model numerical checks. Performance reports identify their workload, hardware, and timing boundaries; metadata or copy-stage improvements are not universal end-to-end speedups.
 
-The current runner processes each sequence separately. Cross-request matrix
-batching, sharing-aware admission, and preemption/recompute remain planned.
+The CUDA runner packs scheduled token rows across requests for matrix operations.
+Page tables and causal attention bounds are specific to each request.
 Multi-turn reuse requires the caller to submit the complete token history with a
 new request ID; automatic conversation storage, HTTP serving, quantization,
 CUDA Graphs, and multi-GPU execution are not implemented in this path.
@@ -192,11 +192,10 @@ the exact parser, importer, dtype, operator, and rejection matrix.
 
 ## Next milestone
 
-The active work is MiniPrefix M5 and its execution path. The latest
-[roadmap](miniprefix/docs/roadmap.md) names **cross-request batched computation**
-as the next step, building on the current scheduler, paged KV ownership, partial
-prefix reuse, and COW transactions. Sharing-aware capacity estimates and
-preemption/recompute remain later work.
+The next MiniPrefix measurement targets sustained arrivals to evaluate overlap
+between scheduling and execution. Sharing-aware admission and preemption/recompute
+remain later work. See the [roadmap](miniprefix/docs/roadmap.md) and the
+[packed prefill and mixed batch measurements](miniprefix/docs/acceptance/packed-prefill-review.md).
 
 The completed core Phase 4/5 foundations remain available for this work; their
 scope and results are recorded in the [CPU optimization acceptance](docs/benchmarks/rog-cpu-phase4.5-selection.md)

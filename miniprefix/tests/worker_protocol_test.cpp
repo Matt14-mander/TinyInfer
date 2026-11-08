@@ -19,6 +19,7 @@ void parsing(){
         catch(const std::invalid_argument& e){caught=true;assert(e.what()==item.second);}assert(caught);}
     assert(protocol::parse("COST_STATS").kind==protocol::Kind::CostStats);
     assert(protocol::parse("DECODE_STATS").kind==protocol::Kind::DecodeStats);
+    assert(protocol::parse("PREFILL_STATS").kind==protocol::Kind::PrefillStats);
     assert(protocol::parse("COST_TIMING 1").id==1);
     auto c=protocol::parse(" \tSUBMIT +1 2 -1 2 0 3 trailing ignored\r");
     assert(c.kind==protocol::Kind::Submit&&c.request.id=="1"&&c.request.generation.max_new_tokens==2);
@@ -29,6 +30,7 @@ void parsing(){
 }
 void encoding(){
     std::ostringstream batch;protocol::decode_stats(batch,{2,7,1});assert(batch.str()=="OK 2 7 1\n");
+    std::ostringstream packed;protocol::prefill_stats(packed,{1,2,3,4,5});assert(packed.str()=="OK 1 2 3 4 5\n");
     std::ostringstream out;protocol::ready(out,8,2,16,"cuda");protocol::ok(out);protocol::count(out,4);
     protocol::logits(out,{0.125F,1.23456789F,-0.0F});
     protocol::events(out,{{"1",3,std::nullopt,{}},{"2",std::nullopt,FinishReason::Error,"not on wire"}});
