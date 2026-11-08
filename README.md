@@ -2,19 +2,27 @@
 
 TinyInfer is a lightweight AI inference runtime built for learning and experimentation. Its long-term scope spans tensors, computation graphs, execution, kernel optimization, quantization, and hardware backends.
 
-TinyInfer has completed the static FP32 CPU optimization slice and the initial static FP32 scope of **Phase 5 — Hardware Backends**. It can execute the Phase 0 two-layer MLP through both the eager Tensor API and the Graph Runtime, and it can load and execute a documented restricted ONNX model through its format-independent `ModelLoader` and named `Model` interface.
+TinyInfer has completed its measured static FP32 CPU optimization and initial Metal/CUDA backend milestones. The current development focus is **MiniPrefix**, a native CPU/CUDA LLM generation engine running SmolLM2-135M-Instruct in FP32, with paged KV, exact prefix reuse, and transactional copy-on-write.
 
 ## Current development stage
 
-```text
-Phase 0  Learning Prototype       Complete
-Phase 1  Tensor Runtime           Complete (v0.1 scope)
-Phase 2  Graph Execution Engine   Complete (v0.2 MVP scope)
-Phase 3  Model Runtime            Complete (v0.3 restricted ONNX scope)
-Phase 4  Optimization Engine      Complete (measured static FP32 CPU slice)
-Phase 5  Hardware Backend         Complete (initial static FP32 Metal/CUDA scope; fixed-target gates passed)
-Phase 6  ML Compiler Direction    Not started
-```
+Status checked against the main branch on **2026-11-05**. The core runtime and
+MiniPrefix have separate roadmaps:
+
+| Track | Current status |
+| --- | --- |
+| Core Phases 0–3 | Complete within the learning prototype, v0.1 Tensor, v0.2 Graph MVP, and v0.3 restricted ONNX scopes |
+| Core Phase 4 | Complete for the measured static FP32 CPU optimization slice |
+| Core Phase 5 | Complete for initial static FP32 Metal/CUDA support and frozen-target performance gates |
+| Core Phase 6 | ML compiler direction not started |
+| MiniPrefix M0–M2 | Architecture, native engine/reference path, and real-model correctness established; preemption/recompute remains deferred |
+| MiniPrefix M3–M4 | GPU forward, resident paged KV, partial-page COW, local generation, and scoped FP32 baselines implemented |
+| MiniPrefix M5 | In progress: exact partial-page prefix reuse, multi-turn history snapshots, cost measurement, and COW/publication optimizations implemented |
+
+The next planned MiniPrefix execution step is cross-request batched computation.
+Current scheduling supports multiple active requests, but runners execute their
+chunks sequentially. See the [MiniPrefix overview](miniprefix/README.md) and
+[detailed roadmap](miniprefix/docs/roadmap.md) for capabilities and acceptance boundaries.
 
 The current graph execution path is:
 
@@ -44,6 +52,7 @@ validation.
 | v0.3 Model Runtime | Complete: protobuf parser, real Gemm MLP fixture, restricted ONNX import, diagnostics, compatibility profile, and Mac/ROG CPU baselines |
 | v0.4 Optimization Engine | Complete for the measured static FP32 CPU slice: graph simplification, lifetime planning, buffer reuse, CPU SIMD MatMul, Gemm + ReLU fusion, and prepared CPU execution; threading and quantization remain deferred |
 | v0.5 Hardware Backends | Complete for the initial static FP32 scope: Mac Metal and ROG CUDA correctness and frozen-target performance gates passed |
+| MiniPrefix M0–M5 | Active LLM track: real-model CPU/CUDA generation, paged KV, partial-page prefix reuse/COW, and measured cache costs; cross-request batched computation is next |
 
 See the [documentation index](docs/README.md) for an overview. The current
 system design lives under `docs/architecture`, learning-oriented walkthroughs
@@ -65,14 +74,14 @@ the documented initial static FP32 scope; tiny models can still favor CPU.
 ```text
 include/tinyinfer/   Public C++ API
 src/core/            Tensor, dtype, and memory foundations
-src/graph/           Nodes, graphs, and future graph passes
+src/graph/           Nodes, graphs, validation, and optimization passes
 src/model/           Model abstraction and format importers
 src/ops/             Operator definitions and dispatch
 src/runtime/         Execution and scheduling
-src/backend/         CPU and future accelerator backends
+src/backend/         CPU, Metal, and CUDA backends
 src/compiler/        Future IR and fusion passes
 examples/            Small end-to-end programs
-miniprefix/          Experimental real-model CPU/CUDA LLM engine and baselines
+miniprefix/          CPU/CUDA LLM engine, paged KV, prefix cache, and baselines
 tests/               Unit and smoke tests
 benchmarks/          Performance harnesses
 cmake/               CMake helpers
@@ -80,13 +89,6 @@ docs/                Architecture and roadmap notes
 ```
 
 ## Build
-
-[MiniPrefix](miniprefix/README.md) runs a documented SmolLM2-135M-Instruct FP32
-CPU/CUDA path with GPU-resident paged KV and an independent-reference-checked
-[end-to-end baseline](miniprefix/docs/baseline.md). Its existing serving examples
-remain advanced algorithm references. The real-model runner supports optional
-[exact full-page prefix reuse](miniprefix/docs/prefix_cache.md); partial-page COW
-and recompute are pending. `TINYINFER_BUILD_MINIPREFIX` remains OFF by default.
 
 Requirements: a C++17 compiler and CMake 3.20 or newer.
 
@@ -124,6 +126,38 @@ cmake --build build --target tinyinfer_matmul_benchmark
 ./build/benchmarks/tinyinfer_matmul_benchmark
 ```
 
+### Build MiniPrefix
+
+MiniPrefix is optional and defaults to OFF. A CPU build needs the same C++17/CMake
+toolchain; downloading model weights and installing Python tokenizer/reference
+packages are explicit, separate steps.
+
+```bash
+cmake -S . -B build-miniprefix -DCMAKE_BUILD_TYPE=Release \
+  -DTINYINFER_BUILD_MINIPREFIX=ON -DTINYINFER_BUILD_TESTS=ON
+cmake --build build-miniprefix
+ctest --test-dir build-miniprefix --output-on-failure
+```
+
+Enable `-DTINYINFER_ENABLE_CUDA=ON` in a CUDA-capable build environment to also
+build `miniprefix_cuda_worker`. Model preparation and text generation commands
+are in the [real-model guide](miniprefix/docs/real_model.md).
+
+## MiniPrefix capabilities
+
+- **Real-model inference:** native CPU and full CUDA forward for SmolLM2-135M-Instruct FP32, checked against an independent Transformers reference; local worker, Python IPC client, and text CLI.
+- **Request scheduling:** an independent Scheduler, decode priority, chunked prefill, token budgets, Greedy generation, EOS/length termination, cancellation, and failure handling.
+- **KV ownership and admission:** a shared physical page pool, per-sequence block tables, transactional append/rollback, and conservative worst-case page reservations with request-level capacity errors. See [capacity admission](miniprefix/docs/capacity_admission.md).
+- **Exact prefix reuse:** full and partial-page history snapshots, page-trie lookup and LRU, token-exact longest-prefix matching, and CPU/CUDA copy-on-write for shared tails. See [current cache semantics](miniprefix/docs/partial_prefix_cache.md). Cache is disabled by default; at least one prompt token is recomputed for logits, and the latest sampled token is not cached until it has been processed by the model.
+- **Cost-driven optimization:** independent lookup/publication/COW counters and optional timing, [CUDA COW copies merged across layers](miniprefix/docs/merged_cuda_cow.md), and [publication-path and metadata reuse](miniprefix/docs/prefix_publication.md).
+- **Validation and measurement:** lifecycle and differential tests, [native stress measurement](miniprefix/docs/long_running_stress.md), [off/cold/hot cache experiments](miniprefix/docs/partial_prefix_costs.md), and independent real-model numerical checks. Performance reports identify their workload, hardware, and timing boundaries; metadata or copy-stage improvements are not universal end-to-end speedups.
+
+The current runner processes each sequence separately. Cross-request matrix
+batching, sharing-aware admission, and preemption/recompute remain planned.
+Multi-turn reuse requires the caller to submit the complete token history with a
+new request ID; automatic conversation storage, HTTP serving, quantization,
+CUDA Graphs, and multi-GPU execution are not implemented in this path.
+
 ## Implemented modules
 
 - **Tensor core:** multidimensional indexing, checked dtypes, deep copy and move semantics, reshape, transpose, contiguous conversion, views, narrow, and stepped slice.
@@ -158,33 +192,18 @@ the exact parser, importer, dtype, operator, and rejection matrix.
 
 ## Next milestone
 
-The active milestone is **v0.5 Hardware Backends**; its current status and
-acceptance boundaries are described below and in the [Phase 5 plan](docs/plans/phase5.md).
-The completed measured CPU optimization foundation includes reference,
-stride-aware, cache-blocked, reusable RHS packing, and SIMD MatMul paths.
-The GraphPass/PassManager pipeline now includes a
-rebuilding GraphRewriter, cascading Constant Folding, and output-driven Dead
-Code Elimination with composed ValueId mappings. Lifetime analysis and buffer
-reuse are now connected to `ExecutionContext` through a static `MemoryPlan`.
-The first fused inference operator now combines Gemm scaling, bias, and ReLU
-in one CPU epilogue. Static FP32 models can now use an explicit prepared CPU
-plan to reuse execution steps and constant matrix packing.
-Phase 4.4 is accepted on Mac and ROG; the
-[ROG report](docs/benchmarks/rog-cpu-phase4.4.md) includes portable/native tests,
-24 scenarios per configuration, preparation costs and persistent memory.
-Phase 4.5 now defaults to conservative `Auto` Gemm epilogue selection: measured
-MSVC AVX2 biased K=N=128 shapes can fuse, while other shapes/ISAs keep Specialized
-or the existing dynamic-RHS path. The [ROG selection acceptance](docs/benchmarks/rog-cpu-phase4.5-selection.md)
-records 41/41 tests per build, 208 full comparison processes, 112 independent
-target/control rechecks and 12 extra p95 rechecks. This closes the measured FP32
-CPU slice, not unrestricted register fusion. Explicit Fused remains experimental;
-SSE2/NEON fusion performance is not claimed. MSVC portable selects scalar width 1.
-The [earlier fixes](docs/benchmarks/rog-cpu-phase4.5-fix.md) and failed loop-split
-experiment remain documented. Next work is broader shape/ISA tuning, multi-row
-tiling, optional threading, and a measured Int8 path. Every
-optimization must preserve the v0.3 correctness contract and be justified by
-reproducible before-and-after benchmarks.
+The active work is MiniPrefix M5 and its execution path. The latest
+[roadmap](miniprefix/docs/roadmap.md) names **cross-request batched computation**
+as the next step, building on the current scheduler, paged KV ownership, partial
+prefix reuse, and COW transactions. Sharing-aware capacity estimates and
+preemption/recompute remain later work.
 
+The completed core Phase 4/5 foundations remain available for this work; their
+scope and results are recorded in the [CPU optimization acceptance](docs/benchmarks/rog-cpu-phase4.5-selection.md)
+and [hardware backend plan](docs/plans/phase5.md). Broader shape/ISA tuning,
+threading, quantization, and compiler IR are future directions rather than
+completed milestones. New optimizations should preserve the numerical and
+resource-lifecycle contracts and use reproducible before/after measurements.
 
 ## Optional Prepared Metal models (Phase 5.1/5.2)
 
