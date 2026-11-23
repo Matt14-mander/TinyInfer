@@ -1,5 +1,6 @@
 #include "miniprefix/kv_manager.h"
 #include <set>
+#include <algorithm>
 
 namespace miniprefix {
 KVManager::KVManager(KvCacheConfig config,int layers,int width,int context,int vocabulary):
@@ -9,6 +10,7 @@ KVManager::KVManager(KvCacheConfig config,int layers,int width,int context,int v
 }
 KVManager::~KVManager(){
     for(auto& item:sequences_)pool_.release(item.second.sequence);
+    for(auto& item:admission_prefixes_)pool_.release(item.second);
     for(auto& item:prefix_leases_)pool_.release(item.second);
     prefix_.clear();
 }
@@ -36,8 +38,18 @@ void KVManager::validate_tokens(const std::vector<TokenId>& tokens) const{
     for(auto token:tokens)if(token<0||token>=vocabulary_)throw std::invalid_argument("invalid token");
 }
 std::size_t KVManager::committed_blocks() const{
-    std::size_t count=0;
-    for(const auto& item:reservations_)count+=item.second;
+    std::size_t count=0;std::set<int> shared;
+    for(const auto& item:reservations_){
+        const auto admission=admission_prefixes_.find(item.first);
+        if(admission==admission_prefixes_.end()){count+=item.second;continue;}
+        const auto state=sequences_.find(item.first);
+        const auto& prefix=state!=sequences_.end()&&state->second.sequence.used?
+            state->second.sequence:admission->second;
+        const auto full=std::size_t(prefix.used)/config().block_tokens;
+        shared.insert(prefix.blocks.begin(),prefix.blocks.begin()+full);
+        count+=item.second-full;
+    }
+    count+=shared.size();
     for(const auto& item:prefix_leases_)count+=item.second.blocks.size();
     for(const auto& item:sequences_)if(!reservations_.count(item.first))count+=item.second.sequence.blocks.size();
     return count;
@@ -53,13 +65,37 @@ KvAdmission KVManager::reserve_request(const RequestId& id,std::size_t max_token
     if(committed>total||pages>total-committed)return KvAdmission::Wait;
     reservations_.emplace(id,pages);return KvAdmission::Ready;
 }
-void KVManager::release_reservation(const RequestId& id) noexcept{reservations_.erase(id);}
+KvAdmission KVManager::reserve_request(const RequestId& id,std::size_t max_tokens,const std::vector<TokenId>& prompt){
+    require_idle();
+    if(contains(id)||reservations_.count(id))throw std::invalid_argument("duplicate KV reservation");
+    if(!max_tokens||max_tokens>std::size_t(context_)||prompt.empty()||prompt.size()>max_tokens)
+        throw std::invalid_argument("invalid KV reservation context");
+    validate_tokens(prompt);
+    const auto pages=1+(max_tokens-1)/config().block_tokens;
+    if(pages>std::size_t(config().max_blocks))return KvAdmission::Impossible;
+    auto inserted=admission_prefixes_.emplace(id,PagedSequence{});
+    try{
+        auto& prefix=inserted.first->second;prefix_.acquire(prefix,prompt);
+        const auto full=std::size_t(prefix.used)/config().block_tokens;
+        pool_.rollback(prefix,full);prefix.used=static_cast<int>(full*config().block_tokens);
+        prefix.tokens.resize(prefix.used);
+        reservations_.emplace(id,pages);
+        if(committed_blocks()<=std::size_t(config().max_blocks))return KvAdmission::Ready;
+    }catch(...){release_reservation(id);throw;}
+    release_reservation(id);return KvAdmission::Wait;
+}
+void KVManager::release_reservation(const RequestId& id) noexcept{
+    auto found=admission_prefixes_.find(id);
+    if(found!=admission_prefixes_.end()){pool_.release(found->second);admission_prefixes_.erase(found);}
+    reservations_.erase(id);
+}
 void KVManager::create(const RequestId& id){
     require_idle();
     if(!sequences_.emplace(id,State{}).second)throw std::invalid_argument("sequence already exists");
 }
 void KVManager::fork_sequence(const RequestId& source,const RequestId& target){
     require_idle();
+    if(admission_prefixes_.count(target))throw std::logic_error("cannot fork into a sharing-aware reservation");
     const auto& original=sequences_.at(source).sequence;auto& destination=idle_state(target).sequence;
     if(source==target||destination.used||!destination.blocks.empty()||!destination.tokens.empty())
         throw std::invalid_argument("fork requires a distinct empty target");
@@ -79,6 +115,28 @@ std::size_t KVManager::reuse_prefix(const RequestId& id,const std::vector<TokenI
     for(auto token:prompt)if(token<0||token>=vocabulary_)throw std::invalid_argument("invalid prefix token");
     auto& sequence=idle_state(id).sequence;
     ++costs_.lookup_calls;CostTimer timer(cost_timing_,costs_.lookup_ns);
+    const auto admission=admission_prefixes_.find(id);
+    if(admission!=admission_prefixes_.end()){
+        if(sequence.used||!sequence.blocks.empty()||!sequence.tokens.empty())
+            throw std::invalid_argument("prefix reuse requires an empty sequence");
+        auto& pinned=admission->second;
+        if(pinned.tokens.size()>=prompt.size()||!std::equal(pinned.tokens.begin(),pinned.tokens.end(),prompt.begin()))
+            throw std::invalid_argument("prompt differs from admitted prefix");
+        PagedSequence candidate;
+        prefix_.acquire(candidate,prompt);
+        // The candidate is speculative. Keep the guaranteed lease until accounting
+        // accepts replacement; no payload allocation or cache mutation occurs here.
+        if(candidate.used>=pinned.used){
+            sequence=std::move(candidate);candidate={};
+            try{
+                if(sequence.blocks.size()>reservations_.at(id)||committed_blocks()>std::size_t(config().max_blocks))
+                    pool_.release(sequence);
+            }catch(...){pool_.release(sequence);throw;}
+        }else pool_.release(candidate);
+        if(!sequence.used){sequence=std::move(pinned);pinned={};}
+        else pool_.release(pinned);
+        prefix_.record_reuse(sequence,prompt);return sequence.used;
+    }
     const auto count=prefix_.reuse(sequence,prompt);
     const auto reservation=reservations_.find(id);
     if(reservation!=reservations_.end()&&sequence.blocks.size()>reservation->second){
@@ -132,6 +190,9 @@ std::vector<std::unique_ptr<KVManager::Append>> KVManager::prepare_batch(const s
     return result;
 }
 void KVManager::reserve_pages(const RequestId& id,PagedSequence& sequence,int end,bool& cow){
+    const auto pending=admission_prefixes_.find(id);
+    if(pending!=admission_prefixes_.end()&&pending->second.used)
+        throw std::logic_error("restore admitted prefix before append");
     const auto tokens=config().block_tokens;
     const auto count=std::size_t(end/tokens+(end%tokens!=0));
     const auto required=count>sequence.blocks.size()?count-sequence.blocks.size():0;
@@ -214,20 +275,30 @@ void KVManager::Append::rollback() noexcept{
         state_->appending=false;--owner_->append_active_;owner_=nullptr;
     }
 }
-void KVManager::reset_sequence(const RequestId& id){pool_.release(idle_state(id).sequence);}
+void KVManager::reset_sequence(const RequestId& id){
+    auto& sequence=idle_state(id).sequence;auto pending=admission_prefixes_.find(id);
+    if(pending==admission_prefixes_.end()){pool_.release(sequence);return;}
+    // Preserve credited immutable pages across backend restoration failure/reset.
+    if(sequence.used){
+        pool_.release(pending->second);pending->second=std::move(sequence);sequence={};
+        auto& prefix=pending->second;const auto full=std::size_t(prefix.used)/config().block_tokens;
+        pool_.rollback(prefix,full);prefix.used=static_cast<int>(full*config().block_tokens);prefix.tokens.resize(prefix.used);
+    }
+}
 void KVManager::release(const RequestId& id){
     require_idle();
     auto it=sequences_.find(id);if(it==sequences_.end())throw std::invalid_argument("unknown sequence");
     if(it->second.appending)throw std::logic_error("cannot release sequence during KV append");
-    pool_.release(it->second.sequence);sequences_.erase(it);reservations_.erase(id);
+    pool_.release(it->second.sequence);sequences_.erase(it);release_reservation(id);
 }
 void KVManager::clear(){
     require_idle();
     for(const auto& item:sequences_)if(item.second.appending)
         throw std::logic_error("cannot clear sequences during KV append");
     for(auto& item:sequences_)pool_.release(item.second.sequence);
+    for(auto& item:admission_prefixes_)pool_.release(item.second);
     for(auto& item:prefix_leases_)pool_.release(item.second);
-    prefix_leases_.clear();sequences_.clear();prefix_.clear();reservations_.clear();
+    admission_prefixes_.clear();prefix_leases_.clear();sequences_.clear();prefix_.clear();reservations_.clear();
 }
 std::size_t KVManager::probe_prefix(const std::vector<TokenId>& prompt){
     require_idle();
@@ -253,6 +324,7 @@ void KVManager::release_prefix_lease(const RequestId& id){
 }
 KvCapacityLedger KVManager::capacity_ledger() const{
     require_idle();KvCapacityLedger result;
+    result.committed_blocks=committed_blocks();
     result.total_blocks=config().max_blocks;result.physical_blocks=pool_.live_blocks();
     result.free_blocks=pool_.free_blocks();result.cache_only_blocks=prefix_.cache_only_blocks();
     std::set<int> pinned,leased;std::size_t references=0;
@@ -263,12 +335,15 @@ KvCapacityLedger KVManager::capacity_ledger() const{
     };
     for(const auto& item:sequences_)collect(item.second.sequence);
     for(const auto& item:prefix_leases_){collect(item.second);leased.insert(item.second.blocks.begin(),item.second.blocks.end());}
+    for(const auto& item:admission_prefixes_){collect(item.second);leased.insert(item.second.blocks.begin(),item.second.blocks.end());}
     result.pinned_blocks=pinned.size();result.prefix_lease_blocks=leased.size();
     result.shared_reference_savings=references-pinned.size();
     for(const auto& item:reservations_){
         result.logical_reserved_blocks+=item.second;
         const auto found=sequences_.find(item.first);
-        const auto present=found==sequences_.end()?0:found->second.sequence.blocks.size();
+        const auto pending=admission_prefixes_.find(item.first);
+        const auto present=found!=sequences_.end()&&found->second.sequence.used?found->second.sequence.blocks.size():
+            (pending==admission_prefixes_.end()?0:pending->second.blocks.size());
         if(item.second>present)result.future_private_blocks+=item.second-present;
     }
     return result;

@@ -11,6 +11,70 @@ template<class F> void rejects(F&& operation){
 void commit(KVManager& manager,const RequestId& id,std::vector<TokenId> tokens){
     auto append=manager.prepare_append(id,tokens);append.copy_shared_tail([](std::size_t,std::size_t,std::size_t){});append.commit();
 }
+void shared_admission(){
+    KVManager m({2,5,5},1,1,20,100);
+    m.create("seed");commit(m,"seed",{1,2,3});m.cache_prefix("seed");m.release("seed");
+    const std::vector<TokenId> prompt{1,2,3,4};
+    assert(m.reserve_request("a",6,prompt)==KvAdmission::Ready);
+    assert(m.reserve_request("b",6,prompt)==KvAdmission::Ready);
+    assert(m.capacity_ledger().committed_blocks==5);
+    const auto before=m.stats();
+    assert(m.reserve_request("wait",6,prompt)==KvAdmission::Wait);
+    assert(m.stats().prefix_hits==before.prefix_hits&&m.stats().prefix_evictions==before.prefix_evictions);
+    assert(m.capacity_ledger().committed_blocks==5);
+    m.create("a");assert(m.reuse_prefix("a",prompt)==3);
+    m.create("b");assert(m.reuse_prefix("b",prompt)==3);
+    m.clear_prefix_cache();
+    // Two private tail budgets fund sequential COW, including source retention.
+    {auto tx=m.prepare_append("a",{4,5,6});assert(tx.tail_copy());tx.rollback();}
+    assert(m.capacity_ledger().committed_blocks==5);
+    commit(m,"a",{4,5,6});commit(m,"b",{7,8,9});
+    assert(m.stats().kv_live_blocks==5);
+    m.release("a");assert(m.capacity_ledger().committed_blocks==3);
+    m.release("b");assert(m.stats().kv_live_blocks==0);
+    // Admission leases survive eviction and cancellation before create.
+    m.create("seed");commit(m,"seed",{1,2,3,4});m.cache_prefix("seed");m.release("seed");
+    assert(m.reserve_request("pending",6,prompt)==KvAdmission::Ready);
+    m.clear_prefix_cache();assert(m.stats().kv_live_blocks==1);
+    m.create("pending");rejects([&]{m.prepare_append("pending",{1});});
+    rejects([&]{m.reuse_prefix("pending",{9,8,7});});
+    assert(m.reuse_prefix("pending",prompt)==2);
+    m.reset_sequence("pending");assert(m.sequence("pending").used==0);
+    assert(m.capacity_ledger().committed_blocks==3);
+    assert(m.reuse_prefix("pending",prompt)==2);m.release("pending");
+    assert(m.stats().kv_live_blocks==0);
+    // Longer prefixes published after admission remain usable.
+    assert(m.reserve_request("later",6,prompt)==KvAdmission::Ready);
+    m.create("seed");commit(m,"seed",{1,2,3});m.cache_prefix("seed");m.release("seed");
+    m.create("later");assert(m.reuse_prefix("later",prompt)==3);m.release("later");m.clear();
+    assert(m.capacity_ledger().committed_blocks==0);
+    // A running request's full pages participate even when it was admitted cold.
+    assert(m.reserve_request("cold",6,prompt)==KvAdmission::Ready);
+    m.create("cold");commit(m,"cold",{1,2,3});m.cache_prefix("cold");
+    assert(m.reserve_request("hot",6,prompt)==KvAdmission::Ready);
+    m.release("cold");m.clear_prefix_cache();assert(m.stats().kv_live_blocks==1);
+    m.release_reservation("hot");m.release_reservation("hot");assert(m.stats().kv_live_blocks==0);
+    // No sharing: retain conservative admission and request-local Impossible.
+    assert(m.reserve_request("off",6,{9})==KvAdmission::Ready);
+    assert(m.reserve_request("wait",6,{8})==KvAdmission::Wait);
+    assert(m.reserve_request("huge",11,{8})==KvAdmission::Impossible);m.clear();
+}
+void shared_restore_fallback(){
+    KVManager m({2,6,6},1,1,20,100);
+    m.create("seed");commit(m,"seed",{1,2});m.cache_prefix("seed");m.release("seed");
+    m.create("duplicate");commit(m,"duplicate",{1,2});
+    assert(m.reserve_request("a",6,{1,2,3})==KvAdmission::Ready);
+    assert(m.reserve_request("b",6,{1,2,3})==KvAdmission::Ready);
+    m.clear_prefix_cache();m.cache_prefix("duplicate");m.release("duplicate");
+    assert(m.reserve_request("extra",2)==KvAdmission::Ready);
+    assert(m.capacity_ledger().committed_blocks==6);
+    m.create("a");assert(m.reuse_prefix("a",{1,2,3})==2);
+    // Equivalent tokens on a different physical page would break shared credit.
+    assert(m.capacity_ledger().committed_blocks==6);
+    m.create("b");assert(m.reuse_prefix("b",{1,2,3})==2);
+    assert(m.sequence("a").blocks==m.sequence("b").blocks);
+    m.clear();assert(m.stats().kv_live_blocks==0);
+}
 void shared_capacity_foundation(){
     KVManager m({2,12,6},1,1,20,100);
     assert(m.reserve_request("source",8)==KvAdmission::Ready);
@@ -194,6 +258,6 @@ void impossible_reservation_and_cache_off(){
     }
 }
 }
-int main(){shared_capacity_foundation();reservations();transactions();prefix_and_reset();exhaustion();capacity_and_lru();pinned_victim_then_free_page();
+int main(){shared_restore_fallback();shared_admission();shared_capacity_foundation();reservations();transactions();prefix_and_reset();exhaustion();capacity_and_lru();pinned_victim_then_free_page();
     rollback_keeps_eviction_effects();impossible_reservation_and_cache_off();
     std::cout<<"KVManager transactions, shared leases, reset, stats and exhaustion passed\n";}

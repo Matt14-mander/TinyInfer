@@ -79,7 +79,7 @@ bool Engine::step(){
             const auto& request=state.request;
             // The final sampled token is delivered, never appended to KV.
             const auto tokens=request.prompt_token_ids.size()+std::size_t(request.generation.max_new_tokens)-1;
-            const auto admission=runner_->reserve_request(request.id,tokens);
+            const auto admission=runner_->reserve_request(request.id,tokens,request.prompt_token_ids);
             if(admission==KvAdmission::Wait&&!active_.empty())break;
             if(admission!=KvAdmission::Ready){
                 terminal(state,FinishReason::Error,std::nullopt,

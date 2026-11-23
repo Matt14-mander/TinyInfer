@@ -66,16 +66,21 @@ class BoundedRunner final:public ModelRunner {
     ModelConfig config_;
 public:
     KVManager kv{{2,2,2},1,1,128,128};
-    bool inject_capacity=false;
-    BoundedRunner(){config_.context=128;config_.vocabulary=128;}
+    bool inject_capacity=false,sharing=false,inject_fatal=false;
+    BoundedRunner(int pages=2,bool shared=false):kv({2,pages,pages},1,1,128,128),sharing(shared){config_.context=128;config_.vocabulary=128;}
     const ModelConfig& config() const override{return config_;}
     int context_limit() const override{return 128;}
     KvAdmission reserve_request(const RequestId& id,std::size_t n) override{return kv.reserve_request(id,n);}
+    KvAdmission reserve_request(const RequestId& id,std::size_t n,const std::vector<TokenId>& p) override{
+        return sharing?kv.reserve_request(id,n,p):kv.reserve_request(id,n);
+    }
     void release_reservation(const RequestId& id) noexcept override{kv.release_reservation(id);}
     void create(const RequestId& id) override{kv.create(id);}
     std::size_t reuse_prefix(const RequestId& id,const std::vector<TokenId>& p) override{return kv.reuse_prefix(id,p);}
     void cache_prefix(const RequestId& id) override{kv.cache_prefix(id);}
+    void clear_prefix_cache() override{kv.clear_prefix_cache();}
     std::vector<float> append(const RequestId& id,const std::vector<TokenId>& t) override{
+        if(inject_fatal)throw std::runtime_error("injected backend failure");
         if(inject_capacity){inject_capacity=false;throw KvCapacityError("injected capacity");}
         auto transaction=kv.prepare_append(id,t);transaction.copy_shared_tail([](std::size_t,std::size_t,std::size_t){});transaction.commit();std::vector<float> result(128,0);result[1]=1;return result;
     }
@@ -83,6 +88,44 @@ public:
     void clear() override{kv.clear();}
     RunnerStats stats() const override{RunnerStats result;result.update_kv_stats(kv.stats());return result;}
 };
+void shared_admission_lifecycle(){
+    auto runner=std::make_unique<BoundedRunner>(3,true);auto* raw=runner.get();
+    raw->create("seed");raw->append("seed",{1,2});raw->cache_prefix("seed");raw->release("seed");
+    EngineConfig config;config.context=32;config.max_batch_size=2;config.token_budget=1;config.prefill_chunk=1;
+    Engine engine(std::move(runner),config);
+    engine.submit(request("a",3,2));engine.submit(request("b",3,2));engine.step();
+    assert(raw->kv.capacity_ledger().committed_blocks==3);
+    assert(!raw->kv.contains("b")); // Admitted with a pinned prefix, not yet resident.
+    engine.cancel("b");assert(raw->kv.capacity_ledger().committed_blocks==2);
+    raw->clear_prefix_cache();engine.submit(request("c",3,2));
+    for(int i=0;i<30&&!engine.idle();++i)engine.step();
+    assert(engine.idle());
+    auto events=engine.poll_events();std::size_t cancelled=0,finished=0;
+    for(const auto& event:events){assert(event.finish_reason!=FinishReason::Error);
+        cancelled+=event.finish_reason==FinishReason::Cancelled;finished+=event.finish_reason==FinishReason::Length;}
+    assert(cancelled==1&&finished==2);raw->clear_prefix_cache();
+    assert(raw->kv.capacity_ledger().committed_blocks==0&&raw->stats().kv_live_blocks==0);
+    raw->create("seed");raw->append("seed",{1,2});raw->cache_prefix("seed");raw->release("seed");
+    engine.submit(request("fail",3,2));engine.submit(request("after",3,2));raw->inject_capacity=true;
+    for(int i=0;i<30&&!engine.idle();++i)engine.step();
+    assert(engine.idle()&&!engine.failed());events=engine.poll_events();std::size_t errors=0;finished=0;
+    for(const auto& event:events){errors+=event.finish_reason==FinishReason::Error;finished+=event.finish_reason==FinishReason::Length;}
+    assert(errors==1&&finished==1);engine.shutdown();
+    assert(raw->kv.capacity_ledger().committed_blocks==0&&raw->stats().kv_live_blocks==0);
+    // EOS releases future quota; shutdown also releases an unexecuted prefix lease.
+    raw->create("seed");raw->append("seed",{1,2});raw->cache_prefix("seed");raw->release("seed");
+    auto eos=request("eos",3,2);eos.generation.eos_token_id=1;
+    engine.submit(eos);engine.submit(request("shutdown-pending",3,2));engine.step();
+    events=engine.poll_events();assert(events.size()==1&&events[0].finish_reason==FinishReason::Eos);
+    assert(!raw->kv.contains("shutdown-pending"));engine.shutdown();engine.poll_events();
+    assert(raw->kv.capacity_ledger().committed_blocks==0&&raw->stats().kv_live_blocks==0);
+    raw->create("seed");raw->append("seed",{1,2});raw->cache_prefix("seed");raw->release("seed");
+    engine.submit(request("fatal",3,2));engine.submit(request("fatal-pending",3,2));raw->inject_fatal=true;
+    engine.step();assert(engine.failed());events=engine.poll_events();
+    assert(events.size()==2);for(const auto& event:events)assert(event.finish_reason==FinishReason::Error);
+    assert(raw->kv.capacity_ledger().committed_blocks==0&&raw->stats().kv_live_blocks==0);
+}
+
 void capacity_admission(){
     {
         auto runner=std::make_unique<BoundedRunner>();auto* trace=runner.get();
@@ -309,6 +352,6 @@ void stable_decode_priority_and_cancel(){
     assert(engine.idle()&&trace->positions.empty());
 }
 }
-int main(){capacity_admission();stats_mapping();runner_context_validation();interleaved_suffix();small_budget_and_cancel();invalid_hit_and_logits();cleanup_failure_still_finishes_requests();
+int main(){shared_admission_lifecycle();capacity_admission();stats_mapping();runner_context_validation();interleaved_suffix();small_budget_and_cancel();invalid_hit_and_logits();cleanup_failure_still_finishes_requests();
     lazy_prefix_and_boundary_refill();stable_decode_priority_and_cancel();
     std::cout<<"incremental suffix prefill positions, budgets, interleaving, events and cleanup passed\n";}

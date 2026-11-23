@@ -223,6 +223,9 @@ public:
     }
     int context_limit() const override{return kv_.context_limit();}
     KvAdmission reserve_request(const RequestId& id,std::size_t tokens) override{return kv_.reserve_request(id,tokens);}
+    KvAdmission reserve_request(const RequestId& id,std::size_t tokens,const std::vector<TokenId>& prompt) override{
+        return kv_.reserve_request(id,tokens,prompt);
+    }
     void release_reservation(const RequestId& id) noexcept override{kv_.release_reservation(id);}
     void create(const RequestId& id) override{
         if(kv_.contains(id))throw std::invalid_argument("sequence already exists");

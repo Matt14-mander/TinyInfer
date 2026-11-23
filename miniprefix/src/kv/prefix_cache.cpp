@@ -150,6 +150,29 @@ int ExactPrefixCache::lookup(PagedSequence& sequence,const std::vector<std::int3
     if(touch){if(count){++hits_;reused_+=count;}else ++misses_;}
     return sequence.used;
 }
+void ExactPrefixCache::record_reuse(const PagedSequence& sequence,const std::vector<std::int32_t>& prompt) noexcept{
+    if(!pool_.config().prefix_cache_blocks)return;
+    if(sequence.used){++hits_;reused_+=sequence.used;}else ++misses_;
+    auto* parent=&index_->root;std::size_t count=0,page=0;
+    const auto block_tokens=std::size_t(pool_.config().block_tokens);
+    while(count<sequence.tokens.size()){
+        const auto length=std::min(block_tokens,prompt.size()-1-count);
+        const auto restored=std::min(block_tokens,sequence.tokens.size()-count);
+        const auto* begin=prompt.data()+count;
+        auto next=parent->available.lower_bound(Index::Page(begin,begin+length));
+        Index::Node* best=nullptr;std::size_t matched=0;
+        auto consider=[&](Index::Node* node){
+            const auto& edge=*node->edge;std::size_t n=0;
+            while(n<length&&n<edge.size()&&edge[n]==begin[n])++n;
+            if(n>matched){matched=n;best=node;}
+        };
+        if(next!=parent->available.end())consider(next->second);
+        if(next!=parent->available.begin())consider(std::prev(next)->second);
+        if(matched<restored)break;
+        if(best->block==sequence.blocks[page])index_->touch(*best);
+        count+=restored;++page;parent=best;
+    }
+}
 void ExactPrefixCache::publish(const PagedSequence& sequence){
     if(sequence.tokens.size()!=std::size_t(sequence.used))throw std::logic_error("invalid committed KV token history");
     const auto block_tokens=std::size_t(pool_.config().block_tokens);

@@ -69,6 +69,39 @@ def verify(worker, model, backend):
                 worker_sha256=hashlib.sha256(Path(worker).read_bytes()).hexdigest())
 
 
+def verify_shared(worker, model, backend):
+    records=[]
+    for prompt in ([1,504,3575], [1,504,3575,4649]):
+        # One full page of guaranteed sharing; an optional partial tail exercises COW.
+        pages=(len(prompt)+4-1+1)//2
+        budget=2*pages-1
+        def open_shared(pool,cache=True):
+            return NativeEngine(worker, model, backend, context=32, batch_size=2,
+                                token_budget=2, chunk_size=1, block_tokens=2,
+                                kv_blocks=pool, prefix_cache_blocks=pool if cache else 0)
+        with open_shared(32,False) as reference:
+            reference.submit("ref",prompt,4,None)
+            expected=[e["token_id"] for e in drain(reference) if e["token_id"] is not None]
+        for warm in (False,True):
+            with open_shared(budget) as engine:
+                if warm:
+                    engine.forward("seed",prompt[:-1]);engine.cache_prefix("seed");engine.release("seed")
+                engine.submit("a",prompt,4,None);engine.submit("b",prompt,4,None)
+                events=engine.step();stats=engine.stats()
+                assert stats["live_sequences"]==(2 if warm else 1),(backend,warm,stats)
+                # Drop cache references while requests own credited pages.
+                engine.clear_prefix_cache();events+=drain(engine)
+                for name in ("a","b"):
+                    actual=[e["token_id"] for e in events if e["request_id"]==name and e["token_id"] is not None]
+                    assert actual==expected,(backend,warm,name,actual,expected)
+                assert all(e["finish_reason"]!="error" for e in events)
+                engine.clear_prefix_cache();final=engine.stats()
+                assert final["live_sequences"]==final["kv_live_blocks"]==0
+                records.append(dict(prompt_tokens=len(prompt),warm=warm,pool_blocks=budget,
+                                    initial_live_sequences=stats["live_sequences"],expected_tokens=expected))
+    return dict(backend=backend,passed=True,cases=records)
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model",type=Path,required=True)
@@ -78,7 +111,9 @@ def main():
     args=parser.parse_args()
     records=[verify(args.cpu_worker,args.model,"cpu")]
     if args.cuda_worker:records.append(verify(args.cuda_worker,args.model,"cuda"))
-    result=dict(passed=True,model_sha256=hashlib.sha256(args.model.read_bytes()).hexdigest(),records=records)
+    shared=[verify_shared(args.cpu_worker,args.model,"cpu")]
+    if args.cuda_worker:shared.append(verify_shared(args.cuda_worker,args.model,"cuda"))
+    result=dict(shared_admission=shared,passed=True,model_sha256=hashlib.sha256(args.model.read_bytes()).hexdigest(),records=records)
     args.output.write_text(json.dumps(result,indent=2)+"\n",encoding="utf-8")
     print(json.dumps(result))
 

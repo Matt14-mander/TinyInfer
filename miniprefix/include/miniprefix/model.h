@@ -52,6 +52,9 @@ public:
     virtual int context_limit() const=0;
     // Unbounded/reference runners may use the default; bounded runners must reserve.
     virtual KvAdmission reserve_request(const RequestId&,std::size_t){return KvAdmission::Ready;}
+    virtual KvAdmission reserve_request(const RequestId& id,std::size_t tokens,const std::vector<TokenId>&){
+        return reserve_request(id,tokens);
+    }
     virtual void release_reservation(const RequestId&) noexcept{}
     virtual void create(const RequestId&)=0;
     // Share committed history, including a partial tail, into an existing empty target.

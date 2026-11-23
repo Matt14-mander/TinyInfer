@@ -33,6 +33,8 @@ public:
     // Acquire references into an empty sequence without touching LRU/statistics.
     // Caller releases with the same pool; the pool must outlive the lease.
     int acquire(PagedSequence& lease,const std::vector<std::int32_t>& prompt);
+    // Account the actually restored snapshot; touch only still-indexed matching pages.
+    void record_reuse(const PagedSequence& sequence,const std::vector<std::int32_t>& prompt) noexcept;
     void publish(const PagedSequence& sequence);
     // Drop one LRU cache reference, not necessarily a physical page: active
     // sequence references survive. False means no cache entry was available.

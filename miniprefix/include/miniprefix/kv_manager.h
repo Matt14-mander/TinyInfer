@@ -21,12 +21,12 @@ struct KvStats {
     std::size_t prefix_hits=0,prefix_misses=0,prefix_reused_tokens=0,prefix_evictions=0;
 };
 
-// Idle-state accounting only: not an admission decision. Counts are physical pages
-// except logical_reserved_blocks, future_private_blocks and shared_reference_savings.
+// Idle-state accounting. committed_blocks is the admission promise, not physical
+// usage; cow_tail_candidates counts holders. Other fields are page/reference counts.
 struct KvCapacityLedger {
     std::size_t total_blocks=0,physical_blocks=0,free_blocks=0;
     std::size_t pinned_blocks=0,cache_only_blocks=0,shared_reference_savings=0;
-    std::size_t logical_reserved_blocks=0,future_private_blocks=0;
+    std::size_t logical_reserved_blocks=0,future_private_blocks=0,committed_blocks=0;
     std::size_t prefix_lease_blocks=0,cow_tail_candidates=0;
 };
 
@@ -44,6 +44,8 @@ class KVManager {
     void require_idle() const;
     std::map<RequestId,std::size_t> reservations_;
     std::map<RequestId,PagedSequence> prefix_leases_;
+    // Presence opts a reservation into sharing; pending full-page prefix owns leases.
+    std::map<RequestId,PagedSequence> admission_prefixes_;
     std::size_t committed_blocks() const;
     State& idle_state(const RequestId& id);
     void validate_tokens(const std::vector<TokenId>& tokens) const;
@@ -96,6 +98,8 @@ public:
     std::size_t offset(const PagedSequence& sequence,int layer,int token) const;
     // Logical worst-case page reservation, without allocating payload or evicting cache.
     KvAdmission reserve_request(const RequestId& id,std::size_t max_tokens);
+    // Prompt-aware reservation pins full pages and credits their physical sharing.
+    KvAdmission reserve_request(const RequestId& id,std::size_t max_tokens,const std::vector<TokenId>& prompt);
     void release_reservation(const RequestId& id) noexcept;
     void create(const RequestId& id);
     void fork_sequence(const RequestId& source,const RequestId& target);
@@ -108,6 +112,7 @@ public:
     // accesses must finish before any transaction commits or rolls back.
     std::vector<std::unique_ptr<Append>> prepare_decode_batch(const std::vector<DecodeInput>& inputs);
     std::vector<std::unique_ptr<Append>> prepare_batch(const std::vector<BatchInput>& inputs);
+    // Shared reservations keep full pages as pending leases until release/restore.
     void reset_sequence(const RequestId& id);
     void release(const RequestId& id);
     void clear();
