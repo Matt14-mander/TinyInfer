@@ -108,7 +108,16 @@ void ExactPrefixCache::clear() noexcept{
     while(node){auto* next=index_->successor(node);if(node->block>=0)index_->drop_node(pool_,*node);node=next;}
     index_->publication.clear();index_->spare_available={};index_->spare_node={};
 }
+std::size_t ExactPrefixCache::probe(const std::vector<std::int32_t>& prompt){
+    PagedSequence candidate;return lookup(candidate,prompt,false,false);
+}
+int ExactPrefixCache::acquire(PagedSequence& lease,const std::vector<std::int32_t>& prompt){
+    return lookup(lease,prompt,false,true);
+}
 int ExactPrefixCache::reuse(PagedSequence& sequence,const std::vector<std::int32_t>& prompt){
+    return lookup(sequence,prompt,true,true);
+}
+int ExactPrefixCache::lookup(PagedSequence& sequence,const std::vector<std::int32_t>& prompt,bool touch,bool retain){
     if(sequence.used||!sequence.blocks.empty()||!sequence.tokens.empty())
         throw std::invalid_argument("prefix reuse requires an empty sequence");
     if(!pool_.config().prefix_cache_blocks)return 0;
@@ -131,14 +140,14 @@ int ExactPrefixCache::reuse(PagedSequence& sequence,const std::vector<std::int32
         if(next!=parent->available.end())consider(next->second);
         if(next!=parent->available.begin())consider(std::prev(next)->second);
         if(!matched)break;
-        pages.push_back(best->block);index_->touch(*best);count+=matched;
+        pages.push_back(best->block);if(touch)index_->touch(*best);count+=matched;
         if(matched!=block_tokens)break;
         parent=best;
     }
     std::vector<std::int32_t> tokens(prompt.begin(),prompt.begin()+count);
-    for(int page:pages)pool_.retain(page);
+    if(retain)for(int page:pages)pool_.retain(page);
     sequence.blocks=std::move(pages);sequence.tokens=std::move(tokens);sequence.used=static_cast<int>(count);
-    if(count){++hits_;reused_+=count;}else ++misses_;
+    if(touch){if(count){++hits_;reused_+=count;}else ++misses_;}
     return sequence.used;
 }
 void ExactPrefixCache::publish(const PagedSequence& sequence){

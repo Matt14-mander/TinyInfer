@@ -21,6 +21,15 @@ struct KvStats {
     std::size_t prefix_hits=0,prefix_misses=0,prefix_reused_tokens=0,prefix_evictions=0;
 };
 
+// Idle-state accounting only: not an admission decision. Counts are physical pages
+// except logical_reserved_blocks, future_private_blocks and shared_reference_savings.
+struct KvCapacityLedger {
+    std::size_t total_blocks=0,physical_blocks=0,free_blocks=0;
+    std::size_t pinned_blocks=0,cache_only_blocks=0,shared_reference_savings=0;
+    std::size_t logical_reserved_blocks=0,future_private_blocks=0;
+    std::size_t prefix_lease_blocks=0,cow_tail_candidates=0;
+};
+
 // Owns sequence metadata, page references and prefix leases. Payload, device
 // tables, streams and completion stay in the backend. Single-threaded API.
 class KVManager {
@@ -34,6 +43,7 @@ class KVManager {
     bool cost_timing_=false;CostStats costs_;
     void require_idle() const;
     std::map<RequestId,std::size_t> reservations_;
+    std::map<RequestId,PagedSequence> prefix_leases_;
     std::size_t committed_blocks() const;
     State& idle_state(const RequestId& id);
     void validate_tokens(const std::vector<TokenId>& tokens) const;
@@ -101,6 +111,12 @@ public:
     void reset_sequence(const RequestId& id);
     void release(const RequestId& id);
     void clear();
+    // Manager-owned leases are independent of sequence/reservation IDs. Acquisition
+    // is conservative and does not grant admission credit. clear() releases all.
+    std::size_t probe_prefix(const std::vector<TokenId>& prompt);
+    std::size_t acquire_prefix_lease(const RequestId& lease_id,const std::vector<TokenId>& prompt);
+    void release_prefix_lease(const RequestId& lease_id);
+    KvCapacityLedger capacity_ledger() const;
     KvStats stats() const;
     void set_cost_timing(bool enabled){cost_timing_=enabled;}
     CostStats cost_stats() const{return costs_;}

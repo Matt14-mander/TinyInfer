@@ -168,5 +168,18 @@ int main(){
         append(pool,a,{1,2,3});cache.publish(a);assert(cache.size()==0&&cache.reuse(b,{1,2,3})==0);
         pool.release(a);assert(pool.live_blocks()==0);
     }
+    {
+        KvBlockPool pool({2,4,2},1,1);ExactPrefixCache cache(pool);PagedSequence a,b,lease,probe;
+        append(pool,a,{1,2});cache.publish(a);pool.release(a);
+        append(pool,b,{7,8});cache.publish(b);pool.release(b);
+        assert(cache.probe({1,2,3})==2);
+        assert(cache.acquire(lease,{1,2,3})==2);
+        assert(cache.hits()==0&&cache.misses()==0&&cache.reused_tokens()==0);
+        assert(cache.evict_one()); // Neither probe nor acquire touched the oldest entry.
+        assert(cache.reuse(probe,{1,2,3})==0);
+        assert(cache.probe({7,8,9})==2);
+        cache.clear();assert(pool.live_blocks()==1&&lease.used==2);
+        pool.release(lease);pool.release(lease);assert(pool.live_blocks()==0);
+    }
     std::cout<<"exact prefix keys, immutable sharing, aligned logits boundary, LRU and active leases passed\n";
 }

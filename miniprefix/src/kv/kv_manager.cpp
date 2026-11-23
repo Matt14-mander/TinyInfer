@@ -9,6 +9,7 @@ KVManager::KVManager(KvCacheConfig config,int layers,int width,int context,int v
 }
 KVManager::~KVManager(){
     for(auto& item:sequences_)pool_.release(item.second.sequence);
+    for(auto& item:prefix_leases_)pool_.release(item.second);
     prefix_.clear();
 }
 const KvCacheConfig& KVManager::config() const{return pool_.config();}
@@ -37,6 +38,7 @@ void KVManager::validate_tokens(const std::vector<TokenId>& tokens) const{
 std::size_t KVManager::committed_blocks() const{
     std::size_t count=0;
     for(const auto& item:reservations_)count+=item.second;
+    for(const auto& item:prefix_leases_)count+=item.second.blocks.size();
     for(const auto& item:sequences_)if(!reservations_.count(item.first))count+=item.second.sequence.blocks.size();
     return count;
 }
@@ -82,7 +84,7 @@ std::size_t KVManager::reuse_prefix(const RequestId& id,const std::vector<TokenI
     if(reservation!=reservations_.end()&&sequence.blocks.size()>reservation->second){
         pool_.release(sequence);throw KvCapacityError("request exceeds KV reservation");
     }
-    if(!reservations_.empty()&&committed_blocks()>std::size_t(config().max_blocks)){
+    if((!reservations_.empty()||!prefix_leases_.empty())&&committed_blocks()>std::size_t(config().max_blocks)){
         pool_.release(sequence);throw KvCapacityError("KV capacity reserved by active requests");
     }
     return count;
@@ -133,7 +135,7 @@ void KVManager::reserve_pages(const RequestId& id,PagedSequence& sequence,int en
     const auto tokens=config().block_tokens;
     const auto count=std::size_t(end/tokens+(end%tokens!=0));
     const auto required=count>sequence.blocks.size()?count-sequence.blocks.size():0;
-    if(!reservations_.empty()){
+    if(!reservations_.empty()||!prefix_leases_.empty()){
         const auto found=reservations_.find(id);
         if(found!=reservations_.end()){
             if(count>found->second)throw KvCapacityError("request exceeds KV reservation");
@@ -224,7 +226,52 @@ void KVManager::clear(){
     for(const auto& item:sequences_)if(item.second.appending)
         throw std::logic_error("cannot clear sequences during KV append");
     for(auto& item:sequences_)pool_.release(item.second.sequence);
-    sequences_.clear();prefix_.clear();reservations_.clear();
+    for(auto& item:prefix_leases_)pool_.release(item.second);
+    prefix_leases_.clear();sequences_.clear();prefix_.clear();reservations_.clear();
+}
+std::size_t KVManager::probe_prefix(const std::vector<TokenId>& prompt){
+    require_idle();
+    if(prompt.empty()||prompt.size()>std::size_t(context_))throw std::invalid_argument("invalid prefix context");
+    validate_tokens(prompt);return prefix_.probe(prompt);
+}
+std::size_t KVManager::acquire_prefix_lease(const RequestId& id,const std::vector<TokenId>& prompt){
+    require_idle();
+    if(id.empty()||prefix_leases_.count(id))throw std::invalid_argument("invalid or duplicate prefix lease");
+    const auto count=probe_prefix(prompt);
+    const auto pages=(count+config().block_tokens-1)/config().block_tokens;
+    const auto committed=committed_blocks(),total=std::size_t(config().max_blocks);
+    if(committed>total||pages>total-committed)throw KvCapacityError("prefix lease exceeds unreserved KV capacity");
+    // Allocate the owner before acquiring references; synchronous lookup cannot stale.
+    auto inserted=prefix_leases_.emplace(id,PagedSequence{});
+    try{return prefix_.acquire(inserted.first->second,prompt);}
+    catch(...){pool_.release(inserted.first->second);prefix_leases_.erase(inserted.first);throw;}
+}
+void KVManager::release_prefix_lease(const RequestId& id){
+    require_idle();auto found=prefix_leases_.find(id);
+    if(found==prefix_leases_.end())return;
+    pool_.release(found->second);prefix_leases_.erase(found);
+}
+KvCapacityLedger KVManager::capacity_ledger() const{
+    require_idle();KvCapacityLedger result;
+    result.total_blocks=config().max_blocks;result.physical_blocks=pool_.live_blocks();
+    result.free_blocks=pool_.free_blocks();result.cache_only_blocks=prefix_.cache_only_blocks();
+    std::set<int> pinned,leased;std::size_t references=0;
+    auto collect=[&](const PagedSequence& s){
+        references+=s.blocks.size();pinned.insert(s.blocks.begin(),s.blocks.end());
+        if(s.used%config().block_tokens&&!s.blocks.empty()&&pool_.references(s.blocks.back())>1)
+            ++result.cow_tail_candidates;
+    };
+    for(const auto& item:sequences_)collect(item.second.sequence);
+    for(const auto& item:prefix_leases_){collect(item.second);leased.insert(item.second.blocks.begin(),item.second.blocks.end());}
+    result.pinned_blocks=pinned.size();result.prefix_lease_blocks=leased.size();
+    result.shared_reference_savings=references-pinned.size();
+    for(const auto& item:reservations_){
+        result.logical_reserved_blocks+=item.second;
+        const auto found=sequences_.find(item.first);
+        const auto present=found==sequences_.end()?0:found->second.sequence.blocks.size();
+        if(item.second>present)result.future_private_blocks+=item.second-present;
+    }
+    return result;
 }
 KvStats KVManager::stats() const{
     KvStats result;result.live_sequences=sequences_.size();result.forward_tokens=forward_tokens_;

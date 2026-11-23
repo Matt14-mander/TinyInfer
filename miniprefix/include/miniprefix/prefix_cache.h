@@ -7,6 +7,7 @@ namespace miniprefix {
 // entire causal history; no hashes or
 // cross-runner keys. Structural ancestors may survive eviction without a KV lease.
 class ExactPrefixCache {
+    int lookup(PagedSequence&,const std::vector<std::int32_t>&,bool touch,bool retain);
     struct Index;
     KvBlockPool& pool_;
     std::unique_ptr<Index> index_;
@@ -27,6 +28,11 @@ public:
     void clear() noexcept;
     // Reuse the longest cached token prefix, keeping one prompt token for logits.
     int reuse(PagedSequence& sequence,const std::vector<std::int32_t>& prompt);
+    // Probe has no reference, LRU or statistics side effects. It is not a guarantee.
+    std::size_t probe(const std::vector<std::int32_t>& prompt);
+    // Acquire references into an empty sequence without touching LRU/statistics.
+    // Caller releases with the same pool; the pool must outlive the lease.
+    int acquire(PagedSequence& lease,const std::vector<std::int32_t>& prompt);
     void publish(const PagedSequence& sequence);
     // Drop one LRU cache reference, not necessarily a physical page: active
     // sequence references survive. False means no cache entry was available.

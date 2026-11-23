@@ -71,3 +71,37 @@ CPU CTest 54/54，CUDA CTest 62/62（要求实际设备）。真实模型容量�
 证据：[CPU](acceptance/capacity-cpu-tests.log)、[CUDA](acceptance/capacity-cuda-tests.log)、
 [真实容量专项](acceptance/capacity-admission.json)、[独立数值对照](acceptance/capacity-real-model.json)。
 JSON 保留模型和 worker SHA256，历史验收文件未覆盖。
+
+## 共享容量基础（第一步，尚未启用共享抵扣）
+
+`KVManager::capacity_ledger()` 提供空闲事务边界上的只读账本。字段含义：
+
+- `total_blocks / physical_blocks / free_blocks`：池总页数、实际存活页、空闲页。
+- `pinned_blocks`：序列及独立前缀租约持有的物理页并集，按页 ID 去重。
+- `cache_only_blocks`：仅缓存持有、可驱逐的物理页。
+- `shared_reference_savings`：序列和独立租约的页引用数减去其物理页并集大小；不包括缓存引用。
+- `logical_reserved_blocks`：现有请求预约页数之和，继续使用保守算法。
+- `future_private_blocks`：各预约减去对应序列已拥有的逻辑页数，取非负值后相加。
+  这是尚未分配的扩页额度，不包含部分尾页的 COW 替换，也不是新的准入承诺公式。
+- `prefix_lease_blocks`：独立前缀租约持有的物理页并集；它是 pinned_blocks 的子集。
+- `cow_tail_candidates`：当前尾页非整页且引用数大于一的序列/独立租约数量。
+  它是潜在复制需求，不是已经预约的 COW 峰值空间。
+
+账本查询在 Append 事务进行中会拒绝；此时新旧页并存由现有事务及物理池统计负责。
+下一步接入准入时，必须明确建立 COW 峰值额度规则，不能直接把以上字段相加作为可用容量。
+
+`probe_prefix(prompt)` 仅返回可复用 token 数，不保留页 ID，不改变 LRU、命中统计或引用。
+结果只代表查询时刻，不能用于未经锁定的容量抵扣。仍保留至少一个 prompt token 计算 logits。
+`acquire_prefix_lease(id, prompt)` 重新匹配并锁定页引用，由 KVManager 持有，缓存清空或驱逐
+不会撤销租约。它不改变 LRU/命中统计，不创建计算序列，不授予共享准入额度。
+租约 ID 是独立命名空间；重复获取报错，重复释放为空操作；空命中也登记 ID，需正常释放。
+获取失败撤销登记；当前按完整租约页数保守计费，保护已有请求预约和未预约诊断序列。
+`release_prefix_lease(id)` 显式释放，`clear()` 和管理器析构兜底释放全部租约。
+事务期间禁止获取/释放租约，避免 GPU 使用中的页引用发生变化。
+
+ExactPrefixCache 的 `probe/acquire` 共享既有 trie 匹配算法，后者把引用交给调用方提供的
+空 PagedSequence。底层调用者必须在同一池上 release，且池须比租约存活更久；业务层应使用
+KVManager 的托管接口。现有 reuse 的 LRU、命中统计及生成路径保持原样，worker 协议不变。
+
+新增回归覆盖只读查询/LRU、租约保活、重复释放、原共享者退出、预约保护、部分页 COW
+复制失败回滚，以及 clear 资源归零。实际共享感知 Ready/Wait 决策将在第二步接入。

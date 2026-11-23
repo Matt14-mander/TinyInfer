@@ -11,6 +11,51 @@ template<class F> void rejects(F&& operation){
 void commit(KVManager& manager,const RequestId& id,std::vector<TokenId> tokens){
     auto append=manager.prepare_append(id,tokens);append.copy_shared_tail([](std::size_t,std::size_t,std::size_t){});append.commit();
 }
+void shared_capacity_foundation(){
+    KVManager m({2,12,6},1,1,20,100);
+    assert(m.reserve_request("source",8)==KvAdmission::Ready);
+    auto ledger=m.capacity_ledger();assert(ledger.logical_reserved_blocks==4&&ledger.future_private_blocks==4);
+    m.create("source");commit(m,"source",{1,2,3});m.cache_prefix("source");
+    const auto before=m.stats();
+    assert(m.probe_prefix({1,2,3,9})==3);
+    assert(m.acquire_prefix_lease("first",{1,2,3,9})==3);
+    assert(m.acquire_prefix_lease("second",{1,2,3,8})==3);
+    const auto after=m.stats();
+    assert(before.prefix_hits==after.prefix_hits&&before.prefix_misses==after.prefix_misses);
+    assert(before.prefix_reused_tokens==after.prefix_reused_tokens&&before.prefix_evictions==after.prefix_evictions);
+    ledger=m.capacity_ledger();
+    assert(ledger.pinned_blocks==2&&ledger.prefix_lease_blocks==2&&ledger.shared_reference_savings==4);
+    assert(ledger.cache_only_blocks==0&&ledger.future_private_blocks==2);
+    assert(ledger.cow_tail_candidates==3);
+    rejects([&]{m.acquire_prefix_lease("first",{1,2,3,9});});
+    rejects([&]{m.acquire_prefix_lease("bad",{100});});
+    // Lease forces COW even after cache eviction; failed copying restores pages.
+    m.clear_prefix_cache();const auto original=m.sequence("source").blocks;
+    {
+        auto append=m.prepare_append("source",{4});assert(append.tail_copy());
+        rejects([&]{m.capacity_ledger();});
+        rejects([&]{m.release_prefix_lease("first");});
+        rejects([&]{append.copy_shared_tail([](std::size_t,std::size_t,std::size_t){throw std::runtime_error("copy");});});
+        rejects([&]{append.commit();});
+    }
+    assert(m.sequence("source").blocks==original&&m.stats().kv_live_blocks==2);
+    commit(m,"source",{4});assert(m.stats().kv_live_blocks==3);
+    m.release("source");assert(m.capacity_ledger().pinned_blocks==2);
+    m.release_prefix_lease("first");m.release_prefix_lease("first");
+    assert(m.stats().kv_live_blocks==2&&m.capacity_ledger().shared_reference_savings==0);
+    m.release_prefix_lease("second");assert(m.stats().kv_live_blocks==0);
+    assert(m.acquire_prefix_lease("miss",{7})==0);m.clear();
+    assert(m.capacity_ledger().pinned_blocks==0&&m.capacity_ledger().logical_reserved_blocks==0);
+    // Conservatively protect existing promises; failed acquisition leaks nothing.
+    KVManager tight({2,3,2},1,1,12,100);tight.create("s");commit(tight,"s",{1,2});
+    tight.cache_prefix("s");tight.release("s");
+    assert(tight.reserve_request("all",6)==KvAdmission::Ready);
+    rejects([&]{tight.acquire_prefix_lease("lease",{1,2,3});});
+    assert(tight.stats().kv_cache_only_blocks==1);
+    tight.release_reservation("all");tight.acquire_prefix_lease("lease",{1,2,3});
+    assert(tight.reserve_request("all",6)==KvAdmission::Wait);
+    tight.clear();assert(tight.stats().kv_live_blocks==0);
+}
 void reservations(){
     KVManager m({2,3,3},1,1,16,100);
     assert(m.reserve_request("too-big",7)==KvAdmission::Impossible);
@@ -149,6 +194,6 @@ void impossible_reservation_and_cache_off(){
     }
 }
 }
-int main(){reservations();transactions();prefix_and_reset();exhaustion();capacity_and_lru();pinned_victim_then_free_page();
+int main(){shared_capacity_foundation();reservations();transactions();prefix_and_reset();exhaustion();capacity_and_lru();pinned_victim_then_free_page();
     rollback_keeps_eviction_effects();impossible_reservation_and_cache_off();
     std::cout<<"KVManager transactions, shared leases, reset, stats and exhaustion passed\n";}
