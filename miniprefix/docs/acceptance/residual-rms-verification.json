@@ -1,0 +1,36 @@
+{
+  "base_commit": "f77110d",
+  "source_and_binary_sha256": {
+    "miniprefix/src/backend/cuda/llama_runner.cu": "7202116734d1363f51671233d949bb0cf3f8e7cc03caf163e42efa1d6a179103",
+    "miniprefix/tests/cow_test.cpp": "d721b09706c110d62a7233aab826ebb3a752f49af2c591e3ef434a55a6e19a47",
+    "miniprefix/benchmarks/launch_trace.cpp": "f3eac2b078cc4e3978546df42b5e96860141dd0ce65c1d10467a442df84eab40",
+    "miniprefix/benchmarks/launch_gaps.py": "992d80250a8bbc7c395b2ee1ca680f289fa17e797685c0207a0ad47870dd246d",
+    "miniprefix/benchmarks/sustained.py": "700e9a66e52e4ff3959e95c0a220c8d39018d7212759d00c87e1e9bd4be11ec0",
+    "build-packed/f77110d.exe": "fe1ec462fcd88968089bd5257adbf77088bbf2e41de1a09363fe13e1946742e0",
+    "build-packed/f77110d-trace.exe": "80b05e03b3e3d88e6ad468d9a391f630825da4faa711731ba1a43adfca5a3a6a",
+    "build-kv-manager-cuda/miniprefix/miniprefix_cuda_worker.exe": "c3ab08f7a08d0ad1a96c99ab91902d178e0d0e68319f9e8b6c77a426772e1084",
+    "build-kv-manager-cuda/miniprefix/miniprefix_launch_trace.exe": "f949293146e0208080e7196dd995ba579f3cd9fdc5ee2181cb74c7ad1fd320fd"
+  },
+  "history": {
+    "passed": true,
+    "cases": 44,
+    "checked_logits": 196608,
+    "workers": {
+      "cpu": "467ef7732ec12e994525482e589cf9364d7fa8eb80961965f2c84bb1737c96bc",
+      "cuda": "c3ab08f7a08d0ad1a96c99ab91902d178e0d0e68319f9e8b6c77a426772e1084"
+    }
+  },
+  "cpu_tests": [
+    "",
+    "100% tests passed, 0 tests failed out of 56",
+    "",
+    "Total Test time (real) =   2.77 sec"
+  ],
+  "cuda_tests": [
+    "",
+    "100% tests passed, 0 tests failed out of 65",
+    "",
+    "Total Test time (real) =   9.46 sec"
+  ],
+  "memcheck": "========= COMPUTE-SANITIZER\nCOW regression started\nCOW metadata passed\nCOW payload passed\nCOW copy, capacity, rollback, retry and release passed\nPartial prefix cache, COW and capacity passed\nCost counters and opt-in timing passed\nPublication snapshot churn, rollback and release passed\nBatched decode ragged positions, COW, rollback and retry passed\nPacked prefill and mixed chunks passed\n========= LEAK SUMMARY: 0 bytes leaked in 0 allocations\n========= ERROR SUMMARY: 0 errors\n"
+}

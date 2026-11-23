@@ -17,10 +17,19 @@ using cuda_detail::blas;
 using cuda_detail::Allocation;
 __global__ void embedding_kernel(float* x,const float* weights,const int* tokens,int rows,int width){
     int i=blockIdx.x*blockDim.x+threadIdx.x;if(i<rows*width)x[i]=weights[std::size_t(tokens[i/width])*width+i%width];}
-__global__ void rms_kernel(const float* x,const float* weight,float* out,int width,float eps,const int* source_rows=nullptr){
+template<bool AddResidual>
+__global__ void rms_kernel(float* x,const float* weight,float* out,int width,float eps,const int* source_rows=nullptr,const float* residual=nullptr){
     __shared__ float sums[256];const int row=blockIdx.x,lane=threadIdx.x;float sum=0;
-    const float* source=x+(source_rows?source_rows[row]:row)*width;
-    for(int d=lane;d<width;d+=256){float v=source[d];sum+=v*v;}sums[lane]=sum;__syncthreads();
+    const int source_row=source_rows?source_rows[row]:row;
+    float* source=x+source_row*width;
+    for(int d=lane;d<width;d+=256){
+        float v=source[d];
+        if constexpr(AddResidual){
+            v+=residual[source_row*width+d];
+            source[d]=v; // Keep the rounded FP32 residual for the next sublayer.
+        }
+        sum+=v*v;
+    }sums[lane]=sum;__syncthreads();
     for(int step=128;step;step/=2){if(lane<step)sums[lane]+=sums[lane+step];__syncthreads();}
     const float scale=1.0F/sqrtf(sums[0]/width+eps);
     for(int d=lane;d<width;d+=256)out[row*width+d]=source[d]*scale*weight[d];}
@@ -52,7 +61,6 @@ __global__ void attention_kernel(const float* q,const float* k,const float* v,fl
     }
     if(lane<dim)out[(row*heads+head)*dim+lane]=numerator/denom;
 }
-__global__ void add_kernel(float* x,const float* y,int count){int i=blockIdx.x*blockDim.x+threadIdx.x;if(i<count)x[i]+=y[i];}
 __global__ void swiglu_kernel(float* gate,const float* up,int count){int i=blockIdx.x*blockDim.x+threadIdx.x;if(i<count){float v=gate[i];gate[i]=(v/(1+expf(-v)))*up[i];}}
 // One block per output row. Any nonfinite logit invalidates the whole row.
 __global__ void greedy_kernel(const float* logits,int vocabulary,TokenId* ids){
@@ -116,7 +124,9 @@ class CudaRunner final:public ModelRunner {
         const auto* tables=batch?reinterpret_cast<const int* const*>(workspace_.tables.data):nullptr;
         embedding_kernel<<<(n*c.hidden+255)/256,256,0,execution_.stream()>>>(workspace_.x.data,parameter("model.embed_tokens.weight"),reinterpret_cast<int*>(workspace_.tokens.data),n,c.hidden);
         for(int l=0;l<c.layers;++l){auto p="model.layers."+std::to_string(l)+".";
-            rms_kernel<<<n,256,0,execution_.stream()>>>(workspace_.x.data,parameter(p+"input_layernorm.weight"),workspace_.norm.data,c.hidden,c.rms_epsilon);
+            // MLP output from the previous layer is still in projection.
+            if(l==0)rms_kernel<false><<<n,256,0,execution_.stream()>>>(workspace_.x.data,parameter(p+"input_layernorm.weight"),workspace_.norm.data,c.hidden,c.rms_epsilon);
+            else rms_kernel<true><<<n,256,0,execution_.stream()>>>(workspace_.x.data,parameter(p+"input_layernorm.weight"),workspace_.norm.data,c.hidden,c.rms_epsilon,nullptr,workspace_.projection.data);
             linear(workspace_.norm,p+"self_attn.q_proj.weight",workspace_.q,n,c.hidden,c.hidden);
             linear(workspace_.norm,p+"self_attn.k_proj.weight",workspace_.k,n,c.hidden,c.kv_width());linear(workspace_.norm,p+"self_attn.v_proj.weight",workspace_.v,n,c.hidden,c.kv_width());
             rope_kernel<<<(n*c.heads*c.head_dimension()/2+255)/256,256,0,execution_.stream()>>>(workspace_.q.data,n,c.heads,c.head_dimension(),start,c.rope_theta,positions);
@@ -126,15 +136,16 @@ class CudaRunner final:public ModelRunner {
             attention_kernel<<<dim3(n,c.heads),256,0,execution_.stream()>>>(workspace_.q.data,keys_.data,values_.data,workspace_.attention.data,table,
                 c.heads,c.kv_heads,c.head_dimension(),start,l,c.layers,kv_.config().block_tokens,positions,tables);
             linear(workspace_.attention,p+"self_attn.o_proj.weight",workspace_.projection,n,c.hidden,c.hidden);
-            add_kernel<<<(n*c.hidden+255)/256,256,0,execution_.stream()>>>(workspace_.x.data,workspace_.projection.data,n*c.hidden);
-            rms_kernel<<<n,256,0,execution_.stream()>>>(workspace_.x.data,parameter(p+"post_attention_layernorm.weight"),workspace_.norm.data,c.hidden,c.rms_epsilon);
+            rms_kernel<true><<<n,256,0,execution_.stream()>>>(workspace_.x.data,parameter(p+"post_attention_layernorm.weight"),workspace_.norm.data,c.hidden,c.rms_epsilon,nullptr,workspace_.projection.data);
             linear(workspace_.norm,p+"mlp.gate_proj.weight",workspace_.gate,n,c.hidden,c.intermediate);linear(workspace_.norm,p+"mlp.up_proj.weight",workspace_.up,n,c.hidden,c.intermediate);
             swiglu_kernel<<<(n*c.intermediate+255)/256,256,0,execution_.stream()>>>(workspace_.gate.data,workspace_.up.data,n*c.intermediate);
             linear(workspace_.gate,p+"mlp.down_proj.weight",workspace_.projection,n,c.intermediate,c.hidden);
-            add_kernel<<<(n*c.hidden+255)/256,256,0,execution_.stream()>>>(workspace_.x.data,workspace_.projection.data,n*c.hidden);
         }
         const int* last_rows=batch && outputs!=n?reinterpret_cast<const int*>(workspace_.last_rows.data):nullptr;
-        rms_kernel<<<outputs,256,0,execution_.stream()>>>(workspace_.x.data+(batch?0:std::size_t(n-1)*c.hidden),parameter("model.norm.weight"),workspace_.norm.data,c.hidden,c.rms_epsilon,last_rows);
+        // Only chunk-final rows are consumed by the head. KV for all input rows
+        // was already written before this final residual addition.
+        const auto offset=batch?std::size_t(0):std::size_t(n-1)*c.hidden;
+        rms_kernel<true><<<outputs,256,0,execution_.stream()>>>(workspace_.x.data+offset,parameter("model.norm.weight"),workspace_.norm.data,c.hidden,c.rms_epsilon,last_rows,workspace_.projection.data+offset);
         linear(workspace_.norm,"lm_head.weight",workspace_.logits,outputs,c.hidden,c.vocabulary);
         check(cudaGetLastError(),"model kernel launch");
     }

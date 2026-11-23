@@ -50,6 +50,7 @@ MiniPrefix 是建立在 TinyInfer 之上的原生 LLM 生成引擎，面向单�
 | 持续压力与瓶颈 | [原生 Engine 压测](docs/long_running_stress.md)，与 worker IPC 端到端测量分别报告 |
 | 持续到达与饱和吞吐 | [CUDA worker 到达速率扫描、尾延迟与调度重叠评估](docs/acceptance/sustained-arrivals.md) |
 | GPU greedy 采样 | [逐 kernel 时间线与持续到达同机对照](docs/acceptance/gpu-greedy.md) |
+| 残差与 RMSNorm 融合 | [数值回归、启动间隙与持续到达对照](docs/acceptance/residual-rms.md) |
 
 2026-11-04 的 CUDA 合并复制报告记录 CPU 56/56、CUDA 65/65 测试通过，CUDA memcheck
 零错误/零泄漏，以及 44 个真实多轮用例和 196,608 个 logits 的独立对照。

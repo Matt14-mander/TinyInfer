@@ -115,24 +115,24 @@ void payload(bool cuda,bool merged=false){
     }
     m.release("a");m.release("b");assert(m.stats().kv_live_blocks==0);
 }
-std::shared_ptr<ModelWeights> weights(){
+std::shared_ptr<ModelWeights> weights(int hidden=8,int layers=2){
     auto w=std::make_shared<ModelWeights>();auto& c=w->config;
-    c.layers=2;c.hidden=8;c.heads=2;c.kv_heads=1;c.intermediate=12;c.vocabulary=16;
+    c.layers=layers;c.hidden=hidden;c.heads=hidden>256?8:2;c.kv_heads=1;c.intermediate=hidden+4;c.vocabulary=16;
     c.context=32;c.eos=0;c.rms_epsilon=1e-5F;c.rope_theta=10000;c.tied=false;c.validate();
     int seed=0;
     auto add=[&](std::string name,tinyinfer::Shape shape,bool norm=false){
         tinyinfer::Tensor t(shape);for(std::size_t i=0;i<t.numel();++i)t.at(i)=norm?1.0F:0.15F*std::sin(float(++seed));
         w->tensors.emplace(name,std::move(t));
     };
-    add("model.embed_tokens.weight",{16,8});add("lm_head.weight",{8,16});add("model.norm.weight",{8},true);
-    for(int l=0;l<2;++l){auto p="model.layers."+std::to_string(l)+".";
-        add(p+"input_layernorm.weight",{8},true);add(p+"post_attention_layernorm.weight",{8},true);
-        add(p+"self_attn.q_proj.weight",{8,8});add(p+"self_attn.k_proj.weight",{8,4});
-        add(p+"self_attn.v_proj.weight",{8,4});add(p+"self_attn.o_proj.weight",{8,8});
-        add(p+"mlp.gate_proj.weight",{8,12});add(p+"mlp.up_proj.weight",{8,12});add(p+"mlp.down_proj.weight",{12,8});
+    add("model.embed_tokens.weight",{16,hidden});add("lm_head.weight",{hidden,16});add("model.norm.weight",{hidden},true);
+    for(int l=0;l<layers;++l){auto p="model.layers."+std::to_string(l)+".";
+        add(p+"input_layernorm.weight",{hidden},true);add(p+"post_attention_layernorm.weight",{hidden},true);
+        add(p+"self_attn.q_proj.weight",{hidden,hidden});add(p+"self_attn.k_proj.weight",{hidden,c.kv_width()});
+        add(p+"self_attn.v_proj.weight",{hidden,c.kv_width()});add(p+"self_attn.o_proj.weight",{hidden,hidden});
+        add(p+"mlp.gate_proj.weight",{hidden,c.intermediate});add(p+"mlp.up_proj.weight",{hidden,c.intermediate});add(p+"mlp.down_proj.weight",{c.intermediate,hidden});
     }
     // Untied head stays finite: only appending this token injects a backend failure.
-    for(int i=0;i<8;++i)w->tensors.at("model.embed_tokens.weight").at(15*8+i)=std::numeric_limits<float>::quiet_NaN();
+    for(int i=0;i<hidden;++i)w->tensors.at("model.embed_tokens.weight").at(15*hidden+i)=std::numeric_limits<float>::quiet_NaN();
     return w;
 }
 void same(const std::vector<float>& a,const std::vector<float>& b){
@@ -458,6 +458,39 @@ void generation_results(bool cuda){
         assert(damaged->stats().forward_tokens==0 && damaged->stats().kv_live_blocks==0);
     }
 }
+void residual_norm_shapes(bool cuda){
+    for(int width:{8,272,576})for(int layers:{1,3}){
+        auto w=weights(width,layers);
+        auto runner=make_cpu_runner(w,32,{4,32,16});
+#ifdef MINIPREFIX_ENABLE_CUDA
+        if(cuda)runner=make_cuda_runner(w,32,{4,32,16});
+#endif
+        auto oracle=make_cpu_runner(w,32,{4,32,0});
+        auto compare=[](const std::vector<float>& actual,const std::vector<float>& expected){
+            assert(actual.size()==expected.size());
+            for(size_t i=0;i<actual.size();++i)
+                assert(std::isfinite(actual[i]) && std::abs(actual[i]-expected[i])<2e-4F);
+            assert(std::max_element(actual.begin(),actual.end())-actual.begin()==
+                   std::max_element(expected.begin(),expected.end())-expected.begin());
+        };
+        for(const auto* id:{"a","b"}){runner->create(id);oracle->create(id);}
+        compare(runner->append("a",{1,2,3}),oracle->append("a",{1,2,3}));
+        runner->fork_sequence("a","b");oracle->fork_sequence("a","b");
+        // Last rows are gathered from indices 2 and 3, then positions change
+        // independently. This also requires retaining the residual across layers.
+        for(const auto& chunks:std::vector<std::vector<BatchInput>>{
+            {{"a",{4,5,6}},{"b",{7},true}},{{"b",{8},true},{"a",{9},true}}}){
+            auto result=runner->append_batch(chunks);
+            for(size_t i=0;i<chunks.size();++i){
+                const auto& c=chunks[i];
+                compare(result?result->at(i):runner->append(c.id,c.tokens),oracle->append(c.id,c.tokens));
+                runner->cache_prefix(c.id);
+            }
+        }
+        runner->clear();
+        assert(runner->stats().kv_live_blocks==0);
+    }
+}
 int main(int argc,char** argv){
     std::cout<<"COW regression started"<<std::endl;
     bool cuda=false,required=false;for(int i=1;i<argc;++i){cuda|=std::string(argv[i])=="--cuda";required|=std::string(argv[i])=="--require-device";}
@@ -473,6 +506,7 @@ int main(int argc,char** argv){
     costs(cuda);std::cout<<"Cost counters and opt-in timing passed"<<std::endl;
     publication_snapshots(cuda);std::cout<<"Publication snapshot churn, rollback and release passed"<<std::endl;
     decode_transactions();batched_decode(cuda);std::cout<<"Batched decode ragged positions, COW, rollback and retry passed"<<std::endl;
+    residual_norm_shapes(cuda);
     generation_results(cuda);
     packed_prefill(cuda);std::cout<<"Packed prefill and mixed chunks passed"<<std::endl;
 }

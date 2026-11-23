@@ -36,5 +36,5 @@ CUDA Graph、CPU/GPU 异步重叠、量化、真实推测解码、HTTP、multi-G
 已优化[前缀发布路径与快照元数据分配](prefix_publication.md)，保持逐步发布及历史快照语义，测量结果见[验收](acceptance/prefix-publication-review.md)。
 已接入首版[CUDA 跨请求 batched decode](batched_decode.md)，不改变 Scheduler 顺序，容量不足时回退逐请求执行。
 CUDA 现已支持跨请求的变长 prefill 和 prefill/decode 混合计算，执行边界与同机基线见[验收报告](acceptance/packed-prefill-review.md)。
-[持续到达测量](acceptance/sustained-arrivals.md)显示饱和下准入和计划生成占比很小。已接入 [GPU greedy 采样并测量逐 kernel 启动间隙](acceptance/gpu-greedy.md)。后续可用相同负载检验减少 forward 启动次数的收益。共享感知容量估算与抢占恢复仍后置。保守容量准入已实现。保留历史 dense/paged 基线与独立框架 oracle，复用基线
+[持续到达测量](acceptance/sustained-arrivals.md)显示饱和下准入和计划生成占比很小。已接入 [GPU greedy 采样](acceptance/gpu-greedy.md)和[残差加法与 RMSNorm 融合](acceptance/residual-rms.md)，以逐 kernel 时间线和同机持续到达基线衡量收益。共享感知容量估算与抢占恢复仍后置。保守容量准入已实现。保留历史 dense/paged 基线与独立框架 oracle，复用基线
 对照正确性、实际跳过计算量、显存和端到端收益。
