@@ -30,6 +30,22 @@ struct KvCapacityLedger {
     std::size_t prefix_lease_blocks=0,cow_tail_candidates=0;
 };
 
+enum class BatchPolicy { Full, Adaptive };
+// Read-only idle-state estimate. Recompute after any reference or sequence change.
+// Reclamation fields are meaningful only when feasible; valid distinguishes bad inputs.
+struct BatchSpacePlan {
+    bool valid=false,feasible=false;
+    std::size_t growth_pages=0,cow_pages=0,cow_work_pages=0,evicted_references=0,freed_pages=0;
+};
+// Cumulative applied-plan counters (not live/committed payload counts), survive clear.
+// Separate from worker STATS. Timings are opt-in; avoided victims are immediate, not net.
+struct BatchSpaceStats {
+    std::uint64_t prepare_calls=0,prepared_batches=0,rejected_batches=0,prepare_ns=0;
+    std::uint64_t growth_pages=0,cow_pages=0,cow_work_pages=0,cancelled_cow_pages=0;
+    std::uint64_t evicted_references=0,freed_pages=0;
+    std::uint64_t selection_calls=0,split_calls=0,rows_deferred=0,selection_ns=0,immediate_victims_avoided=0;
+};
+
 // Owns sequence metadata, page references and prefix leases. Payload, device
 // tables, streams and completion stay in the backend. Single-threaded API.
 class KVManager {
@@ -41,6 +57,7 @@ class KVManager {
     std::size_t forward_tokens_=0;
     std::size_t append_active_=0;
     bool cost_timing_=false;CostStats costs_;
+    BatchPolicy batch_policy_=BatchPolicy::Full;BatchSpaceStats batch_space_stats_;
     void require_idle() const;
     std::map<RequestId,std::size_t> reservations_;
     std::map<RequestId,PagedSequence> prefix_leases_;
@@ -113,6 +130,10 @@ public:
     // All device accesses must finish before any commit/rollback.
     std::vector<std::unique_ptr<Append>> prepare_decode_batch(const std::vector<DecodeInput>& inputs);
     std::vector<std::unique_ptr<Append>> prepare_batch(const std::vector<BatchInput>& inputs);
+    BatchSpacePlan plan_batch(const std::vector<BatchInput>& inputs) const;
+    std::size_t batch_prefix_size(const std::vector<BatchInput>& inputs);
+    void set_batch_policy(BatchPolicy policy){require_idle();batch_policy_=policy;}
+    BatchSpaceStats batch_space_stats() const{return batch_space_stats_;}
     // Shared reservations keep full pages as pending leases until release/restore.
     void reset_sequence(const RequestId& id);
     void release(const RequestId& id);

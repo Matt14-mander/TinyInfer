@@ -71,6 +71,10 @@ public:
     // publishes prefixes or samples tokens. CPU/reference runners fall back.
     virtual std::optional<std::vector<std::vector<float>>> append_decode_batch(const std::vector<DecodeInput>&){return std::nullopt;}
     virtual DecodeBatchStats decode_batch_stats() const{return {};}
+    // Select only a consecutive prefix; Engine validates size and executes the remainder in order.
+    virtual std::size_t batch_prefix_size(const std::vector<BatchInput>& inputs){return inputs.size();}
+    virtual void set_batch_policy(BatchPolicy){}
+    virtual BatchSpaceStats batch_space_stats() const{return {};}
     virtual bool supports_packed_prefill() const{return false;}
     virtual PrefillBatchStats prefill_batch_stats() const{return {};}
     // One final logit vector per chunk, in scheduler order. Same transaction

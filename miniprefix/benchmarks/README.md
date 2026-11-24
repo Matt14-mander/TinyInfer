@@ -24,3 +24,7 @@ prefix_benefit.py 提供真实模型八请求负载的 off/cold/warm 独立进�
 输出可复核 JSON 和 Markdown。详见 [成本观测与测量协议](../docs/partial_prefix_costs.md)。
 
 `sustained.py` 用预定时间表向同一 worker 持续提交请求。`--summarize` 从原始 token 时间戳汇总延迟与吞吐，`--profile` 单独启用 CUDA forward 和主机准入/计划计时。负载配置、复现命令及实测见[持续到达基线](../docs/acceptance/sustained-arrivals.md)。
+
+`capacity.cpp` / `capacity.py` 支持同一原生二进制比较共享准入与 Full/Adaptive 批量空间策略，
+包含混合输入/输出长度、可调公共前缀和页池。主测量关闭成本计时，`--profile` 单独收集诊断，
+协议见[批量工作页与缓存保留](../docs/batch_cache_balance.md)，结果见[验收](../docs/acceptance/batch-cache-balance.md)。

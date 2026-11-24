@@ -166,9 +166,10 @@ std::vector<std::unique_ptr<KVManager::Append>> KVManager::prepare_decode_batch(
     for(const auto& input:inputs)chunks.push_back({input.id,{input.token},true});
     return prepare_batch(chunks);
 }
-std::vector<std::unique_ptr<KVManager::Append>> KVManager::prepare_batch(const std::vector<BatchInput>& inputs){
+BatchSpacePlan KVManager::plan_batch(const std::vector<BatchInput>& inputs) const{
     require_idle();
-    if(inputs.size()<2)return {};
+    BatchSpacePlan result;
+    if(inputs.size()<2)return result;
     std::set<RequestId> seen;std::size_t growth=0,unreserved_growth=0;bool unreserved=false;
     std::vector<int> tails;
     for(const auto& input:inputs){
@@ -191,8 +192,10 @@ std::vector<std::unique_ptr<KVManager::Append>> KVManager::prepare_batch(const s
         const auto committed=committed_blocks(),total=std::size_t(config().max_blocks);
         if(committed>total||unreserved_growth>total-committed)return {};
     }
+    result.valid=true;result.growth_pages=growth;
     auto required=growth;
     for(int tail:tails)if(pool_.references(tail)>1)++required;
+    result.cow_pages=required-growth;
     std::size_t victims=0;
     if(required>pool_.free_blocks()){
         // Read-only planning. A cache entry is a reference, not necessarily a free
@@ -207,8 +210,36 @@ std::vector<std::unique_ptr<KVManager::Append>> KVManager::prepare_batch(const s
             if(free>=required)break;
         }
         // No partial eviction on fallback, including an all-pinned cache.
-        if(free<required)return {};
+        if(free<required)return result;
+        result.freed_pages=free-pool_.free_blocks();
     }
+    result.feasible=true;result.evicted_references=victims;
+    result.cow_work_pages=required-growth;return result;
+}
+std::size_t KVManager::batch_prefix_size(const std::vector<BatchInput>& inputs){
+    require_idle();
+    if(batch_policy_==BatchPolicy::Full||inputs.size()<3)return inputs.size();
+    ++batch_space_stats_.selection_calls;CostTimer timer(cost_timing_,batch_space_stats_.selection_ns);
+    const auto full=plan_batch(inputs);
+    if(!full.valid||(full.feasible&&full.evicted_references<2))return inputs.size();
+    // Prefer the largest prefix that saves >=2 references and >=25% of eviction
+    // cost per row. This is a proxy, not a prediction of latency or future hits.
+    for(std::size_t n=inputs.size()-1;n>=2;--n){
+        const auto plan=plan_batch(std::vector<BatchInput>(inputs.begin(),inputs.begin()+n));
+        if(!plan.feasible)continue;
+        if(!full.feasible || (plan.evicted_references+2<=full.evicted_references &&
+            double(plan.evicted_references)*inputs.size()<=.75*double(full.evicted_references)*n)){
+            ++batch_space_stats_.split_calls;batch_space_stats_.rows_deferred+=inputs.size()-n;
+            if(full.feasible)batch_space_stats_.immediate_victims_avoided+=full.evicted_references-plan.evicted_references;
+            return n;
+        }
+    }
+    return inputs.size();
+}
+std::vector<std::unique_ptr<KVManager::Append>> KVManager::prepare_batch(const std::vector<BatchInput>& inputs){
+    require_idle();++batch_space_stats_.prepare_calls;CostTimer timer(cost_timing_,batch_space_stats_.prepare_ns);
+    const auto plan=plan_batch(inputs);
+    if(!plan.feasible){++batch_space_stats_.rejected_batches;return {};}
     // Allocate host sequence capacity before making the planned LRU changes.
     for(const auto& input:inputs){
         auto& s=sequences_.at(input.id).sequence;
@@ -218,10 +249,16 @@ std::vector<std::unique_ptr<KVManager::Append>> KVManager::prepare_batch(const s
     // This is a batch-boundary pressure operation, not speculative publication.
     // Once applied, eviction effects survive rollback just like ordinary append.
     std::vector<std::unique_ptr<Append>> result;result.reserve(inputs.size());
-    for(std::size_t i=0;i<victims;++i)prefix_.evict_one();
+    const auto free_before=pool_.free_blocks();
+    for(std::size_t i=0;i<plan.evicted_references;++i)prefix_.evict_one();
+    batch_space_stats_.evicted_references+=plan.evicted_references;
+    batch_space_stats_.freed_pages+=pool_.free_blocks()-free_before;
+    batch_space_stats_.growth_pages+=plan.growth_pages;batch_space_stats_.cow_pages+=plan.cow_pages;
+    batch_space_stats_.cow_work_pages+=plan.cow_work_pages;
+    batch_space_stats_.cancelled_cow_pages+=plan.cow_pages-plan.cow_work_pages;
     try{for(const auto& input:inputs)result.emplace_back(new Append(*this,input.id,input.tokens,true));}
-    catch(const KvCapacityError&){return {};}
-    return result;
+    catch(const KvCapacityError&){++batch_space_stats_.rejected_batches;return {};}
+    ++batch_space_stats_.prepared_batches;return result;
 }
 void KVManager::reserve_pages(const RequestId& id,PagedSequence& sequence,int end,bool& cow){
     const auto pending=admission_prefixes_.find(id);

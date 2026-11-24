@@ -593,6 +593,27 @@ void residual_norm_shapes(bool cuda){
         assert(runner->stats().kv_live_blocks==0);
     }
 }
+void adaptive_runner(bool cuda){
+    auto w=weights();auto r=make_cpu_runner(w,32,{2,10,8});
+#ifdef MINIPREFIX_ENABLE_CUDA
+    if(cuda)r=make_cuda_runner(w,32,{2,10,8});
+#endif
+    auto oracle=make_cpu_runner(w,32,{2,32,0});
+    r->create("seed");r->append("seed",std::vector<TokenId>(16,1));r->cache_prefix("seed");r->release("seed");
+    std::vector<BatchInput> rows={{"a",{2,3}},{"b",{4,5}},{"c",std::vector<TokenId>(8,6)},{"d",std::vector<TokenId>(8,7)}};
+    for(const auto& row:rows){r->create(row.id);oracle->create(row.id);}
+    assert(r->batch_prefix_size(rows)==4);r->set_batch_policy(BatchPolicy::Adaptive);
+    const auto before=r->stats();assert(r->batch_prefix_size(rows)==3);
+    assert(r->stats().prefix_evictions==before.prefix_evictions&&r->stats().kv_cached_blocks==before.kv_cached_blocks);
+    std::vector<BatchInput> prefix(rows.begin(),rows.begin()+3);auto result=r->append_batch(prefix);
+    assert(bool(result)==cuda);
+    for(std::size_t i=0;i<rows.size();++i){const auto& row=rows[i];
+        same(result&&i<3?result->at(i):r->append(row.id,row.tokens),oracle->append(row.id,row.tokens));
+        r->cache_prefix(row.id);
+    }
+    assert(r->batch_space_stats().split_calls==1);
+    r->clear();assert(r->stats().kv_live_blocks==0&&r->stats().block_table_device_bytes==0);
+}
 int main(int argc,char** argv){
     std::cout<<"COW regression started"<<std::endl;
     bool cuda=false,required=false;for(int i=1;i<argc;++i){cuda|=std::string(argv[i])=="--cuda";required|=std::string(argv[i])=="--require-device";}
@@ -602,7 +623,7 @@ int main(int argc,char** argv){
     assert(!cuda);
 #endif
     metadata();std::cout<<"COW metadata passed"<<std::endl;
-    pressure_payload(cuda);pressure_runner(cuda);
+    adaptive_runner(cuda);pressure_payload(cuda);pressure_runner(cuda);
     payload(cuda);payload(cuda,true);std::cout<<"COW payload passed"<<std::endl;
     runner(cuda);std::cout<<"COW copy, capacity, rollback, retry and release passed"<<std::endl;
     partial_cache(cuda);std::cout<<"Partial prefix cache, COW and capacity passed"<<std::endl;

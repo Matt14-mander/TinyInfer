@@ -1,0 +1,273 @@
+{
+  "header": {
+    "binary_sha256": "fa12428c4f3c438ed87a6eb778b0c44500ab480e5b4b034b83432529d4e93c96",
+    "model_sha256": "fe826f487690854ac806197b60edffc2c76c6c446eede6b188e47763deae7aef",
+    "backend": "cuda",
+    "rates": [
+      40.0
+    ],
+    "requests": 48,
+    "repeats": 3,
+    "pages": 20,
+    "pools": [
+      32
+    ],
+    "cache_pages": null,
+    "modes": [
+      "hot"
+    ],
+    "gpu": {
+      "command": [
+        "nvidia-smi",
+        "--query-gpu=name,driver_version,memory.total,pstate,clocks.sm,temperature.gpu,power.draw",
+        "--format=csv,noheader"
+      ],
+      "value": "NVIDIA GeForce RTX 4070 Laptop GPU, 555.97, 8188 MiB, P0, 2430 MHz, 65, 28.11 W"
+    },
+    "timing": "cost timing off; planned arrival to event polling; model load/warmup/prime excluded",
+    "config": {
+      "batch_size": 4,
+      "token_budget": 32,
+      "chunk": 16,
+      "block_tokens": 8,
+      "batch_policies": [
+        "full",
+        "adaptive"
+      ],
+      "workloads": [
+        "mixed"
+      ],
+      "shared_prefixes": [
+        0
+      ],
+      "uniform": {
+        "prompt_lengths": [
+          65,
+          68,
+          71,
+          74
+        ],
+        "output_tokens": [
+          8,
+          8,
+          8,
+          8
+        ]
+      },
+      "mixed": {
+        "prompt_lengths": [
+          17,
+          33,
+          65,
+          89
+        ],
+        "output_tokens": [
+          4,
+          8,
+          16,
+          24
+        ]
+      }
+    },
+    "before_binary_sha256": null,
+    "policies": [
+      "shared"
+    ]
+  },
+  "cells": [
+    {
+      "variant": "current",
+      "rate": 40,
+      "mode": "hot",
+      "policy": "shared",
+      "repeats": 3,
+      "batch_policy": "adaptive",
+      "workload": "mixed",
+      "shared_prefix_tokens": 0,
+      "timing": "timing-off",
+      "count": 48,
+      "pool_pages": 32,
+      "cache_pages": 32,
+      "duration_ms": 2413.9525,
+      "step_ms": 2408.0474,
+      "steps": 179,
+      "mean_active": 3.65291295677,
+      "peak_active": 4,
+      "peak_resident": 4,
+      "peak_committed": 32,
+      "peak_logical_reserved": 48,
+      "peak_saved_pages": 19,
+      "physical_peak": 32,
+      "reused_tokens": 1808,
+      "prefix_evictions": 845,
+      "forward_tokens": 1216,
+      "decode_batches": 139,
+      "decode_fallbacks": 0,
+      "prefill_fallbacks": 0,
+      "prefill_batches": 0,
+      "mixed_batches": 26,
+      "space_prepare_calls": 165,
+      "space_prepared_batches": 165,
+      "space_rejected_batches": 0,
+      "space_prepare_ns": 0,
+      "space_growth_pages": 64,
+      "space_cow_pages": 489,
+      "space_cow_work_pages": 446,
+      "space_cancelled_cow_pages": 39,
+      "space_evicted_references": 699,
+      "space_freed_pages": 509,
+      "space_selection_calls": 155,
+      "space_split_calls": 56,
+      "space_rows_deferred": 58,
+      "space_selection_ns": 0,
+      "space_immediate_victims_avoided": 327,
+      "final_blocks": 0,
+      "final_committed": 0,
+      "ttft_ms": {
+        "p50": 501.9134,
+        "p95": 990.6186,
+        "p99": 1030.0783000000001
+      },
+      "tpot_ms": {
+        "p50": 12.756933333333333,
+        "p95": 16.233114285714286,
+        "p99": 19.23049999999999
+      },
+      "latency_ms": {
+        "p50": 681.7251,
+        "p95": 1176.5305,
+        "p99": 1229.1271
+      },
+      "queue_ms": {
+        "p50": 469.64660000000003,
+        "p95": 965.4341,
+        "p99": 967.7436
+      },
+      "capacity_wait_ms": {
+        "p50": 0,
+        "p95": 0,
+        "p99": 0
+      },
+      "submit_delay_ms": {
+        "p50": 6.565399999999954,
+        "p95": 19.118899999999996,
+        "p99": 22.970599999999877
+      },
+      "arriving_tok_s": 262.1684087067508,
+      "arriving_backlog": 1.0,
+      "service_tok_s": 272.10541678679033,
+      "service_backlog": 1.0,
+      "full_tok_s": 258.49721566600834,
+      "wait_attempts": 0,
+      "waited_requests": 0,
+      "drain_ms": 1229.1271,
+      "itl_p99_ms": 26.38470000000001,
+      "repeat": 1,
+      "arriving_range": [
+        240.1516747419423,
+        306.3759315484405
+      ],
+      "service_range": [
+        254.23397075710318,
+        287.5219245260432
+      ]
+    },
+    {
+      "variant": "current",
+      "rate": 40,
+      "mode": "hot",
+      "policy": "shared",
+      "repeats": 3,
+      "batch_policy": "full",
+      "workload": "mixed",
+      "shared_prefix_tokens": 0,
+      "timing": "timing-off",
+      "count": 48,
+      "pool_pages": 32,
+      "cache_pages": 32,
+      "duration_ms": 1921.7925,
+      "step_ms": 1919.3001,
+      "steps": 181,
+      "mean_active": 3.65705080587,
+      "peak_active": 4,
+      "peak_resident": 4,
+      "peak_committed": 32,
+      "peak_logical_reserved": 48,
+      "peak_saved_pages": 19,
+      "physical_peak": 32,
+      "reused_tokens": 1792,
+      "prefix_evictions": 1055,
+      "forward_tokens": 1232,
+      "decode_batches": 130,
+      "decode_fallbacks": 0,
+      "prefill_fallbacks": 0,
+      "prefill_batches": 0,
+      "mixed_batches": 36,
+      "space_prepare_calls": 166,
+      "space_prepared_batches": 166,
+      "space_rejected_batches": 0,
+      "space_prepare_ns": 0,
+      "space_growth_pages": 85,
+      "space_cow_pages": 529,
+      "space_cow_work_pages": 441,
+      "space_cancelled_cow_pages": 89,
+      "space_evicted_references": 971,
+      "space_freed_pages": 524,
+      "space_selection_calls": 0,
+      "space_split_calls": 0,
+      "space_rows_deferred": 0,
+      "space_selection_ns": 0,
+      "space_immediate_victims_avoided": 0,
+      "final_blocks": 0,
+      "final_committed": 0,
+      "ttft_ms": {
+        "p50": 286.55050000000006,
+        "p95": 559.7101,
+        "p99": 613.6416000000002
+      },
+      "tpot_ms": {
+        "p50": 9.95685714285714,
+        "p95": 11.57622857142857,
+        "p99": 11.772499999999999
+      },
+      "latency_ms": {
+        "p50": 406.5098,
+        "p95": 707.6202000000001,
+        "p99": 744.5707
+      },
+      "queue_ms": {
+        "p50": 258.9217,
+        "p95": 536.3586,
+        "p99": 562.8012000000001
+      },
+      "capacity_wait_ms": {
+        "p50": 0,
+        "p95": 0,
+        "p99": 0
+      },
+      "submit_delay_ms": {
+        "p50": 5.0557999999999765,
+        "p95": 18.651700000000005,
+        "p99": 24.1918
+      },
+      "arriving_tok_s": 340.8777256417334,
+      "arriving_backlog": 1.0,
+      "service_tok_s": 345.3929080900009,
+      "service_backlog": 1.0,
+      "full_tok_s": 324.69686503615765,
+      "wait_attempts": 0,
+      "waited_requests": 0,
+      "drain_ms": 742.0672000000002,
+      "itl_p99_ms": 22.892000000000053,
+      "repeat": 1,
+      "arriving_range": [
+        303.3494838845587,
+        343.57859877884715
+      ],
+      "service_range": [
+        333.4151103544313,
+        358.3809194463771
+      ]
+    }
+  ]
+}

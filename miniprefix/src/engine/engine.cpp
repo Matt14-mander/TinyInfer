@@ -120,6 +120,9 @@ bool Engine::step(){
                         auto probe=plan;
                         std::vector<BatchInput> chunks;
                         for(std::size_t j=i;j<order.size() && probe.has_budget();++j){
+                            // A shortened group must not probe/execute across an
+                            // already recorded restore failure on the next group.
+                            if(restore_failure && j==failed_restore_at)break;
                             const auto phase=order[j].phase;
                             auto& candidate=active_[order[j].active_index];
                             if(!packed && phase!=SchedulePhase::Decode)break;
@@ -138,8 +141,10 @@ bool Engine::step(){
                             chunks.push_back({candidate.request.id,input_for(candidate,phase,count),phase==SchedulePhase::Decode});
                         }
                         if(chunks.size()>1){
-                            group_end=i+chunks.size();
-                            results=runner_->append_generation_batch(chunks);
+                            const auto selected=runner_->batch_prefix_size(chunks);
+                            if(!selected||selected>chunks.size())throw std::runtime_error("invalid batch prefix size");
+                            chunks.resize(selected);group_end=i+selected;
+                            if(selected>1)results=runner_->append_generation_batch(chunks);
                             if(results && results->size()!=chunks.size())throw std::runtime_error("invalid batch arity");
                         }
                     }

@@ -12,6 +12,11 @@ public:
     std::vector<std::vector<TokenId>> published;
     bool fail_publish=false,invalid_logits=false;
     bool batch_enabled=false;int batches=0;
+    std::size_t prefix_limit=99,splits=0;
+    std::size_t batch_prefix_size(const std::vector<BatchInput>& in) override{
+        const auto n=prefix_limit==100?in.size()+1:std::min(prefix_limit,in.size());
+        if(n<in.size())++splits;return n;
+    }
     bool packed=false;int prefills=0,mixed=0;
     bool supports_packed_prefill() const override{return packed;}
     std::optional<std::vector<std::vector<float>>> append_batch(const std::vector<BatchInput>& chunks) override{
@@ -179,9 +184,9 @@ void packed_schedule_equivalence(){
     for(int cache:{0,16}){
         std::vector<std::string> reference;
         std::vector<std::vector<TokenId>> publications;
-        for(bool packed:{false,true}){
+        for(int limit:{99,2,1})for(bool packed:{false,true}){
             auto runner=std::make_unique<Runner>(cache);
-            auto* trace=runner.get();trace->packed=packed;
+            auto* trace=runner.get();trace->packed=packed;trace->prefix_limit=limit;
             Engine engine(std::move(runner),{4,8,2,128});
             engine.submit(request("a",{1,2,3},4));
             engine.submit(request("b",{10,11,12,13,14,15,16,17,18},3));
@@ -199,7 +204,8 @@ void packed_schedule_equivalence(){
             }
             assert(engine.idle() && !engine.failed());
             if(packed){
-                assert(trace->prefills>0 && trace->mixed>0);
+                if(limit>1)assert(trace->prefills>0 && trace->mixed>0);
+                if(limit<3&&cache==0)assert(trace->splits>0);
                 assert(observed==reference && trace->published==publications);
             }else{reference=observed;publications=trace->published;}
             engine.shutdown();assert(trace->stats().kv_live_blocks==0);
@@ -207,9 +213,9 @@ void packed_schedule_equivalence(){
     }
 }
 void restore_failure_preserves_order(){
-    for(bool packed:{false,true}){
+    for(int limit:{99,2,1})for(bool packed:{false,true}){
         auto runner=std::make_unique<Runner>(0);
-        auto* trace=runner.get();trace->packed=packed;trace->fail_restore=true;
+        auto* trace=runner.get();trace->packed=packed;trace->prefix_limit=limit;trace->fail_restore=true;
         Engine engine(std::move(runner),{4,8,2,128});
         const std::vector<RequestId> ids={"a","b","bad","d"};
         for(const auto& id:ids)engine.submit(request(id,{1},1));
@@ -221,6 +227,25 @@ void restore_failure_preserves_order(){
             assert(events[i].finish_reason==(ids[i]=="bad"?FinishReason::Error:FinishReason::Length));
         }
         assert(trace->stats().live_sequences==0 && trace->stats().kv_live_blocks==0);
+        assert(trace->stats().forward_tokens==3); // Failed restore never executes, even after splitting.
     }
 }
-int main(){aligned_single_token_completion();history_and_boundaries();cancellation_eos_and_failure();concurrent_fork_and_off();batch_schedule_equivalence();packed_schedule_equivalence();restore_failure_preserves_order();std::cout<<"generation history publication and page boundaries passed\n";}
+void split_publication_failure(){
+    auto runner=std::make_unique<Runner>(0);auto* trace=runner.get();
+    trace->packed=true;trace->prefix_limit=2;trace->fail_publish=true;
+    Engine e(std::move(runner),{4,8,2,128});for(const auto* id:{"a","b","c"})e.submit(request(id,{1},2));
+    e.step();const auto events=e.poll_events();assert(e.failed()&&e.idle()&&events.size()==3&&trace->splits==1);
+    const std::vector<RequestId> ids={"a","b","c"};
+    for(std::size_t i=0;i<events.size();++i)assert(events[i].request_id==ids[i]&&events[i].finish_reason==FinishReason::Error&&!events[i].token_id);
+    assert(trace->published.empty()&&trace->stats().forward_tokens==2&&trace->stats().kv_live_blocks==0);
+}
+void invalid_selection(){
+    for(std::size_t limit:{0u,100u}){
+        auto runner=std::make_unique<Runner>(0);auto* trace=runner.get();trace->packed=true;trace->prefix_limit=limit;
+        Engine e(std::move(runner),{4,8,2,128});for(const auto* id:{"a","b","c"})e.submit(request(id,{1},2));
+        e.step();auto events=e.poll_events();assert(e.failed()&&e.idle()&&events.size()==3);
+        for(const auto& event:events)assert(event.finish_reason==FinishReason::Error&&!event.token_id);
+        assert(trace->stats().kv_live_blocks==0&&trace->published.empty());
+    }
+}
+int main(){split_publication_failure();invalid_selection();aligned_single_token_completion();history_and_boundaries();cancellation_eos_and_failure();concurrent_fork_and_off();batch_schedule_equivalence();packed_schedule_equivalence();restore_failure_preserves_order();std::cout<<"generation history publication and page boundaries passed\n";}

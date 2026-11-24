@@ -11,6 +11,32 @@ template<class F> void rejects(F&& operation){
 void commit(KVManager& manager,const RequestId& id,std::vector<TokenId> tokens){
     auto append=manager.prepare_append(id,tokens);append.copy_shared_tail([](std::size_t,std::size_t,std::size_t){});append.commit();
 }
+void adaptive_plans(){
+    KVManager m({2,10,8},1,1,32,100);
+    m.create("seed");commit(m,"seed",std::vector<TokenId>(16,1));m.cache_prefix("seed");m.release("seed");
+    for(const auto* id:{"a","b","c","d"})m.create(id);
+    std::vector<BatchInput> rows={{"a",{2,3}},{"b",{4,5}},{"c",std::vector<TokenId>(8,6)},{"d",std::vector<TokenId>(8,7)}};
+    auto before=m.stats();auto full=m.plan_batch(rows);
+    assert(full.valid&&full.feasible&&full.growth_pages==10&&full.evicted_references==8&&full.freed_pages==8);
+    assert(m.batch_prefix_size(rows)==4&&m.batch_space_stats().selection_calls==0);
+    m.set_batch_policy(BatchPolicy::Adaptive);m.set_cost_timing(true);
+    assert(m.batch_prefix_size(rows)==3);
+    auto stats=m.batch_space_stats();assert(stats.split_calls==1&&stats.rows_deferred==1&&stats.immediate_victims_avoided==4);
+    assert(m.stats().prefix_evictions==before.prefix_evictions&&m.stats().kv_live_blocks==before.kv_live_blocks);
+    assert(m.stats().prefix_hits==before.prefix_hits&&m.stats().prefix_misses==before.prefix_misses);
+    auto invalid=rows;invalid.back().tokens={100};assert(m.batch_prefix_size(invalid)==4);
+    auto impossible=rows;for(auto& row:impossible)row.tokens=std::vector<TokenId>(8,2);
+    assert(m.plan_batch(impossible).valid&&!m.plan_batch(impossible).feasible);
+    assert(m.batch_prefix_size(impossible)==2);
+    rows.resize(3);
+    {auto group=m.prepare_batch(rows);assert(group.size()==3);}
+    stats=m.batch_space_stats();assert(stats.prepared_batches==1&&stats.growth_pages==6);
+    assert(stats.evicted_references==4&&stats.freed_pages==4&&stats.cow_pages==0&&stats.prepare_ns>0&&stats.selection_ns>0);
+    assert(m.stats().kv_live_blocks==4&&m.sequence("a").tokens.empty()&&m.sequence("c").blocks.empty());
+    m.clear();assert(m.stats().kv_live_blocks==0&&m.batch_space_stats().evicted_references==4);
+    KVManager free({2,16,0},1,1,32,100);for(const auto& row:rows)free.create(row.id);
+    free.set_batch_policy(BatchPolicy::Adaptive);assert(free.batch_prefix_size(rows)==rows.size());
+}
 void batch_space_preparation(){
     KVManager m({4,5,4},1,1,24,100);
     m.create("a");commit(m,"a",{1,2,3});m.create("b");m.fork_sequence("a","b");m.cache_prefix("a");
@@ -44,6 +70,9 @@ void batch_space_preparation(){
     for(const auto* id:{"a","b"}){inplace.create(id);commit(inplace,id,{id[0],1,2});inplace.cache_prefix(id);}
     auto in=inplace.prepare_decode_batch({{"a",3},{"b",4}});assert(in.size()==2);
     assert(!in[0]->tail_copy()&&!in[1]->tail_copy());
+    const auto cost=inplace.batch_space_stats();
+    assert(cost.cow_pages==2&&cost.cow_work_pages==0&&cost.cancelled_cow_pages==2);
+    assert(cost.evicted_references==2&&cost.freed_pages==0);
     for(auto& tx:in)tx->commit();inplace.clear();assert(inplace.stats().kv_live_blocks==0);
     // An admission lease survives planned eviction; an impossible batch must not drop any cache reference.
     KVManager pinned({4,2,2},1,1,16,100);
@@ -325,6 +354,6 @@ void impossible_reservation_and_cache_off(){
     }
 }
 }
-int main(){batch_reference_accounting();batch_space_preparation();shared_restore_fallback();shared_admission();shared_capacity_foundation();reservations();transactions();prefix_and_reset();exhaustion();capacity_and_lru();pinned_victim_then_free_page();
+int main(){adaptive_plans();batch_reference_accounting();batch_space_preparation();shared_restore_fallback();shared_admission();shared_capacity_foundation();reservations();transactions();prefix_and_reset();exhaustion();capacity_and_lru();pinned_victim_then_free_page();
     rollback_keeps_eviction_effects();impossible_reservation_and_cache_off();
     std::cout<<"KVManager transactions, shared leases, reset, stats and exhaustion passed\n";}

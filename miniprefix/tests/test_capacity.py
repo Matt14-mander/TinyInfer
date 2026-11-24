@@ -33,6 +33,24 @@ class CapacityMetricsTests(unittest.TestCase):
         self.assertEqual({x['variant']:x['service_tok_s'] for x in cells},
                          {'before':a['service_tok_s'],'after':b['service_tok_s']})
 
+    def test_mixed_output_lengths(self):
+        rows=self.fixture()
+        for i, row in enumerate(rows[:-1]):
+            row['output_tokens']=4 if i%2==0 else 12
+            row['token_times_ms']=[row['arrival_ms']+5+j for j in range(row['output_tokens'])]
+        result=summarize(rows)
+        self.assertEqual(result['tpot_ms']['p50'],1)
+        self.assertAlmostEqual(result['full_tok_s'],80000/102)
+        rows[0]['output_tokens']=8
+        with self.assertRaises(ValueError): summarize(rows)
+
+    def test_batch_and_workload_dimensions_stay_separate(self):
+        base=summarize(self.fixture());base.update(rate=40,mode='hot',policy='shared')
+        cases=[base]
+        for field, value in [('batch_policy','adaptive'),('workload','mixed'),('shared_prefix_tokens',0),('timing','profile')]:
+            row=copy.deepcopy(base);row[field]=value;cases.append(row)
+        self.assertEqual(len(aggregate(cases)),5)
+
     def test_reject_incomplete_duplicate_and_invalid_timeline(self):
         rows = self.fixture()
         with self.assertRaises(ValueError): summarize(rows[:-1])
