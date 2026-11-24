@@ -1,0 +1,90 @@
+{
+  "backend": "cpu",
+  "command": [
+    "E:\\Project Learning\\AI Infra\\TinyInfer\\build-kv-manager-cpu\\miniprefix\\miniprefix_stress.exe",
+    "E:\\Project Learning\\AI Infra\\TinyInfer\\build-miniprefix-models\\smollm2-135m-instruct\\model.mpf",
+    "cpu",
+    "300.0",
+    "32"
+  ],
+  "platform": "Windows-11-10.0.26300-SP0",
+  "executable_sha256": "b71deb2165b044086f4825fce0daab7916b9a31e9cadd4476ed60997748c43be",
+  "model_sha256": "fe826f487690854ac806197b60edffc2c76c6c446eede6b188e47763deae7aef",
+  "raw_sha256": "7f51d56a6d40431e01343c3455fc837d7af602b5b60ae6649472ece22f409c96",
+  "total_process_seconds": 320.17199999999866,
+  "summary": {
+    "passed": true,
+    "waves": 34,
+    "requests": 272,
+    "elapsed_seconds": 302.91798239999997,
+    "steady_waves": 24,
+    "excluded_warmup_waves": 10,
+    "steady_output_tokens_per_second": 3.7253607650102087,
+    "ttft_p50_ms": 4424.7947,
+    "ttft_p95_ms": 9748.4171,
+    "queue_p95_ms": 7618.1571,
+    "mean_request_tpot_ms": 276.9527625,
+    "timing": {
+      "admission": {
+        "ms": 4.1193,
+        "calls": 669,
+        "wall_percent": 0.0019230424309907962,
+        "mean_call_ms": 0.006157399103139013
+      },
+      "clear_prefix": {
+        "ms": 0.0269,
+        "calls": 4,
+        "wall_percent": 1.2557920373280027e-05,
+        "mean_call_ms": 0.006725
+      },
+      "create": {
+        "ms": 0.19679999999999997,
+        "calls": 144,
+        "wall_percent": 9.187355871604123e-05,
+        "mean_call_ms": 0.0013666666666666664
+      },
+      "decode": {
+        "ms": 79333.68260000001,
+        "calls": 672,
+        "wall_percent": 37.035913346091874,
+        "mean_call_ms": 118.05607529761907
+      },
+      "prefill": {
+        "ms": 134417.30660000004,
+        "calls": 518,
+        "wall_percent": 62.75099751202857,
+        "mean_call_ms": 259.49286988417
+      },
+      "publish": {
+        "ms": 7.746400000000001,
+        "calls": 798,
+        "wall_percent": 0.00361630759775377,
+        "mean_call_ms": 0.009707268170426067
+      },
+      "release": {
+        "ms": 0.6317000000000003,
+        "calls": 144,
+        "wall_percent": 0.00029490105203721175,
+        "mean_call_ms": 0.004386805555555557
+      },
+      "reuse": {
+        "ms": 0.6564999999999999,
+        "calls": 144,
+        "wall_percent": 0.00030647861431443634,
+        "mean_call_ms": 0.004559027777777776
+      }
+    },
+    "unattributed_wall_percent": 0.2068439807053776,
+    "initial_private_bytes": 1085825024.0,
+    "final_private_bytes": 1086212096.0,
+    "private_growth_bytes": 387072.0,
+    "max_private_bytes": 1086246912,
+    "max_rss_bytes": 1087635456,
+    "workspace_sizes": [
+      0
+    ],
+    "reused_tokens": 635,
+    "evictions": 4078
+  },
+  "scope": "native synchronous wall time; excludes worker IPC/tokenizer; same-backend uncached oracle; first 10 waves excluded only from steady summary; no speedup claim"
+}

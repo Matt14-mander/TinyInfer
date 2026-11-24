@@ -89,6 +89,7 @@ public:
     virtual void release(const RequestId&)=0;
     virtual void clear()=0;
     virtual RunnerStats stats() const=0;
+    virtual KvCapacityLedger capacity_ledger() const{return {};}
     virtual std::size_t sampled_id_downloaded_bytes() const{return 0;}
     virtual ExecutionStats execution_stats() const{return {};}
     virtual void set_execution_timing(bool){}

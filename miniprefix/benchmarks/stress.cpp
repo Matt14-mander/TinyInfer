@@ -22,11 +22,16 @@ struct Profile final:ModelRunner {
     std::map<std::string,Timing> times;
     std::map<RequestId,std::size_t> lengths,positions;
     std::map<RequestId,Clock::time_point> admitted;
+    std::size_t shared_admission_calls=0;
     explicit Profile(std::unique_ptr<ModelRunner> r):inner(std::move(r)){}
     const ModelConfig& config() const override{return inner->config();}
     int context_limit() const override{return inner->context_limit();}
     KvAdmission reserve_request(const RequestId& id,std::size_t n) override{
         Scope t{times["admission"]};auto result=inner->reserve_request(id,n);
+        if(result==KvAdmission::Ready)admitted[id]=Clock::now();return result;
+    }
+    KvAdmission reserve_request(const RequestId& id,std::size_t n,const std::vector<TokenId>& prompt) override{
+        ++shared_admission_calls;Scope t{times["admission"]};auto result=inner->reserve_request(id,n,prompt);
         if(result==KvAdmission::Ready)admitted[id]=Clock::now();return result;
     }
     void release_reservation(const RequestId& id) noexcept override{inner->release_reservation(id);}
@@ -43,6 +48,7 @@ struct Profile final:ModelRunner {
     void release(const RequestId& id) override{Scope t{times["release"]};inner->release(id);positions.erase(id);}
     void clear() override{Scope t{times["clear"]};inner->clear();positions.clear();}
     RunnerStats stats() const override{return inner->stats();}
+    KvCapacityLedger capacity_ledger() const override{return inner->capacity_ledger();}
 };
 std::pair<std::size_t,std::size_t> memory(){
 #ifdef _WIN32
@@ -95,7 +101,7 @@ int main(int argc,char** argv){try{
         std::map<RequestId,double> first,last;
         std::map<RequestId,FinishReason> reasons;
         std::vector<RequestId> ids;
-        std::size_t wave_tokens=0,forward_tokens=0,reused_tokens=0;
+        std::size_t wave_tokens=0,forward_tokens=0,reused_tokens=0,peak_committed=0,peak_saved=0;
         for(int i=0;i<8;++i){
             auto id=std::to_string(wave*8+i);ids.push_back(id);const int k=(wave+i)%12;index[id]=k;
             Request r;r.id=id;r.prompt_token_ids=prompts[k];r.generation.max_new_tokens=8;
@@ -116,6 +122,10 @@ int main(int argc,char** argv){try{
             const auto step=engine.last_step_stats();forward_tokens+=step.prefill_tokens+step.decode_tokens;reused_tokens+=step.prefix_reused_tokens;consume();
             if(steps==1&&!terminal[ids[0]]){engine.cancel(ids[0]);consume();}
             require(!engine.failed(),"Engine poisoned");
+            const auto ledger=trace->capacity_ledger();
+            require(ledger.committed_blocks<=24,"reservation overcommit");
+            peak_committed=std::max(peak_committed,ledger.committed_blocks);
+            peak_saved=std::max(peak_saved,ledger.logical_reserved_blocks-ledger.committed_blocks);
         }
         for(int i=0;i<8;++i){const auto& id=ids[i];require(terminal[id]==1,"missing or duplicate terminal");
             const auto expected=i==7?FinishReason::Error:i==6?FinishReason::Eos:(i==0||i==5)?FinishReason::Cancelled:FinishReason::Length;
@@ -124,6 +134,8 @@ int main(int argc,char** argv){try{
             if(expected==FinishReason::Eos)require(received[id]==1,"EOS not early");
         }
         const auto after=trace->stats();
+        require(trace->capacity_ledger().committed_blocks==0,"reservation leak between waves");
+        require(trace->shared_admission_calls>0,"shared admission bypassed");
         require(after.forward_tokens-before.forward_tokens==forward_tokens&&after.prefix_reused_tokens-before.prefix_reused_tokens==reused_tokens,"step/runner accounting mismatch");
         require(after.live_sequences==0&&after.block_table_device_bytes==0,"sequence/table leak");
         require(after.kv_live_blocks==after.kv_cache_only_blocks&&after.kv_cached_blocks==after.kv_cache_only_blocks,"non-cache page leak");
@@ -132,6 +144,7 @@ int main(int argc,char** argv){try{
         if(wave%5==4){trace->clear_prefix_cache();require(trace->stats().kv_live_blocks==0,"clear leaked KV");}
         total+=8;total_tokens+=wave_tokens;auto mem=memory();
         std::cout<<"{\"wave\":"<<wave<<",\"elapsed_ms\":"<<ms(start)<<",\"wall_ms\":"<<ms(wave_start)
+                 <<",\"peak_committed\":"<<peak_committed<<",\"peak_saved_pages\":"<<peak_saved<<",\"shared_admission_calls\":"<<trace->shared_admission_calls
                  <<",\"step_ms\":"<<step_ms<<",\"steps\":"<<steps<<",\"tokens\":"<<wave_tokens
                  <<",\"private_bytes\":"<<mem.first<<",\"rss_bytes\":"<<mem.second
                  <<",\"cached_pages\":"<<after.kv_cached_blocks<<",\"forward_tokens\":"<<after.forward_tokens-before.forward_tokens

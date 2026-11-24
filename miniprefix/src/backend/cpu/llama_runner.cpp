@@ -45,6 +45,7 @@ public:
         result.cow_copy_ns=costs_.cow_copy_ns;result.cow_timed_copies=costs_.cow_timed_copies;return result;
     }
     void set_cost_timing(bool enabled) override{cost_timing_=enabled;kv_.set_cost_timing(enabled);}
+    KvCapacityLedger capacity_ledger() const override{return kv_.capacity_ledger();}
     int context_limit() const override{return kv_.context_limit();}
     KvAdmission reserve_request(const RequestId& id,std::size_t tokens) override{return kv_.reserve_request(id,tokens);}
     KvAdmission reserve_request(const RequestId& id,std::size_t tokens,const std::vector<TokenId>& prompt) override{

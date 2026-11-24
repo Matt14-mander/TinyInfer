@@ -175,3 +175,11 @@ CTest 65/65 通过；真实 SmolLM2-135M 的原容量专项及新增 8 个 CPU/C
 5/7 页池热缓存首轮 resident 数为 2，冷缓存为 1，输出与关闭缓存的大池参考一致，清理后
 live_sequences/kv_live_blocks 均归零。模型与最终 worker SHA256 及案例结果见
 [共享准入验收](acceptance/shared-capacity-admission.json)。尚未测量持续到达的性能收益。
+
+## 第三步：压力与收益验收
+
+已完成保守/共享准入在 off/cold/hot 下的持续到达对照，以及固定缓存预算的物理池诊断。
+CPU/CUDA 各至少五分钟生命周期压力通过。容量收益明确，但小池热缓存中的批量回退限制了
+吞吐收益；下一项执行优化应关注批量 COW 的临时物理页空间，不能仅靠增加活跃请求数。
+完整边界与复现见 [测量协议](shared_capacity_measurement.md)，结果见
+[共享容量验收报告](acceptance/shared-capacity-measurement.md)。

@@ -221,6 +221,7 @@ public:
         if(enabled&&!copy_events_)copy_events_=std::make_unique<TimingEvents>();
         cost_timing_=enabled;kv_.set_cost_timing(enabled);
     }
+    KvCapacityLedger capacity_ledger() const override{return kv_.capacity_ledger();}
     int context_limit() const override{return kv_.context_limit();}
     KvAdmission reserve_request(const RequestId& id,std::size_t tokens) override{return kv_.reserve_request(id,tokens);}
     KvAdmission reserve_request(const RequestId& id,std::size_t tokens,const std::vector<TokenId>& prompt) override{
