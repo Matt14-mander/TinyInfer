@@ -11,6 +11,7 @@ void execution_stats(std::ostream&,const ExecutionStats&);
 void cost_stats(std::ostream&,const CostStats&);
 void prefill_stats(std::ostream&,const PrefillBatchStats&);
 void decode_stats(std::ostream&,const DecodeBatchStats&);
+void lifecycle_stats(std::ostream&,const LifecycleStats&);
 void stats(std::ostream&,const RunnerStats&);
 void step_stats(std::ostream&,const EngineStepStats&);
 void error(std::ostream&,const std::string&);

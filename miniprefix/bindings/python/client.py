@@ -2,13 +2,20 @@
 from pathlib import Path
 import subprocess
 import time
+from collections import deque
 
 
 class NativeEngine:
     def __init__(self, worker, model, backend="cpu", context=512, batch_size=2, token_budget=32, chunk_size=16,
-                 block_tokens=16, kv_blocks=128, prefix_cache_blocks=0):
+                 block_tokens=16, kv_blocks=128, prefix_cache_blocks=0, max_waiting_requests=1024, max_event_slots=65536,
+                 history_capacity=4096, history_ttl_ms=300000):
+        limits=(max_waiting_requests,max_event_slots,history_capacity,history_ttl_ms)
+        if any(type(n) is not int or n<0 or n>2147483647 for n in limits) or not all(limits[:2]):
+            raise ValueError("invalid lifecycle limits")
+        self.history_capacity,self.history_ttl_ms=history_capacity,history_ttl_ms
+        self.history=deque();self.next_handle=1
         self.process = subprocess.Popen([str(Path(worker).resolve()), str(Path(model).resolve()), backend,
-                                         str(context), str(batch_size), str(token_budget), str(chunk_size), str(block_tokens), str(kv_blocks), str(prefix_cache_blocks)],
+                                         str(context), str(batch_size), str(token_budget), str(chunk_size), str(block_tokens), str(kv_blocks), str(prefix_cache_blocks), *(map(str,limits) if limits!=(1024,65536,4096,300000) else ())],
                                         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                         text=True, bufsize=1)
         self.ids, self.diagnostics, self.pending = {}, {}, set()
@@ -40,16 +47,27 @@ class NativeEngine:
             self.close(force=True)
             raise RuntimeError("invalid native payload")
 
-    def submit(self, request_id, prompt_tokens, max_new_tokens=32, eos_token_id="model"):
+    def _prune_history(self):
+        now=time.monotonic()
+        while self.history and (len(self.history)>self.history_capacity or now>=self.history[0][1]):
+            key,_=self.history.popleft();self.ids.pop(key,None)
+
+    def submit(self, request_id, prompt_tokens, max_new_tokens=32, eos_token_id="model", timeout_ms=0):
+        self._prune_history()
         if request_id in self.ids:
             raise ValueError("duplicate request ID")
         prompt_tokens = list(prompt_tokens)
         if (not isinstance(request_id, str) or not request_id or type(max_new_tokens) is not int
                 or any(type(t) is not int for t in prompt_tokens)):
             raise ValueError("invalid request")
-        handle = len(self.ids) + 1
+        if type(timeout_ms) is not int or timeout_ms<0 or timeout_ms>2147483647:
+            raise ValueError("invalid timeout")
+        handle = self.next_handle
+        if handle>2147483647:raise RuntimeError("native handle space exhausted; open a new session")
         eos = self.eos if eos_token_id == "model" else -1 if eos_token_id is None else eos_token_id
-        self._command(["SUBMIT", handle, max_new_tokens, eos, len(prompt_tokens)] + prompt_tokens)
+        fields=(["SUBMIT_TIMEOUT",handle,max_new_tokens,eos,timeout_ms] if timeout_ms else ["SUBMIT",handle,max_new_tokens,eos])
+        self._command(fields+[len(prompt_tokens)]+prompt_tokens)
+        self.next_handle+=1
         self.ids[request_id] = handle
         self.pending.add(request_id)
 
@@ -60,19 +78,26 @@ class NativeEngine:
         result = []
         for i in range(values[0]):
             handle, token, reason = values[1 + i * 3:4 + i * 3]
-            if handle not in reverse or reason not in (-1, 0, 1, 2, 3):
+            if handle not in reverse or reason not in (-1, 0, 1, 2, 3, 4):
                 raise RuntimeError("invalid native event identity/reason")
             key = reverse[handle]
             event = {"request_id": key, "token_id": None if token == -1 else token,
-                     "finish_reason": None if reason == -1 else ("eos", "length", "cancelled", "error")[reason],
+                     "finish_reason": None if reason == -1 else ("eos", "length", "cancelled", "error", "timeout")[reason],
                      "received_ns": time.perf_counter_ns()}
             if reason != -1:
                 self.pending.discard(key)
+                self.history.append((key,time.monotonic()+self.history_ttl_ms/1000))
             result.append(event)
+        self._prune_history()
         return result
 
     def step(self):
         return self._events(self._command(["STEP"]))
+
+    def lifecycle_stats(self):
+        values=self._command(["LIFECYCLE_STATS"])
+        if len(values)!=6:raise RuntimeError("invalid lifecycle stats")
+        return dict(zip(("waiting","active","buffered_events","event_slots","tracked_ids","history_ids"),values))
 
     def last_step_stats(self):
         values = self._command(["STEP_STATS"])

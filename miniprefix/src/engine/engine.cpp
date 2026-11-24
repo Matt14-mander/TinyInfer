@@ -12,20 +12,28 @@ SchedulerConfig scheduler_config(const EngineConfig& config){
     return {config.max_batch_size,config.token_budget,config.prefill_chunk};
 }
 }
-Engine::Engine(std::unique_ptr<ModelRunner> runner,EngineConfig config):runner_(std::move(runner)),config_(config),
-    scheduler_(scheduler_config(config)){
-    if(!runner_||config.max_batch_size<1||config.token_budget<1||config.prefill_chunk<1||config.context<1||config.context>runner_->config().context||config.context>runner_->context_limit())
+Engine::Engine(std::unique_ptr<ModelRunner> runner,EngineConfig config,Now now):runner_(std::move(runner)),config_(config),
+    scheduler_(scheduler_config(config)),now_(std::move(now)){
+    if(!runner_||!now_||!config.max_waiting_requests||!config.max_event_slots||config.max_batch_size<1||config.token_budget<1||config.prefill_chunk<1||config.context<1||config.context>runner_->config().context||config.context>runner_->context_limit())
         throw std::invalid_argument("invalid engine configuration");
 }
 Engine::~Engine(){try{shutdown();}catch(...){}}
 void Engine::submit(Request request){
     if(failed_)throw std::runtime_error("engine failed; create a new engine");
+    const auto now=now_();prune_history(now);
     if(request.id.empty()||seen_.count(request.id)||request.prompt_token_ids.empty()||request.generation.max_new_tokens<1||
        request.prompt_token_ids.size()+std::uint64_t(request.generation.max_new_tokens)>std::uint64_t(config_.context))
         throw std::invalid_argument("invalid request, duplicate ID or context overflow");
     for(auto t:request.prompt_token_ids)if(t<0||t>=runner_->config().vocabulary)throw std::invalid_argument("invalid prompt token");
     if(request.generation.eos_token_id&&(*request.generation.eos_token_id<0||*request.generation.eos_token_id>=runner_->config().vocabulary))throw std::invalid_argument("invalid EOS");
-    State state;state.request=std::move(request);waiting_.push_back(std::move(state));seen_.insert(waiting_.back().request.id);
+    const auto slots=std::size_t(request.generation.max_new_tokens)+1;
+    if(waiting_.size()>=config_.max_waiting_requests)throw QueueFullError("waiting queue full");
+    if(slots>config_.max_event_slots-event_slots_)throw QueueFullError("event capacity exhausted; poll events or reduce output budget");
+    State state;if(request.timeout_ms)state.deadline=now+std::chrono::milliseconds(request.timeout_ms);
+    state.request=std::move(request);
+    const auto inserted=seen_.insert(state.request.id);
+    try{waiting_.push_back(std::move(state));}catch(...){seen_.erase(inserted.first);throw;}
+    event_slots_+=slots;
 }
 void Engine::terminal(State& state,FinishReason reason,std::optional<TokenId> token,
                       const std::string& error,TerminalCleanup cleanup){
@@ -36,6 +44,8 @@ void Engine::terminal(State& state,FinishReason reason,std::optional<TokenId> to
     runner_->release_reservation(state.request.id);
     state.resident=false;
     events_.push_back({state.request.id,token,reason,error});
+    ++state.emitted_events;
+    event_slots_-=std::size_t(state.request.generation.max_new_tokens)+1-state.emitted_events;
     state.finished=true;
 }
 void Engine::remove_finished(bool include_waiting){
@@ -73,6 +83,13 @@ bool Engine::step(){
     try{
         using Clock=std::chrono::steady_clock;
         const auto begin=execution_timing_?Clock::now():Clock::time_point{};
+        // One clock snapshot for the entire step: a running batch is never interrupted.
+        const auto now=now_();prune_history(now);
+        for(auto& state:active_)
+            if(state.deadline&&now>=*state.deadline){terminal(state,FinishReason::Timeout);progressed=true;}
+        for(auto& state:waiting_)
+            if(state.deadline&&now>=*state.deadline){terminal(state,FinishReason::Timeout);progressed=true;}
+        remove_finished(true);
         auto slots=scheduler_.admission_count(active_.size(),waiting_.size());
         while(slots&&!waiting_.empty()){
             auto& state=waiting_.front();
@@ -171,7 +188,7 @@ bool Engine::step(){
                 if(r.generation.eos_token_id&&token==*r.generation.eos_token_id)finish=FinishReason::Eos;
                 else if(s.output.size()==r.generation.max_new_tokens)finish=FinishReason::Length;
                 if(finish)terminal(s,*finish,token);
-                else events_.push_back({r.id,token,std::nullopt,{}});
+                else{events_.push_back({r.id,token,std::nullopt,{}});++s.emitted_events;}
             }catch(const KvCapacityError& error){
                 // Defensive isolation for bounded runners/direct diagnostic interference.
                 // A failed release still reaches the fatal backend handler below.
@@ -193,7 +210,21 @@ bool Engine::step(){
     }
     return true;
 }
-std::vector<GenerationEvent> Engine::poll_events(){auto result=std::move(events_);events_.clear();return result;}
+void Engine::prune_history(Clock::time_point now){
+    while(!history_.empty()&&(history_.size()>config_.history_capacity||now>=history_.front().second)){
+        seen_.erase(history_.front().first);history_.pop_front();
+    }
+}
+LifecycleStats Engine::lifecycle_stats() const{return {waiting_.size(),active_.size(),events_.size(),event_slots_,seen_.size(),history_.size()};}
+std::vector<GenerationEvent> Engine::poll_events(){
+    const auto now=now_();prune_history(now);
+    const auto original=history_.size();
+    try{for(const auto& event:events_)if(event.finish_reason)
+        history_.emplace_back(event.request_id,now+std::chrono::milliseconds(config_.history_ttl_ms));
+    }catch(...){while(history_.size()>original)history_.pop_back();throw;}
+    prune_history(now);
+    auto result=std::move(events_);events_.clear();event_slots_-=result.size();return result;
+}
 void Engine::cancel(const RequestId& id){
     for(auto& state:waiting_)if(state.request.id==id&&!state.finished){terminal(state,FinishReason::Cancelled);remove_finished(true);return;}
     for(auto& state:active_)if(state.request.id==id&&!state.finished){terminal(state,FinishReason::Cancelled);remove_finished();return;}

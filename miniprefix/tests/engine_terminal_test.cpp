@@ -8,7 +8,7 @@ struct Trace {
     std::vector<std::string> operations;
     std::set<RequestId> resident;
     RequestId fail_append,fail_release;
-    int clears=0;
+    int clears=0;std::function<void()> forward_hook;
 };
 class Runner final:public ModelRunner {
     ModelConfig config_;
@@ -20,6 +20,7 @@ public:
     void create(const RequestId& id) override{assert(trace_->resident.insert(id).second);trace_->operations.push_back("create:"+id);}
     std::vector<float> append(const RequestId& id,const std::vector<TokenId>& tokens) override{
         assert(trace_->resident.count(id));trace_->operations.push_back("append:"+id);
+        if(trace_->forward_hook)trace_->forward_hook();
         if(id==trace_->fail_append)throw std::runtime_error("forward failed");
         std::vector<float> logits(128,0);logits.at(tokens.back()+1)=1;return logits;
     }
@@ -127,10 +128,69 @@ void scheduling_after_partial_shutdown(){
     assert(engine.idle()&&trace->resident.empty());
     assert(std::count(trace->operations.begin(),trace->operations.end(),"append:first")==1);
 }
+void timeout_boundary(){
+    auto trace=std::make_shared<Trace>();Engine::Clock::time_point now{};
+    trace->forward_hook=[&]{now+=std::chrono::milliseconds(10);};
+    Engine e(std::make_unique<Runner>(trace),{1,8,8,128},[&]{return now;});
+    auto a=request("a",1,2);a.timeout_ms=1;e.submit(a);e.step();auto events=e.poll_events();
+    assert(events.size()==1&&events[0].token_id&&!events[0].finish_reason); // deadline crossed inside forward
+    e.step();events=e.poll_events();assert(events.size()==1&&events[0].finish_reason==FinishReason::Timeout);
+    auto done=request("done");done.timeout_ms=1;e.submit(done);e.step();events=e.poll_events();
+    assert(events.size()==1&&events[0].finish_reason==FinishReason::Length); // completed step wins
+    e.submit(request("head"));auto tail=request("tail");tail.timeout_ms=1;e.submit(tail);
+    now+=std::chrono::milliseconds(1);e.step();events=e.poll_events();
+    assert(events.size()==2&&events[0].request_id=="tail"&&events[0].finish_reason==FinishReason::Timeout);
+    assert(events[1].request_id=="head"&&events[1].finish_reason==FinishReason::Length);
+}
+void lifecycle_limits(){
+    auto trace=std::make_shared<Trace>();Engine::Clock::time_point now{};
+    EngineConfig config{1,8,8,128};config.max_waiting_requests=1;config.max_event_slots=6;
+    config.history_capacity=1;config.history_ttl_ms=10;
+    Engine e(std::make_unique<Runner>(trace),config,[&]{return now;});
+    auto a=request("a",1,3);a.timeout_ms=5;e.submit(a);
+    rejects([&]{e.submit(request("queue-full"));});assert(e.lifecycle_stats().tracked_ids==1);
+    e.step();assert(!e.idle()); // one resident; event credit survives polling
+    e.poll_events();assert(e.lifecycle_stats().event_slots==3);
+    auto b=request("b");b.timeout_ms=2;e.submit(b);
+    now+=std::chrono::milliseconds(2);e.step();auto events=e.poll_events();
+    assert(events.size()==2);event(events[0],"b",std::nullopt,FinishReason::Timeout);
+    event(events[1],"a",3,std::nullopt);assert(!e.failed());
+    now+=std::chrono::milliseconds(3);e.step();assert(e.idle());
+    rejects([&]{e.submit(a);}); // unread terminal pins ID even beyond TTL
+    now+=std::chrono::milliseconds(20);rejects([&]{e.submit(a);});
+    events=e.poll_events();assert(events.size()==1);event(events[0],"a",std::nullopt,FinishReason::Timeout);
+    assert(e.lifecycle_stats().event_slots==0&&trace->resident.empty());
+    rejects([&]{e.submit(a);});
+    now+=std::chrono::milliseconds(10);e.submit(a);e.cancel("a");e.poll_events();
+    e.submit(request("queue-full"));e.step();e.poll_events(); // rejection did not poison ID
+    e.submit(a); // count eviction removed a from the one-entry history
+    e.cancel("a");e.poll_events();assert(e.lifecycle_stats().tracked_ids==1);
+}
+void event_backpressure_and_churn(){
+    auto trace=std::make_shared<Trace>();EngineConfig config{1,8,8,128};
+    config.max_event_slots=2;config.history_capacity=2;
+    Engine e(std::make_unique<Runner>(trace),config);
+    e.submit(request("one"));e.step(); // one buffered terminal still owns one slot
+    rejects([&]{e.submit(request("two"));});assert(e.idle()&&!e.failed());
+    e.poll_events();e.submit(request("two"));e.cancel("two");e.poll_events();
+    for(int i=0;i<10000;++i){e.submit(request(std::to_string(i)));e.step();e.poll_events();
+        assert(e.lifecycle_stats().tracked_ids<=2&&e.lifecycle_stats().event_slots==0);}
+    assert(e.lifecycle_stats().history_ids==2);
+}
+void timeout_cleanup_failure(){
+    auto trace=std::make_shared<Trace>();Engine::Clock::time_point now{};
+    Engine e(std::make_unique<Runner>(trace),{1,8,8,128},[&]{return now;});
+    auto a=request("a",1,3);a.timeout_ms=1;e.submit(a);e.step();e.poll_events();
+    trace->fail_release="a";now+=std::chrono::milliseconds(1);e.step();
+    auto events=e.poll_events();assert(events.size()==1&&events[0].finish_reason==FinishReason::Error);
+    assert(e.failed()&&e.idle()&&trace->resident.empty()&&e.lifecycle_stats().event_slots==0);
+}
+
 }
 int main(int argc,char** argv){
     const bool legacy=argc==2&&std::string(argv[1])=="--legacy-compatible";
     if(argc!=1&&!legacy)return 2;
+    timeout_boundary();lifecycle_limits();event_backpressure_and_churn();timeout_cleanup_failure();
     completion();cancellation();failure_preserves_prior_events(false);failure_preserves_prior_events(true);
     shutdown_order_and_destructor();retry_cancellation();if(!legacy){retry_partial_shutdown();scheduling_after_partial_shutdown();}
     std::cout<<"terminal events, ordering, release ownership and retries passed\n";}

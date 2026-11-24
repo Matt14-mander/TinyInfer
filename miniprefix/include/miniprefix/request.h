@@ -12,7 +12,7 @@ namespace miniprefix {
 using TokenId = std::int32_t;
 using RequestId = std::string;
 
-enum class FinishReason { Eos, Length, Cancelled, Error };
+enum class FinishReason { Eos, Length, Cancelled, Error, Timeout };
 
 struct GenerationOptions {
     std::uint32_t max_new_tokens = 32;
@@ -24,6 +24,7 @@ struct Request {
     RequestId id;
     std::vector<TokenId> prompt_token_ids;
     GenerationOptions generation;
+    std::uint32_t timeout_ms=0; // Submission-to-step-boundary deadline; zero disables.
 };
 
 // A committed output token is emitted exactly once, including after replay.

@@ -7,6 +7,8 @@
 using namespace miniprefix;
 namespace {
 void parsing(){
+    auto timed=protocol::parse("SUBMIT_TIMEOUT 1 2 -1 10 1 3");assert(timed.request.timeout_ms==10);
+    bool rejected=false;try{protocol::parse("SUBMIT_TIMEOUT 1 2 -1 -1 1 3");}catch(const std::invalid_argument&){rejected=true;}assert(rejected);
     const std::vector<std::pair<std::string,std::string>> errors={
         {"COST_TIMING 2","invalid timing flag"},{"COST_TIMING","missing integer"},{"","unknown command"},{"step","unknown command"},{"UNKNOWN 1","unknown command"},
         {"CANCEL","missing integer"},{"CANCEL 2147483648","missing integer"},
@@ -29,6 +31,9 @@ void parsing(){
     assert(protocol::parse("CANCEL 1x").id==1); // formatted integer extraction, not strict token parsing
 }
 void encoding(){
+    std::ostringstream lifecycle;protocol::lifecycle_stats(lifecycle,{1,2,3,4,5,6});assert(lifecycle.str()=="OK 1 2 3 4 5 6\n");
+    assert(protocol::parse("LIFECYCLE_STATS").kind==protocol::Kind::LifecycleStats);
+    std::ostringstream timeout;protocol::events(timeout,{{"1",std::nullopt,FinishReason::Timeout,{}}});assert(timeout.str()=="OK 1 1 -1 4\n");
     std::ostringstream batch;protocol::decode_stats(batch,{2,7,1});assert(batch.str()=="OK 2 7 1\n");
     std::ostringstream packed;protocol::prefill_stats(packed,{1,2,3,4,5});assert(packed.str()=="OK 1 2 3 4 5\n");
     std::ostringstream out;protocol::ready(out,8,2,16,"cuda");protocol::ok(out);protocol::count(out,4);

@@ -40,3 +40,5 @@ CUDA 现已支持跨请求的变长 prefill 和 prefill/decode 混合计算，�
 对照正确性、实际跳过计算量、显存和端到端收益。
 
 已增加可选[批量空间与缓存保留策略](batch_cache_balance.md)，Full 保持默认，Adaptive 通过连续前缀拆批控制即时回收成本；适用范围由配对混合负载测量确定。
+
+已加入[有界等待队列、协作式超时与历史 ID 生命周期](request_lifecycle.md)，同步限制待消费事件额度；CPU/CUDA 和 Python 客户端均已接入。

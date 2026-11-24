@@ -15,6 +15,7 @@ int serve(Engine& engine,std::istream& in,std::ostream& out){
                 throw std::runtime_error("engine failed; create a new engine");
             switch(command.kind){
             case Kind::Submit:engine.submit(std::move(command.request));ok(out);break;
+            case Kind::LifecycleStats:lifecycle_stats(out,engine.lifecycle_stats());break;
             case Kind::Step:engine.step();events(out,engine.poll_events());break;
             case Kind::StepStats:step_stats(out,engine.last_step_stats());break;
             case Kind::Cancel:engine.cancel(std::to_string(command.id));events(out,engine.poll_events());break;

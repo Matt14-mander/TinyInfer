@@ -4,7 +4,7 @@
 #include <iostream>
 using namespace miniprefix;
 int main(int argc,char** argv){try{
-    if(argc<4||argc>10)throw std::invalid_argument("usage: miniprefix_worker MODEL cpu|cuda CONTEXT [BATCH TOKENS CHUNK BLOCK_TOKENS KV_BLOCKS PREFIX_BLOCKS]");
+    if(argc<4||argc>14)throw std::invalid_argument("usage: miniprefix_worker MODEL cpu|cuda CONTEXT [BATCH TOKENS CHUNK BLOCK_TOKENS KV_BLOCKS PREFIX_BLOCKS MAX_WAITING EVENT_SLOTS HISTORY_CAPACITY HISTORY_TTL_MS]");
     auto weights=ModelWeights::load(argv[1]);const int context=std::stoi(argv[3]);std::unique_ptr<ModelRunner> runner;
     KvCacheConfig kv;if(argc>7)kv.block_tokens=std::stoi(argv[7]);if(argc>8)kv.max_blocks=std::stoi(argv[8]);
     if(argc>9)kv.prefix_cache_blocks=std::stoi(argv[9]);
@@ -15,6 +15,11 @@ int main(int argc,char** argv){try{
 #endif
     else throw std::invalid_argument("backend unavailable in this build");
     EngineConfig config;config.context=context;if(argc>4)config.max_batch_size=std::stoi(argv[4]);if(argc>5)config.token_budget=std::stoi(argv[5]);if(argc>6)config.prefill_chunk=std::stoi(argv[6]);
+    auto bound=[&](int index){int n=std::stoi(argv[index]);if(n<0)throw std::invalid_argument("negative lifecycle limit");return n;};
+    if(argc>10)config.max_waiting_requests=bound(10);
+    if(argc>11)config.max_event_slots=bound(11);
+    if(argc>12)config.history_capacity=bound(12);
+    if(argc>13)config.history_ttl_ms=bound(13);
     Engine engine(std::move(runner),config);
     protocol::ready(std::cout,weights->config.vocabulary,weights->config.eos,context,backend);
     return protocol::serve(engine,std::cin,std::cout);

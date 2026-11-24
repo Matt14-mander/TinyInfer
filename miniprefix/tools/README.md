@@ -23,3 +23,5 @@ requirements-reference.txt 固定参考依赖，CPU PyTorch 单独安装于工�
 
 `verify_generation_history.py` 验证多轮生成历史完整页复用，覆盖 CPU/CUDA cache off/on，
 使用独立 Transformers full-prefix oracle，记录实际跳过计算量和恢复后的 logits。
+
+`verify_lifecycle.py` 使用真实 CPU/CUDA worker 验证队列拒绝与重试、超时、取消、ID TTL/轮换和资源释放，见[请求生命周期](../docs/request_lifecycle.md)。

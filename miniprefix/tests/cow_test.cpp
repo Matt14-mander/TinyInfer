@@ -1,4 +1,4 @@
-#include "miniprefix/model.h"
+#include "miniprefix/engine.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -614,6 +614,26 @@ void adaptive_runner(bool cuda){
     assert(r->batch_space_stats().split_calls==1);
     r->clear();assert(r->stats().kv_live_blocks==0&&r->stats().block_table_device_bytes==0);
 }
+void lifecycle_backend(bool cuda){
+    auto w=weights();auto runner=make_cpu_runner(w,32,{2,16,8});
+#ifdef MINIPREFIX_ENABLE_CUDA
+    if(cuda)runner=make_cuda_runner(w,32,{2,16,8});
+#endif
+    auto* trace=runner.get();Engine::Clock::time_point now{};
+    EngineConfig config{2,8,4,32};config.history_capacity=0;config.max_waiting_requests=2;
+    Engine e(std::move(runner),config,[&]{return now;});
+    for(int wave=0;wave<20;++wave){
+        Request a;a.id="a";a.prompt_token_ids={1,2,3};a.generation.max_new_tokens=4;a.timeout_ms=1;
+        auto b=a;b.id="b";e.submit(a);e.submit(b);e.step();
+        auto events=e.poll_events();assert(events.size()==2&&!e.failed());
+        now+=std::chrono::milliseconds(1);e.step();events=e.poll_events();
+        assert(events.size()==2&&e.idle()&&!e.failed());
+        for(const auto& event:events)assert(event.finish_reason==FinishReason::Timeout&&!event.token_id);
+        assert(trace->capacity_ledger().committed_blocks==0&&trace->stats().live_sequences==0);
+        assert(e.lifecycle_stats().event_slots==0&&e.lifecycle_stats().tracked_ids==0);
+    }
+    e.shutdown();assert(trace->stats().kv_live_blocks==0&&trace->stats().block_table_device_bytes==0);
+}
 int main(int argc,char** argv){
     std::cout<<"COW regression started"<<std::endl;
     bool cuda=false,required=false;for(int i=1;i<argc;++i){cuda|=std::string(argv[i])=="--cuda";required|=std::string(argv[i])=="--require-device";}
@@ -622,7 +642,7 @@ int main(int argc,char** argv){
 #else
     assert(!cuda);
 #endif
-    metadata();std::cout<<"COW metadata passed"<<std::endl;
+    lifecycle_backend(cuda);metadata();std::cout<<"COW metadata passed"<<std::endl;
     adaptive_runner(cuda);pressure_payload(cuda);pressure_runner(cuda);
     payload(cuda);payload(cuda,true);std::cout<<"COW payload passed"<<std::endl;
     runner(cuda);std::cout<<"COW copy, capacity, rollback, retry and release passed"<<std::endl;
