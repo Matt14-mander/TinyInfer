@@ -1,0 +1,511 @@
+{
+  "header": {
+    "binary_sha256": "49bc0f9cd44cf15294b2ed04e8e7cbb60aac61a8818d561fb3fb38935824101f",
+    "model_sha256": "fe826f487690854ac806197b60edffc2c76c6c446eede6b188e47763deae7aef",
+    "backend": "cuda",
+    "rates": [
+      40.0
+    ],
+    "requests": 128,
+    "repeats": 3,
+    "pages": 20,
+    "pools": null,
+    "cache_pages": null,
+    "modes": [
+      "off",
+      "cold",
+      "hot"
+    ],
+    "gpu": {
+      "command": [
+        "nvidia-smi",
+        "--query-gpu=name,driver_version,memory.total,pstate,clocks.sm,temperature.gpu,power.draw",
+        "--format=csv,noheader"
+      ],
+      "value": "NVIDIA GeForce RTX 4070 Laptop GPU, 555.97, 8188 MiB, P8, 375 MHz, 58, 8.56 W"
+    },
+    "timing": "native instrumented; planned arrival to event polling; model load/warmup/prime excluded",
+    "config": {
+      "batch_size": 4,
+      "token_budget": 32,
+      "chunk": 16,
+      "block_tokens": 8,
+      "shared_prefix_tokens": 64,
+      "prompt_lengths": [
+        65,
+        68,
+        71,
+        74
+      ],
+      "output_tokens": 8
+    },
+    "before_binary_sha256": "c9c17af7b176071f6e48f0f6b8dfda00ac6fbbc12c5bbbdf5c81f5aeccb9ca13",
+    "policies": [
+      "shared"
+    ]
+  },
+  "cells": [
+    {
+      "variant": "after",
+      "rate": 40,
+      "mode": "cold",
+      "policy": "shared",
+      "repeats": 3,
+      "count": 128,
+      "pool_pages": 20,
+      "cache_pages": 20,
+      "duration_ms": 3254.7173,
+      "step_ms": 3248.7783,
+      "steps": 333,
+      "mean_active": 3.06685162197,
+      "peak_active": 4,
+      "peak_resident": 4,
+      "peak_committed": 19,
+      "peak_logical_reserved": 40,
+      "peak_saved_pages": 24,
+      "physical_peak": 20,
+      "reused_tokens": 8381,
+      "forward_tokens": 1411,
+      "decode_batches": 321,
+      "decode_fallbacks": 0,
+      "prefill_fallbacks": 0,
+      "prefill_batches": 0,
+      "mixed_batches": 0,
+      "final_blocks": 0,
+      "final_committed": 0,
+      "ttft_ms": {
+        "p50": 17.804099999999835,
+        "p95": 23.434699999999793,
+        "p99": 28.331499999999778
+      },
+      "tpot_ms": {
+        "p50": 9.343028571428606,
+        "p95": 10.528657142857137,
+        "p99": 10.65325714285713
+      },
+      "latency_ms": {
+        "p50": 84.03960000000006,
+        "p95": 96.32550000000037,
+        "p99": 99.10849999999999
+      },
+      "queue_ms": {
+        "p50": 0.006700000000023465,
+        "p95": 0.015599999999949432,
+        "p99": 7.136799999999766
+      },
+      "capacity_wait_ms": {
+        "p50": 0,
+        "p95": 0,
+        "p99": 0
+      },
+      "submit_delay_ms": {
+        "p50": 4.097599999999602,
+        "p95": 7.5726999999999975,
+        "p99": 10.22219999999993
+      },
+      "arriving_tok_s": 320.54029482433924,
+      "arriving_backlog": 0.004504845288508948,
+      "service_tok_s": 319.57350972824236,
+      "service_backlog": 0.004490499861656211,
+      "full_tok_s": 314.62025903140653,
+      "wait_attempts": 0,
+      "waited_requests": 0,
+      "drain_ms": 67.86700000000019,
+      "itl_p99_ms": 15.764999999999873,
+      "repeat": 1,
+      "arriving_range": [
+        320.07482268582265,
+        320.8859129539016
+      ],
+      "service_range": [
+        319.4779863462003,
+        320.0441245250125
+      ]
+    },
+    {
+      "variant": "after",
+      "rate": 40,
+      "mode": "hot",
+      "policy": "shared",
+      "repeats": 3,
+      "count": 128,
+      "pool_pages": 20,
+      "cache_pages": 20,
+      "duration_ms": 3250.1435,
+      "step_ms": 3238.1875,
+      "steps": 324,
+      "mean_active": 3.14159362502,
+      "peak_active": 4,
+      "peak_resident": 4,
+      "peak_committed": 16,
+      "peak_logical_reserved": 40,
+      "peak_saved_pages": 24,
+      "physical_peak": 20,
+      "reused_tokens": 8443,
+      "forward_tokens": 1349,
+      "decode_batches": 316,
+      "decode_fallbacks": 0,
+      "prefill_fallbacks": 0,
+      "prefill_batches": 0,
+      "mixed_batches": 0,
+      "final_blocks": 0,
+      "final_committed": 0,
+      "ttft_ms": {
+        "p50": 17.21180000000004,
+        "p95": 22.710900000000038,
+        "p99": 24.25149999999985
+      },
+      "tpot_ms": {
+        "p50": 9.952928571428597,
+        "p95": 10.70995714285715,
+        "p99": 10.809671428571423
+      },
+      "latency_ms": {
+        "p50": 87.14190000000008,
+        "p95": 94.12699999999995,
+        "p99": 95.57249999999999
+      },
+      "queue_ms": {
+        "p50": 0.007000000000061846,
+        "p95": 0.014200000000002433,
+        "p99": 7.509999999999991
+      },
+      "capacity_wait_ms": {
+        "p50": 0,
+        "p95": 0,
+        "p99": 0
+      },
+      "submit_delay_ms": {
+        "p50": 3.714100000000002,
+        "p95": 7.702499999999873,
+        "p99": 10.986099999999851
+      },
+      "arriving_tok_s": 320.0207805701669,
+      "arriving_backlog": 0.014683758685629244,
+      "service_tok_s": 319.38109750233093,
+      "service_backlog": 0.014596442021987273,
+      "full_tok_s": 315.0630118331698,
+      "wait_attempts": 0,
+      "waited_requests": 0,
+      "drain_ms": 63.29340000000002,
+      "itl_p99_ms": 15.865600000000086,
+      "repeat": 1,
+      "arriving_range": [
+        319.5552207009431,
+        329.64202935874323
+      ],
+      "service_range": [
+        318.9617917947908,
+        349.8218278438765
+      ]
+    },
+    {
+      "variant": "after",
+      "rate": 40,
+      "mode": "off",
+      "policy": "shared",
+      "repeats": 3,
+      "count": 128,
+      "pool_pages": 20,
+      "cache_pages": 0,
+      "duration_ms": 5865.1075,
+      "step_ms": 5853.4803,
+      "steps": 780,
+      "mean_active": 1.96926756337,
+      "peak_active": 2,
+      "peak_resident": 2,
+      "peak_committed": 20,
+      "peak_logical_reserved": 20,
+      "peak_saved_pages": 0,
+      "physical_peak": 20,
+      "reused_tokens": 0,
+      "forward_tokens": 9792,
+      "decode_batches": 437,
+      "decode_fallbacks": 0,
+      "prefill_fallbacks": 0,
+      "prefill_batches": 311,
+      "mixed_batches": 8,
+      "final_blocks": 0,
+      "final_committed": 0,
+      "ttft_ms": {
+        "p50": 1337.8630999999998,
+        "p95": 2502.9009,
+        "p99": 2597.6814999999997
+      },
+      "tpot_ms": {
+        "p50": 6.985314285714269,
+        "p95": 7.2214571428572265,
+        "p99": 7.452799999999992
+      },
+      "latency_ms": {
+        "p50": 1386.4147999999998,
+        "p95": 2549.5448,
+        "p99": 2644.5981999999995
+      },
+      "queue_ms": {
+        "p50": 1292.8029,
+        "p95": 2459.7599,
+        "p99": 2553.8964999999994
+      },
+      "capacity_wait_ms": {
+        "p50": 0,
+        "p95": 92.6751,
+        "p99": 94.5458
+      },
+      "submit_delay_ms": {
+        "p50": 3.6340000000000146,
+        "p95": 8.28269999999975,
+        "p99": 10.442099999999982
+      },
+      "arriving_tok_s": 175.12232809683235,
+      "arriving_backlog": 1.0,
+      "service_tok_s": 177.77661530489098,
+      "service_backlog": 1.0,
+      "full_tok_s": 174.59185530699992,
+      "wait_attempts": 761,
+      "waited_requests": 64,
+      "drain_ms": 2674.733,
+      "itl_p99_ms": 8.320500000000038,
+      "repeat": 1,
+      "arriving_range": [
+        174.5567894019092,
+        178.7430827985763
+      ],
+      "service_range": [
+        176.8461450463577,
+        179.28434986578404
+      ]
+    },
+    {
+      "variant": "before",
+      "rate": 40,
+      "mode": "cold",
+      "policy": "shared",
+      "repeats": 3,
+      "count": 128,
+      "pool_pages": 20,
+      "cache_pages": 20,
+      "duration_ms": 6422.3045,
+      "step_ms": 6404.0086,
+      "steps": 270,
+      "mean_active": 3.62958832615,
+      "peak_active": 4,
+      "peak_resident": 4,
+      "peak_committed": 20,
+      "peak_logical_reserved": 40,
+      "peak_saved_pages": 24,
+      "physical_peak": 20,
+      "reused_tokens": 8622,
+      "forward_tokens": 1170,
+      "decode_batches": 0,
+      "decode_fallbacks": 228,
+      "prefill_fallbacks": 0,
+      "prefill_batches": 1,
+      "mixed_batches": 2,
+      "final_blocks": 0,
+      "final_committed": 0,
+      "ttft_ms": {
+        "p50": 1583.6233000000002,
+        "p95": 2980.7376000000004,
+        "p99": 3144.3248
+      },
+      "tpot_ms": {
+        "p50": 24.93369999999998,
+        "p95": 25.836314285714284,
+        "p99": 26.57241428571429
+      },
+      "latency_ms": {
+        "p50": 1761.0359000000003,
+        "p95": 3151.6304,
+        "p99": 3238.78
+      },
+      "queue_ms": {
+        "p50": 1545.8509,
+        "p95": 2951.0860000000002,
+        "p99": 3117.3437
+      },
+      "capacity_wait_ms": {
+        "p50": 0,
+        "p95": 0,
+        "p99": 25.1652
+      },
+      "submit_delay_ms": {
+        "p50": 11.540799999999763,
+        "p95": 24.692200000000014,
+        "p99": 25.53469999999993
+      },
+      "arriving_tok_s": 158.6402266288952,
+      "arriving_backlog": 1.0,
+      "service_tok_s": 159.85194481629694,
+      "service_backlog": 1.0,
+      "full_tok_s": 159.44432407401425,
+      "wait_attempts": 10,
+      "waited_requests": 2,
+      "drain_ms": 3237.0042999999996,
+      "itl_p99_ms": 27.83179999999993,
+      "repeat": 1,
+      "arriving_range": [
+        149.62010520163648,
+        162.11581928242967
+      ],
+      "service_range": [
+        157.55555525912516,
+        162.0822931227607
+      ]
+    },
+    {
+      "variant": "before",
+      "rate": 40,
+      "mode": "hot",
+      "policy": "shared",
+      "repeats": 3,
+      "count": 128,
+      "pool_pages": 20,
+      "cache_pages": 20,
+      "duration_ms": 6671.2501,
+      "step_ms": 6661.7001,
+      "steps": 264,
+      "mean_active": 3.57234240101,
+      "peak_active": 4,
+      "peak_resident": 4,
+      "peak_committed": 16,
+      "peak_logical_reserved": 40,
+      "peak_saved_pages": 24,
+      "physical_peak": 20,
+      "reused_tokens": 8750,
+      "forward_tokens": 1042,
+      "decode_batches": 0,
+      "decode_fallbacks": 257,
+      "prefill_fallbacks": 0,
+      "prefill_batches": 0,
+      "mixed_batches": 0,
+      "final_blocks": 0,
+      "final_committed": 0,
+      "ttft_ms": {
+        "p50": 1594.3313,
+        "p95": 3190.7965,
+        "p99": 3335.1304
+      },
+      "tpot_ms": {
+        "p50": 25.597042857142828,
+        "p95": 28.1523,
+        "p99": 28.520285714285688
+      },
+      "latency_ms": {
+        "p50": 1768.9177000000002,
+        "p95": 3390.3551,
+        "p99": 3484.1063
+      },
+      "queue_ms": {
+        "p50": 1562.7257000000002,
+        "p95": 3137.1676999999995,
+        "p99": 3295.7447999999995
+      },
+      "capacity_wait_ms": {
+        "p50": 0,
+        "p95": 0,
+        "p99": 0
+      },
+      "submit_delay_ms": {
+        "p50": 13.04359999999997,
+        "p95": 25.309400000000096,
+        "p99": 26.0940999999998
+      },
+      "arriving_tok_s": 156.57996394540305,
+      "arriving_backlog": 1.0,
+      "service_tok_s": 154.3493504610999,
+      "service_backlog": 1.0,
+      "full_tok_s": 153.49447024928656,
+      "wait_attempts": 0,
+      "waited_requests": 0,
+      "drain_ms": 3477.8247999999994,
+      "itl_p99_ms": 32.72890000000007,
+      "repeat": 1,
+      "arriving_range": [
+        153.77621923501525,
+        160.03741134291133
+      ],
+      "service_range": [
+        148.94539287115916,
+        155.17279765384728
+      ]
+    },
+    {
+      "variant": "before",
+      "rate": 40,
+      "mode": "off",
+      "policy": "shared",
+      "repeats": 3,
+      "count": 128,
+      "pool_pages": 20,
+      "cache_pages": 0,
+      "duration_ms": 5993.0728,
+      "step_ms": 5989.2226,
+      "steps": 780,
+      "mean_active": 1.97073714143,
+      "peak_active": 2,
+      "peak_resident": 2,
+      "peak_committed": 20,
+      "peak_logical_reserved": 20,
+      "peak_saved_pages": 0,
+      "physical_peak": 20,
+      "reused_tokens": 0,
+      "forward_tokens": 9792,
+      "decode_batches": 437,
+      "decode_fallbacks": 0,
+      "prefill_fallbacks": 0,
+      "prefill_batches": 311,
+      "mixed_batches": 8,
+      "final_blocks": 0,
+      "final_committed": 0,
+      "ttft_ms": {
+        "p50": 1415.7266999999997,
+        "p95": 2615.1521000000002,
+        "p99": 2713.6282999999994
+      },
+      "tpot_ms": {
+        "p50": 7.088757142857178,
+        "p95": 7.537900000000003,
+        "p99": 7.991257142857145
+      },
+      "latency_ms": {
+        "p50": 1465.348,
+        "p95": 2663.7082,
+        "p99": 2765.057
+      },
+      "queue_ms": {
+        "p50": 1366.8292999999999,
+        "p95": 2572.391,
+        "p99": 2662.7613
+      },
+      "capacity_wait_ms": {
+        "p50": 0,
+        "p95": 96.025,
+        "p99": 99.3661
+      },
+      "submit_delay_ms": {
+        "p50": 3.478700000000117,
+        "p95": 8.420000000000073,
+        "p99": 10.030199999999695
+      },
+      "arriving_tok_s": 172.03193407159412,
+      "arriving_backlog": 1.0,
+      "service_tok_s": 174.6164359311652,
+      "service_backlog": 1.0,
+      "full_tok_s": 170.8639347748287,
+      "wait_attempts": 761,
+      "waited_requests": 64,
+      "drain_ms": 2799.6476000000002,
+      "itl_p99_ms": 8.911299999999983,
+      "repeat": 1,
+      "arriving_range": [
+        168.32261835184102,
+        178.7430827985763
+      ],
+      "service_range": [
+        173.5116588723178,
+        180.99360854803388
+      ]
+    }
+  ]
+}

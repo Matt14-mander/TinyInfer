@@ -115,6 +115,86 @@ void payload(bool cuda,bool merged=false){
     }
     m.release("a");m.release("b");assert(m.stats().kv_live_blocks==0);
 }
+void pressure_payload(bool cuda){
+    const bool merged=true;
+    KVManager m({4,4,1},2,3,16,100);m.create("a");m.create("b");
+    {auto tx=m.prepare_append("a",{1,2,3});tx.commit();}m.fork_sequence("a","b");
+    m.create("victim");{auto tx=m.prepare_append("victim",{9,9,9,9});tx.commit();}
+    m.cache_prefix("victim");m.release("victim");
+    const auto original=m.sequence("a").blocks;
+    const auto elements=m.reserved_bytes()/sizeof(float)/2;
+    std::vector<float> keys(elements),values(elements);
+    for(std::size_t i=0;i<elements;++i){keys[i]=float(i+1);values[i]=-float(i+1);}
+    auto* k=keys.data();auto* v=values.data();
+#ifdef MINIPREFIX_ENABLE_CUDA
+    struct Device {
+        float *k=nullptr,*v=nullptr;cudaStream_t stream=nullptr;
+        ~Device(){if(stream)cudaStreamSynchronize(stream);cudaFree(k);cudaFree(v);if(stream)cudaStreamDestroy(stream);}
+    } device;
+    auto check=[](cudaError_t status){if(status!=cudaSuccess)throw std::runtime_error(cudaGetErrorString(status));};
+    if(cuda){check(cudaStreamCreate(&device.stream));check(cudaMalloc(&device.k,elements*4));check(cudaMalloc(&device.v,elements*4));
+        k=device.k;v=device.v;check(cudaMemcpy(k,keys.data(),elements*4,cudaMemcpyHostToDevice));
+        check(cudaMemcpy(v,values.data(),elements*4,cudaMemcpyHostToDevice));}
+#endif
+    for(bool fail:{true,false}){
+        auto group=m.prepare_batch({{"b",{4,5}},{"a",{6},true}});assert(group.size()==2);
+        assert(m.stats().prefix_evictions==1&&m.stats().kv_live_blocks==4);
+        auto& tx=*group[0];int calls=0;
+        const auto copy=*tx.tail_copy();bool caught=false;
+        try{if(merged){tx.copy_shared_tail_region([&](const KVManager::TailCopyRegion& r){
+            assert(r.rows==2&&r.pitch==12&&r.width==9);
+#ifdef MINIPREFIX_ENABLE_CUDA
+            if(cuda){
+                check(cudaMemcpy2DAsync(k+r.destination,r.pitch*4,k+r.source,r.pitch*4,r.width*4,r.rows,cudaMemcpyDeviceToDevice,device.stream));
+                if(fail)throw std::runtime_error("failure between merged K and V submissions");
+                check(cudaMemcpy2DAsync(v+r.destination,r.pitch*4,v+r.source,r.pitch*4,r.width*4,r.rows,cudaMemcpyDeviceToDevice,device.stream));
+            }else
+#endif
+            {
+                for(std::size_t row=0;row<r.rows;++row)std::copy_n(k+r.source+row*r.pitch,r.width,k+r.destination+row*r.pitch);
+                if(fail)throw std::runtime_error("failure between merged K and V copies");
+                for(std::size_t row=0;row<r.rows;++row)std::copy_n(v+r.source+row*r.pitch,r.width,v+r.destination+row*r.pitch);
+            }
+        });}else tx.copy_shared_tail([&](std::size_t dst,std::size_t src,std::size_t count){
+#ifdef MINIPREFIX_ENABLE_CUDA
+            if(cuda){check(cudaMemcpyAsync(k+dst,k+src,count*4,cudaMemcpyDeviceToDevice,device.stream));
+                check(cudaMemcpyAsync(v+dst,v+src,count*4,cudaMemcpyDeviceToDevice,device.stream));}
+            else
+#endif
+            {std::copy_n(k+src,count,k+dst);std::copy_n(v+src,count,v+dst);}
+            if(++calls==1&&fail)throw std::runtime_error("injected after first layer copy");
+        });}catch(const std::runtime_error&){caught=true;}
+#ifdef MINIPREFIX_ENABLE_CUDA
+        if(cuda){check(cudaStreamSynchronize(device.stream));check(cudaMemcpy(keys.data(),k,elements*4,cudaMemcpyDeviceToHost));
+            check(cudaMemcpy(values.data(),v,elements*4,cudaMemcpyDeviceToHost));}
+#endif
+        assert(caught==fail);
+        for(int layer=0;layer<(fail&&!merged?1:2);++layer)for(int i=0;i<12;++i){
+            auto src=(copy.source*2+layer)*12+i,dst=(copy.destination*2+layer)*12+i;
+            assert(keys[src]==float(src+1)&&values[src]==-float(src+1));
+            if(i<9){assert(keys[dst]==keys[src]);
+                assert(values[dst]==((merged&&fail)?-float(dst+1):values[src]));}
+            else assert(keys[dst]==float(dst+1)&&values[dst]==-float(dst+1));
+        }
+        if(fail){rejects([&]{tx.commit();});tx.rollback();group[1]->rollback();assert(m.sequence("b").blocks==original&&m.stats().kv_live_blocks==1);}
+        else{
+            group[1]->copy_shared_tail_region([&](const KVManager::TailCopyRegion& r){
+#ifdef MINIPREFIX_ENABLE_CUDA
+                if(cuda){check(cudaMemcpy2DAsync(k+r.destination,r.pitch*4,k+r.source,r.pitch*4,r.width*4,r.rows,cudaMemcpyDeviceToDevice,device.stream));
+                    check(cudaMemcpy2DAsync(v+r.destination,r.pitch*4,v+r.source,r.pitch*4,r.width*4,r.rows,cudaMemcpyDeviceToDevice,device.stream));}
+                else
+#endif
+                for(std::size_t row=0;row<r.rows;++row){std::copy_n(k+r.source+row*r.pitch,r.width,k+r.destination+row*r.pitch);
+                    std::copy_n(v+r.source+row*r.pitch,r.width,v+r.destination+row*r.pitch);}
+            });
+#ifdef MINIPREFIX_ENABLE_CUDA
+            if(cuda)check(cudaStreamSynchronize(device.stream));
+#endif
+            tx.commit();group[1]->commit();
+        }
+    }
+    m.release("a");m.release("b");assert(m.stats().kv_live_blocks==0);
+}
 std::shared_ptr<ModelWeights> weights(int hidden=8,int layers=2){
     auto w=std::make_shared<ModelWeights>();auto& c=w->config;
     c.layers=layers;c.hidden=hidden;c.heads=hidden>256?8:2;c.kv_heads=1;c.intermediate=hidden+4;c.vocabulary=16;
@@ -345,6 +425,28 @@ void batched_decode(bool cuda){
     same(r->append("b",{5}),oracle->append("b",{1,2,3,5}));r->release("b");r->clear();oracle->clear();
     assert(r->stats().kv_live_blocks==0&&r->stats().block_table_device_bytes==0);
 }
+void pressure_runner(bool cuda){
+    auto w=weights();auto runner=make_cpu_runner(w,16,{4,4,3});
+#ifdef MINIPREFIX_ENABLE_CUDA
+    if(cuda)runner=make_cuda_runner(w,16,{4,4,3});
+#endif
+    auto oracle=make_cpu_runner(w,16,{4,8,0});
+    for(const auto* id:{"a","b"}){runner->create(id);oracle->create(id);oracle->append(id,{1,2,3});}
+    runner->append("a",{1,2,3});runner->fork_sequence("a","b");runner->cache_prefix("a");
+    for(int token:{6,7}){runner->create("seed");runner->append("seed",{token,token,token,token});runner->cache_prefix("seed");runner->release("seed");}
+    const auto before=runner->stats();
+    if(cuda){
+        assert(!runner->append_decode_batch({{"a",4},{"b",15}}));
+        assert(runner->stats().prefix_evictions==before.prefix_evictions+2);
+        assert(runner->stats().forward_tokens==before.forward_tokens&&runner->stats().kv_live_blocks==2);
+    }
+    auto result=runner->append_decode_batch({{"a",4},{"b",5}});assert(bool(result)==cuda);
+    same(result?result->at(0):runner->append("a",{4}),oracle->append("a",{4}));runner->cache_prefix("a");
+    same(result?result->at(1):runner->append("b",{5}),oracle->append("b",{5}));runner->cache_prefix("b");
+    runner->create("probe");assert(runner->reuse_prefix("probe",{1,2,3,5,8})==4);
+    same(runner->append("probe",{8}),oracle->append("b",{8}));
+    runner->clear();assert(runner->stats().kv_live_blocks==0&&runner->stats().block_table_device_bytes==0);
+}
 void packed_prefill(bool cuda){
     auto w=weights();
     auto runner=make_cpu_runner(w,32,{4,32,16});
@@ -500,6 +602,7 @@ int main(int argc,char** argv){
     assert(!cuda);
 #endif
     metadata();std::cout<<"COW metadata passed"<<std::endl;
+    pressure_payload(cuda);pressure_runner(cuda);
     payload(cuda);payload(cuda,true);std::cout<<"COW payload passed"<<std::endl;
     runner(cuda);std::cout<<"COW copy, capacity, rollback, retry and release passed"<<std::endl;
     partial_cache(cuda);std::cout<<"Partial prefix cache, COW and capacity passed"<<std::endl;

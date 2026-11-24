@@ -39,5 +39,7 @@ public:
     // Drop one LRU cache reference, not necessarily a physical page: active
     // sequence references survive. False means no cache entry was available.
     bool evict_one();
+    // One physical ID per cache reference, oldest first; no touch or retain.
+    std::vector<int> eviction_candidates() const;
 };
 } // namespace miniprefix

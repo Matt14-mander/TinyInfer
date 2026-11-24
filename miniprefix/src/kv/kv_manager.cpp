@@ -169,22 +169,56 @@ std::vector<std::unique_ptr<KVManager::Append>> KVManager::prepare_decode_batch(
 std::vector<std::unique_ptr<KVManager::Append>> KVManager::prepare_batch(const std::vector<BatchInput>& inputs){
     require_idle();
     if(inputs.size()<2)return {};
-    std::set<RequestId> seen;std::size_t required=0;
+    std::set<RequestId> seen;std::size_t growth=0,unreserved_growth=0;bool unreserved=false;
+    std::vector<int> tails;
     for(const auto& input:inputs){
         const auto found=sequences_.find(input.id);
         if(found==sequences_.end()||!seen.insert(input.id).second||input.tokens.empty())return {};
         const auto& s=found->second.sequence;
         if(input.tokens.size()>std::size_t(context_-s.used))return {};
         for(auto token:input.tokens)if(token<0||token>=vocabulary_)return {};
+        const auto pending=admission_prefixes_.find(input.id);
+        if(pending!=admission_prefixes_.end()&&pending->second.used)return {};
         const auto end=std::size_t(s.used)+input.tokens.size();
         const auto pages=1+(end-1)/config().block_tokens;
-        required+=pages-s.blocks.size();
-        if(s.used%config().block_tokens && pool_.references(s.blocks.back())>1)++required;
-        if(required>pool_.free_blocks())return {};
+        const auto reservation=reservations_.find(input.id);
+        if(reservation!=reservations_.end()&&pages>reservation->second)return {};
+        growth+=pages-s.blocks.size();
+        if(reservation==reservations_.end()){unreserved=true;unreserved_growth+=pages-s.blocks.size();}
+        if(s.used%config().block_tokens)tails.push_back(s.blocks.back());
     }
-    // No cache eviction during preparation: publication must remain in Engine's
-    // original order. Under pressure use sequential append/eviction instead.
+    if(unreserved&&(!reservations_.empty()||!prefix_leases_.empty())){
+        const auto committed=committed_blocks(),total=std::size_t(config().max_blocks);
+        if(committed>total||unreserved_growth>total-committed)return {};
+    }
+    auto required=growth;
+    for(int tail:tails)if(pool_.references(tail)>1)++required;
+    std::size_t victims=0;
+    if(required>pool_.free_blocks()){
+        // Read-only planning. A cache entry is a reference, not necessarily a free
+        // page. Retain all active/admission/diagnostic references in this simulation.
+        std::vector<std::size_t> references(config().max_blocks);
+        for(std::size_t i=0;i<references.size();++i)references[i]=pool_.references(static_cast<int>(i));
+        auto free=pool_.free_blocks();
+        for(int block:prefix_.eviction_candidates()){
+            ++victims;if(--references[block]==0)++free;
+            required=growth;
+            for(int tail:tails)if(references[tail]>1)++required;
+            if(free>=required)break;
+        }
+        // No partial eviction on fallback, including an all-pinned cache.
+        if(free<required)return {};
+    }
+    // Allocate host sequence capacity before making the planned LRU changes.
+    for(const auto& input:inputs){
+        auto& s=sequences_.at(input.id).sequence;
+        const auto end=std::size_t(s.used)+input.tokens.size();
+        s.tokens.reserve(end);s.blocks.reserve(1+(end-1)/config().block_tokens);
+    }
+    // This is a batch-boundary pressure operation, not speculative publication.
+    // Once applied, eviction effects survive rollback just like ordinary append.
     std::vector<std::unique_ptr<Append>> result;result.reserve(inputs.size());
+    for(std::size_t i=0;i<victims;++i)prefix_.evict_one();
     try{for(const auto& input:inputs)result.emplace_back(new Append(*this,input.id,input.tokens,true));}
     catch(const KvCapacityError&){return {};}
     return result;

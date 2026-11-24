@@ -107,9 +107,10 @@ public:
     void cache_prefix(const RequestId& id);
     void clear_prefix_cache();
     Append prepare_append(const RequestId& id,const std::vector<TokenId>& tokens);
-    // Non-evicting group reservation. Empty means use the ordinary sequential
-    // path; committed histories/cache references remain unchanged. All device
-    // accesses must finish before any transaction commits or rolls back.
+    // Plan the complete group's growth/COW peak before evicting oldest cache
+    // references. Insufficient plans return empty without eviction. Applied LRU
+    // evictions survive append rollback; publication stays with the caller.
+    // All device accesses must finish before any commit/rollback.
     std::vector<std::unique_ptr<Append>> prepare_decode_batch(const std::vector<DecodeInput>& inputs);
     std::vector<std::unique_ptr<Append>> prepare_batch(const std::vector<BatchInput>& inputs);
     // Shared reservations keep full pages as pending leases until release/restore.

@@ -11,6 +11,73 @@ template<class F> void rejects(F&& operation){
 void commit(KVManager& manager,const RequestId& id,std::vector<TokenId> tokens){
     auto append=manager.prepare_append(id,tokens);append.copy_shared_tail([](std::size_t,std::size_t,std::size_t){});append.commit();
 }
+void batch_space_preparation(){
+    KVManager m({4,5,4},1,1,24,100);
+    m.create("a");commit(m,"a",{1,2,3});m.create("b");m.fork_sequence("a","b");m.cache_prefix("a");
+    for(int token:{10,20,30}){m.create("seed");commit(m,"seed",{token,token,token,token});m.cache_prefix("seed");m.release("seed");}
+    const auto original=m.sequence("a").blocks;const auto before=m.stats();
+    assert(before.kv_live_blocks==4);
+    // Validation of every row precedes LRU changes.
+    assert(m.prepare_decode_batch({{"a",4},{"b",100}}).empty());
+    assert(m.stats().prefix_evictions==before.prefix_evictions);
+    {
+        auto group=m.prepare_decode_batch({{"a",4},{"b",5}});assert(group.size()==2);
+        assert(group[0]->tail_copy()&&group[1]->tail_copy());
+        assert(m.stats().prefix_evictions==before.prefix_evictions+2); // pinned oldest, then oldest cache-only page
+        assert(m.stats().kv_live_blocks==5&&m.stats().forward_tokens==before.forward_tokens);
+        rejects([&]{m.cache_prefix("a");});
+        rejects([&]{group[0]->copy_shared_tail([](std::size_t,std::size_t,std::size_t){throw std::runtime_error("copy");});});
+        rejects([&]{group[0]->commit();});
+    }
+    assert(m.sequence("a").blocks==original&&m.sequence("b").blocks==original);
+    assert(m.sequence("a").used==3&&m.stats().kv_live_blocks==3);
+    assert(m.probe_prefix({10,10,10,10,1})==0&&m.probe_prefix({20,20,20,20,1})==4);
+    assert(m.probe_prefix({30,30,30,30,1})==4); // unchanged relative LRU
+    auto group=m.prepare_decode_batch({{"a",4},{"b",5}});assert(group.size()==2);
+    for(auto& tx:group){tx->copy_shared_tail([](std::size_t,std::size_t,std::size_t){});tx->commit();}
+    m.cache_prefix("b");m.cache_prefix("a"); // caller controls publication order
+    m.create("next");commit(m,"next",{9,9,9,9,9});
+    assert(m.probe_prefix({20,20,20,20,1})==0&&m.probe_prefix({30,30,30,30,1})==4);
+    m.clear();assert(m.stats().kv_live_blocks==0);
+    // Cache-only sharing can disappear without freeing a page: neither row needs COW then.
+    KVManager inplace({4,2,2},1,1,16,100);
+    for(const auto* id:{"a","b"}){inplace.create(id);commit(inplace,id,{id[0],1,2});inplace.cache_prefix(id);}
+    auto in=inplace.prepare_decode_batch({{"a",3},{"b",4}});assert(in.size()==2);
+    assert(!in[0]->tail_copy()&&!in[1]->tail_copy());
+    for(auto& tx:in)tx->commit();inplace.clear();assert(inplace.stats().kv_live_blocks==0);
+    // An admission lease survives planned eviction; an impossible batch must not drop any cache reference.
+    KVManager pinned({4,2,2},1,1,16,100);
+    pinned.create("seed");commit(pinned,"seed",{1,2,3,4});pinned.cache_prefix("seed");pinned.release("seed");
+    assert(pinned.acquire_prefix_lease("pending",{1,2,3,4,5})==4);
+    pinned.create("a");pinned.create("b");
+    const auto cache=pinned.stats().kv_cached_blocks;
+    assert(pinned.prepare_batch({{"a",{6}},{"b",{7}}}).empty());
+    assert(pinned.stats().kv_cached_blocks==cache&&pinned.stats().prefix_evictions==0);
+    pinned.clear();assert(pinned.stats().kv_live_blocks==0);
+}
+void batch_reference_accounting(){
+    // Two cache entries can lease one page. Only the last eviction frees it.
+    KVManager aliases({4,2,2},1,1,16,100);
+    aliases.create("source");commit(aliases,"source",{1,2,3,4});aliases.cache_prefix("source");
+    aliases.create("short");assert(aliases.reuse_prefix("short",{1,2,3,9})==3);aliases.cache_prefix("short");
+    aliases.release("source");aliases.release("short");
+    assert(aliases.stats().kv_cached_blocks==2&&aliases.stats().kv_live_blocks==1);
+    aliases.create("a");aliases.create("b");
+    auto group=aliases.prepare_batch({{"a",{8}},{"b",{9}}});assert(group.size()==2);
+    assert(aliases.stats().prefix_evictions==2&&aliases.stats().kv_cached_blocks==0);
+    for(auto& tx:group)tx->commit();aliases.clear();assert(aliases.stats().kv_live_blocks==0);
+    // Releasing a resident reservation converts it to conservative diagnostic
+    // accounting. Reject before pressure eviction even when that row only fills a tail.
+    KVManager external({4,3,3},1,1,16,100);
+    assert(external.reserve_request("a",8,{1})==KvAdmission::Ready);
+    external.create("a");commit(external,"a",{1,2,3,4,5,6,7});external.cache_prefix("a");
+    assert(external.reserve_request("b",8,{1,2,3,4,9})==KvAdmission::Ready);
+    external.create("b");assert(external.reuse_prefix("b",{1,2,3,4,9})==4);
+    external.release_reservation("a");const auto before=external.stats();
+    assert(external.prepare_decode_batch({{"a",8},{"b",9}}).empty());
+    assert(external.stats().prefix_evictions==before.prefix_evictions&&external.stats().kv_live_blocks==before.kv_live_blocks);
+    external.clear();
+}
 void shared_admission(){
     KVManager m({2,5,5},1,1,20,100);
     m.create("seed");commit(m,"seed",{1,2,3});m.cache_prefix("seed");m.release("seed");
@@ -258,6 +325,6 @@ void impossible_reservation_and_cache_off(){
     }
 }
 }
-int main(){shared_restore_fallback();shared_admission();shared_capacity_foundation();reservations();transactions();prefix_and_reset();exhaustion();capacity_and_lru();pinned_victim_then_free_page();
+int main(){batch_reference_accounting();batch_space_preparation();shared_restore_fallback();shared_admission();shared_capacity_foundation();reservations();transactions();prefix_and_reset();exhaustion();capacity_and_lru();pinned_victim_then_free_page();
     rollback_keeps_eviction_effects();impossible_reservation_and_cache_off();
     std::cout<<"KVManager transactions, shared leases, reset, stats and exhaustion passed\n";}

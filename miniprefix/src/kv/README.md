@@ -27,3 +27,9 @@ evict_one()，仅移除一个缓存引用；活跃请求仍持有的页不会变
 
 KVManager 另持有请求最大页数的逻辑预约，协调 Engine 准入和未预约诊断操作，
 不提前分配 payload，不按预期前缀命中打折。见 [容量准入](../../docs/capacity_admission.md)。
+
+
+批量准备由 KVManager 先验证全部行并模拟 LRU 引用释放，计入整批扩页和同时存活的 COW 页。
+ExactPrefixCache 仅提供不 touch、不 retain 的 LRU 引用快照，容量决策仍留在 KVManager。
+计划不可行不驱逐；应用后各 Append 持有页面直到同步后的提交/回滚。实际驱逐效果沿用普通
+append 的失败语义保留，发布仍由 Engine 顺序调用。详见 `../../docs/batch_workpages.md`。

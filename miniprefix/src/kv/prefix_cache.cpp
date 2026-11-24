@@ -82,6 +82,11 @@ struct ExactPrefixCache::Index {
         return nullptr;
     }
 };
+std::vector<int> ExactPrefixCache::eviction_candidates() const{
+    std::vector<int> result;result.reserve(index_->cached);
+    for(auto* node=index_->oldest;node;node=node->next)result.push_back(node->block);
+    return result;
+}
 bool ExactPrefixCache::evict_one(){
     if(!index_->oldest)return false;
     index_->drop(pool_);++evictions_;return true;

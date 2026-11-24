@@ -49,10 +49,10 @@ def summarize(lines):
 
 def aggregate(runs):
     cells = []
-    keys = sorted({(r['pool_pages'], r['rate'], r['mode'], r['policy']) for r in runs})
-    for pages, rate, mode, policy in keys:
-        group = [r for r in runs if (r['pool_pages'], r['rate'], r['mode'], r['policy']) == (pages, rate, mode, policy)]
-        cell = dict(rate=rate, mode=mode, policy=policy, repeats=len(group))
+    keys = sorted({(r.get('variant', 'current'), r['pool_pages'], r['rate'], r['mode'], r['policy']) for r in runs})
+    for variant, pages, rate, mode, policy in keys:
+        group = [r for r in runs if (r.get('variant', 'current'), r['pool_pages'], r['rate'], r['mode'], r['policy']) == (variant, pages, rate, mode, policy)]
+        cell = dict(variant=variant, rate=rate, mode=mode, policy=policy, repeats=len(group))
         for key, value in group[0].items():
             if isinstance(value, dict):
                 cell[key] = {q: statistics.median(r[key][q] for r in group) for q in value}
@@ -71,6 +71,8 @@ def digest(path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', type=Path, required=True)
+    parser.add_argument('--before-binary', type=Path)
+    parser.add_argument('--policies', nargs='+', choices=('conservative','shared'), default=['conservative','shared'])
     parser.add_argument('--model', type=Path, required=True)
     parser.add_argument('--backend', choices=('cpu', 'cuda'), required=True)
     parser.add_argument('--rates', type=float, nargs='+', default=[10, 40, 100])
@@ -89,20 +91,25 @@ def main():
                   gpu=gpu_snapshot(), timing='native instrumented; planned arrival to event polling; model load/warmup/prime excluded',
                   config=dict(batch_size=4, token_budget=32, chunk=16, block_tokens=8, shared_prefix_tokens=64,
                               prompt_lengths=[65, 68, 71, 74], output_tokens=8))
+    header['before_binary_sha256'] = digest(args.before_binary) if args.before_binary else None
+    header['policies'] = args.policies
+    variants = ['before', 'after'] if args.before_binary else ['current']
     summaries = []
     with gzip.open(args.output, 'wt', encoding='utf-8') as output:
         output.write(json.dumps(header)+'\n')
         for repeat in range(args.repeats):
-            cases = list(itertools.product(args.pools or [args.pages], args.rates, args.modes, ('conservative', 'shared')))
+            cases = list(itertools.product(variants, args.pools or [args.pages], args.rates, args.modes, args.policies))
             random.Random(918+repeat).shuffle(cases)
-            for pages, rate, mode, policy in cases:
-                result = subprocess.run([str(args.binary), str(args.model), args.backend, policy, mode,
+            for variant, pages, rate, mode, policy in cases:
+                binary=args.before_binary if variant=='before' else args.binary
+                result = subprocess.run([str(binary), str(args.model), args.backend, policy, mode,
                                          str(args.requests), str(rate), str(100+repeat), str(pages),
                                          str(args.cache_pages if args.cache_pages is not None else pages)],
                                         capture_output=True, text=True, timeout=900, check=True)
                 rows = [json.loads(line) for line in result.stdout.splitlines()]
                 summary = summarize(rows)
                 summary['repeat'] = repeat
+                summary['variant'] = variant
                 summaries.append(summary)
                 output.write(json.dumps(dict(summary=summary, requests=rows[:-1]))+'\n');output.flush()
                 print(json.dumps(summary), flush=True)

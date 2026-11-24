@@ -65,8 +65,9 @@ public:
     virtual void clear_prefix_cache(){}
     virtual std::vector<float> append(const RequestId&,const std::vector<TokenId>&)=0;
     // Optional acceleration of the already scheduled decode prefix. A result
-    // commits all rows, in input order; nullopt leaves committed histories and
-    // cache references unchanged so Engine can use ordinary append. Never
+    // commits all rows, in input order. Nullopt leaves committed histories intact;
+    // preflight capacity rejection does not evict, but rollback after preparation
+    // retains applied LRU pressure evictions (as ordinary append does). Never
     // publishes prefixes or samples tokens. CPU/reference runners fall back.
     virtual std::optional<std::vector<std::vector<float>>> append_decode_batch(const std::vector<DecodeInput>&){return std::nullopt;}
     virtual DecodeBatchStats decode_batch_stats() const{return {};}

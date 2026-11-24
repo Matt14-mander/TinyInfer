@@ -25,6 +25,14 @@ class CapacityMetricsTests(unittest.TestCase):
         self.assertEqual([x['pool_pages'] for x in cells], [20,64])
         self.assertEqual([x['repeats'] for x in cells], [1,1])
 
+    def test_before_after_are_not_aggregated_together(self):
+        a=summarize(self.fixture());a.update(rate=40,mode='hot',policy='shared',variant='before')
+        b=copy.deepcopy(a);b['variant']='after';b['service_tok_s']=2*a['service_tok_s']
+        cells=aggregate([a,b])
+        self.assertEqual(len(cells),2)
+        self.assertEqual({x['variant']:x['service_tok_s'] for x in cells},
+                         {'before':a['service_tok_s'],'after':b['service_tok_s']})
+
     def test_reject_incomplete_duplicate_and_invalid_timeline(self):
         rows = self.fixture()
         with self.assertRaises(ValueError): summarize(rows[:-1])
