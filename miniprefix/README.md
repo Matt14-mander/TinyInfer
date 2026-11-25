@@ -60,7 +60,7 @@ MiniPrefix 是建立在 TinyInfer 之上的原生 LLM 生成引擎，面向单�
 
 ## 当前边界与下一步
 
-- 同轮有多个 decode 请求时，CPU 将其首层 Q/K/V 投影合并为三个多行矩阵乘法。后续层、prefill 和 CUDA 仍逐请求执行。
+- 同轮有多个 decode 请求时，CPU 对全部层的 Q/K/V、输出投影、MLP 和 LM head 执行多行矩阵计算。参见[真实权重配对测量](docs/acceptance/cpu-decode-batch.md)。
 - 多轮复用由调用方提交完整历史 token 和新的 request ID；尚无自动会话存储或历史拼接。
 - 最多复用 `prompt.size() - 1` 个 token，至少留下一个 token 计算 logits；没有 cached-logits 路径。
 - 共享感知容量估算、抢占重算、HTTP、量化、CUDA Graph、异步流水与多 GPU 仍待实现。

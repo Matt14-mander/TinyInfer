@@ -19,7 +19,7 @@ MiniPrefix have separate roadmaps:
 | MiniPrefix M3–M4 | GPU forward, resident paged KV, partial-page COW, local generation, and scoped FP32 baselines implemented |
 | MiniPrefix M5 | In progress: exact partial-page prefix reuse, multi-turn history snapshots, cost measurement, and COW/publication optimizations implemented |
 
-MiniPrefix now batches the first CPU decode layer’s Q/K/V projections across requests.
+MiniPrefix now batches all CPU decode layers and the LM head across requests.
 Current scheduling supports multiple active requests, but runners execute their
 chunks sequentially. See the [MiniPrefix overview](miniprefix/README.md) and
 [detailed roadmap](miniprefix/docs/roadmap.md) for capabilities and acceptance boundaries.
@@ -52,7 +52,7 @@ validation.
 | v0.3 Model Runtime | Complete: protobuf parser, real Gemm MLP fixture, restricted ONNX import, diagnostics, compatibility profile, and Mac/ROG CPU baselines |
 | v0.4 Optimization Engine | Complete for the measured static FP32 CPU slice: graph simplification, lifetime planning, buffer reuse, CPU SIMD MatMul, Gemm + ReLU fusion, and prepared CPU execution; threading and quantization remain deferred |
 | v0.5 Hardware Backends | Complete for the initial static FP32 scope: Mac Metal and ROG CUDA correctness and frozen-target performance gates passed |
-| MiniPrefix M0–M5 | Active LLM track: real-model CPU/CUDA generation, paged KV, partial-page prefix reuse/COW, and measured cache costs; first-layer CPU decode Q/K/V projections batch across requests |
+| MiniPrefix M0–M5 | Active LLM track: real-model CPU/CUDA generation, paged KV, partial-page prefix reuse/COW, and measured cache costs; all CPU decode layers batch across requests |
 
 See the [documentation index](docs/README.md) for an overview. The current
 system design lives under `docs/architecture`, learning-oriented walkthroughs
@@ -152,7 +152,7 @@ are in the [real-model guide](miniprefix/docs/real_model.md).
 - **Cost-driven optimization:** independent lookup/publication/COW counters and optional timing, [CUDA COW copies merged across layers](miniprefix/docs/merged_cuda_cow.md), and [publication-path and metadata reuse](miniprefix/docs/prefix_publication.md).
 - **Validation and measurement:** lifecycle and differential tests, [native stress measurement](miniprefix/docs/long_running_stress.md), [off/cold/hot cache experiments](miniprefix/docs/partial_prefix_costs.md), and independent real-model numerical checks. Performance reports identify their workload, hardware, and timing boundaries; metadata or copy-stage improvements are not universal end-to-end speedups.
 
-CPU decode batches the first layer’s Q/K/V projections for requests selected in the same step. Later layers, prefill, and CUDA execute per sequence. Sharing-aware admission and preemption/recompute remain planned.
+CPU decode batches all dense projections and the LM head across requests selected in the same step. See the [paired CPU measurements](miniprefix/docs/acceptance/cpu-decode-batch.md). Sharing-aware admission and preemption/recompute remain planned.
 Multi-turn reuse requires the caller to submit the complete token history with a
 new request ID; automatic conversation storage, HTTP serving, quantization,
 CUDA Graphs, and multi-GPU execution are not implemented in this path.
