@@ -16,18 +16,18 @@ REQUESTS = [(0, "short", [4, 5], 8), (0, "long-a", [1, 2, 3, 4]*5, 4),
             (0, "long-b", [2, 3, 4]*6, 4), (2, "late", [1, 2, 3, 4]*5+[2], 3)]
 
 
-def run(worker, model, batched, cache):
-    with NativeEngine(worker, model, context=64, batch_size=4, token_budget=13,
-                      chunk_size=4, block_tokens=4, kv_blocks=64, prefix_cache_blocks=cache,
+def run(worker, model, batched, cache, requests=REQUESTS, chunk=4, budget=13):
+    with NativeEngine(worker, model, context=64, batch_size=4, token_budget=budget,
+                      chunk_size=chunk, block_tokens=4, kv_blocks=64, prefix_cache_blocks=cache,
                       batch_decode=True, batch_prefill=batched) as engine:
         engine.submit("warm", [31, 32], 2, None)
         list(engine.events())
         engine.clear_prefix_cache()
-        times = {key: [] for _, key, _, _ in REQUESTS}
+        times = {key: [] for _, key, _, _ in requests}
         arrivals, trace = {}, []
         start = time.perf_counter_ns()
-        while not trace or engine.pending:
-            for step, key, prompt, limit in REQUESTS:
+        while len(trace) <= max(r[0] for r in requests) or engine.pending:
+            for step, key, prompt, limit in requests:
                 if step == len(trace):
                     arrivals[key] = time.perf_counter_ns()
                     engine.submit(key, prompt, limit, None)
@@ -36,7 +36,7 @@ def run(worker, model, batched, cache):
                 times[event["request_id"]].append(event["received_ns"])
             trace.append([(e["request_id"], e["token_id"], e["finish_reason"]) for e in events])
         end = time.perf_counter_ns()
-        for _, key, _, limit in REQUESTS:
+        for _, key, _, limit in requests:
             stream = [e for step in trace for e in step if e[0] == key]
             if len(stream) != limit or stream[-1][2] != "length":
                 raise RuntimeError(f"incomplete stream for {key}")
