@@ -84,7 +84,7 @@ bool Engine::step(){
             const auto& state=active_[work.active_index];
             decode_rows.emplace_back(state.request.id,state.output.back());
         }
-        auto batch=decode_rows.size()>1?runner_->prepare_decode_batch(decode_rows):ModelRunner::DecodeBatch{};
+        auto batch=config_.batch_decode&&decode_rows.size()>1?runner_->prepare_decode_batch(decode_rows):ModelRunner::DecodeBatch{};
         std::size_t decode_row=0;
         for(const auto& work:plan.order()){
             if(!plan.has_budget())break;auto& s=active_[work.active_index];auto& r=s.request;

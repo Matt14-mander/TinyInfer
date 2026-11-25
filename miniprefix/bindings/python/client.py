@@ -6,9 +6,9 @@ import time
 
 class NativeEngine:
     def __init__(self, worker, model, backend="cpu", context=512, batch_size=2, token_budget=32, chunk_size=16,
-                 block_tokens=16, kv_blocks=128, prefix_cache_blocks=0):
+                 block_tokens=16, kv_blocks=128, prefix_cache_blocks=0, batch_decode=True):
         self.process = subprocess.Popen([str(Path(worker).resolve()), str(Path(model).resolve()), backend,
-                                         str(context), str(batch_size), str(token_budget), str(chunk_size), str(block_tokens), str(kv_blocks), str(prefix_cache_blocks)],
+                                         str(context), str(batch_size), str(token_budget), str(chunk_size), str(block_tokens), str(kv_blocks), str(prefix_cache_blocks)] + ([] if batch_decode else ["serial"]),
                                         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                         text=True, bufsize=1)
         self.ids, self.diagnostics, self.pending = {}, {}, set()

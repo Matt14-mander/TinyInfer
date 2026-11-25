@@ -154,6 +154,18 @@ void batched_decode(){
         same(forward(i),serial->append(rows[i].first,{rows[i].second}));
     for(const auto& row:rows)
         same(batch->append(row.first,{3}),serial->append(row.first,{3}));
+    // Roll back a shared tail on a nonfinite row. Its sibling can still
+    // consume the prepared batch and both sequences remain usable.
+    for(auto* runner:{batch.get(),serial.get()}){
+        runner->create("fork");runner->fork_sequence("short","fork");
+    }
+    auto failed=batch->prepare_decode_batch({{"short",15},{"fork",5}});
+    auto before=batch->stats();
+    rejects([&]{failed(0);});
+    assert(batch->stats().forward_tokens==before.forward_tokens);
+    assert(batch->stats().kv_live_blocks==before.kv_live_blocks);
+    same(failed(1),serial->append("fork",{5}));
+    same(batch->append("short",{6}),serial->append("short",{6}));
 }
 void runner(bool cuda){
     auto w=weights();auto make=[&](){

@@ -41,6 +41,39 @@ class CpuRunner final:public ModelRunner {
                 linear(normalized,layer+"self_attn.k_proj.weight"),
                 linear(normalized,layer+"self_attn.v_proj.weight")};
     }
+    Tensor finish_layer(Tensor& x,const Tensor& contexts,const std::string& p){
+        const auto& c=config();
+        x=tinyinfer::ops::add(x,linear(contexts,p+"self_attn.o_proj.weight"));
+        auto normalized=rms(x,weights_->get(p+"post_attention_layernorm.weight"),c.rms_epsilon);
+        auto gate=linear(normalized,p+"mlp.gate_proj.weight"),up=linear(normalized,p+"mlp.up_proj.weight");
+        for(std::size_t i=0;i<gate.numel();++i){const float a=gate.at(i);gate.at(i)=(a/(1+std::exp(-a)))*up.at(i);}
+        return tinyinfer::ops::add(x,linear(gate,p+"mlp.down_proj.weight"));
+    }
+    template<class Key,class Value>
+    void attention(const float* q,float* out,int length,Key key,Value value) const{
+        const auto& c=config();
+        const int dim=c.head_dimension();
+        std::vector<float> scores(length);
+        for(int h=0;h<c.heads;++h){
+            const int base=h/(c.heads/c.kv_heads)*dim;
+            float maximum=-INFINITY;
+            for(int t=0;t<length;++t){
+                const float* k=key(t)+base;
+                float score=0;
+                for(int d=0;d<dim;++d)score+=q[h*dim+d]*k[d];
+                scores[t]=score/std::sqrt(float(dim));
+                maximum=std::max(maximum,scores[t]);
+            }
+            float denominator=0;
+            for(float& score:scores){score=std::exp(score-maximum);denominator+=score;}
+            std::fill_n(out+h*dim,dim,0.0f);
+            for(int t=0;t<length;++t){
+                const float* v=value(t)+base;
+                float probability=scores[t]/denominator;
+                for(int d=0;d<dim;++d)out[h*dim+d]+=probability*v[d];
+            }
+        }
+    }
 public:
     CpuRunner(std::shared_ptr<ModelWeights> w,int context,KvCacheConfig kv):weights_(std::move(w)),
         kv_(kv,config().layers,config().kv_width(),context,config().vocabulary){
@@ -65,36 +98,9 @@ public:
     void cache_prefix(const RequestId& id) override{kv_.cache_prefix(id);}
     void clear_prefix_cache() override{kv_.clear_prefix_cache();}
     std::vector<float> append(const RequestId& id,const std::vector<TokenId>& tokens) override{
-        return append_projected(id,tokens,nullptr);
-    }
-    DecodeBatch prepare_decode_batch(const std::vector<DecodeRow>& rows) override{
-        const auto width=config().hidden;
-        Tensor input({static_cast<std::int64_t>(rows.size()),width});
-        const auto* embedding=weights_->get("model.embed_tokens.weight").data<float>();
-        for(std::size_t i=0;i<rows.size();++i){
-            auto token=rows[i].second;
-            if(token<0||token>=config().vocabulary)throw std::invalid_argument("invalid decode token");
-            std::copy_n(embedding+std::size_t(token)*width,width,input.data<float>()+i*width);
-        }
-        auto projected=project_qkv(input,"model.layers.0.");
-        return [this,rows,projected=std::move(projected)](std::size_t index){
-            const auto& row=rows.at(index);
-            Qkv slice{projected.q.narrow(0,index,1),projected.k.narrow(0,index,1),
-                      projected.v.narrow(0,index,1)};
-            return append_projected(row.first,{row.second},&slice);
-        };
-    }
-private:
-    std::vector<float> append_projected(const RequestId& id,const std::vector<TokenId>& tokens,Qkv* first){
-        auto append=kv_.prepare_append(id,tokens);const auto& s=append.sequence();
-        if(append.tail_copy())++costs_.cow_pages;
-        {CostTimer timer(cost_timing_&&bool(append.tail_copy()),costs_.cow_copy_ns);
-        append.copy_shared_tail([&](std::size_t destination,std::size_t source,std::size_t count){
-            std::copy_n(keys_.data()+source,count,keys_.data()+destination);
-            std::copy_n(values_.data()+source,count,values_.data()+destination);
-            costs_.cow_bytes+=2*count*sizeof(float);
-        });}
-        if(cost_timing_&&append.tail_copy())++costs_.cow_timed_copies;
+        auto append=kv_.prepare_append(id,tokens);
+        const auto& s=append.sequence();
+        copy_tail(append);
         const auto& c=config();const int n=static_cast<int>(tokens.size()),dim=c.head_dimension(),kv=c.kv_width();
         Tensor x({n,c.hidden});const auto& embedding=weights_->get("model.embed_tokens.weight");
         for(int row=0;row<n;++row){
@@ -103,31 +109,86 @@ private:
         std::vector<std::size_t> offsets(s.used+n);
         for(int l=0;l<c.layers;++l){auto p="model.layers."+std::to_string(l)+".";
             for(int t=0;t<s.used+n;++t)offsets[t]=kv_.offset(s,l,t);
-            auto [q,k,v]=(l==0&&first)?std::move(*first):project_qkv(x,p);
+            auto [q,k,v]=project_qkv(x,p);
             rope(q,c.heads,dim,s.used,c.rope_theta);rope(k,c.kv_heads,dim,s.used,c.rope_theta);
             for(int row=0;row<n;++row){const auto offset=offsets[s.used+row];
                 std::copy_n(k.data<float>()+row*kv,kv,keys_.data()+offset);
                 std::copy_n(v.data<float>()+row*kv,kv,values_.data()+offset);}
             Tensor contexts({n,c.hidden});
-            for(int row=0;row<n;++row)for(int h=0;h<c.heads;++h){
-                const int length=s.used+row+1,kh=h/(c.heads/c.kv_heads);std::vector<float> scores(length);float maximum=-INFINITY;
-                for(int t=0;t<length;++t){const auto offset=offsets[t]+kh*dim;
-                    float score=0;for(int d=0;d<dim;++d)score+=q.at((row*c.heads+h)*dim+d)*keys_[offset+d];
-                    scores[t]=score/std::sqrt(float(dim));maximum=std::max(maximum,scores[t]);}
-                float denominator=0;for(auto& score:scores){score=std::exp(score-maximum);denominator+=score;}
-                for(int d=0;d<dim;++d){float total=0;for(int t=0;t<length;++t)total+=(scores[t]/denominator)*values_[offsets[t]+kh*dim+d];
-                    contexts.at((row*c.heads+h)*dim+d)=total;}
+            for(int row=0;row<n;++row){
+                attention(q.data<float>()+row*c.hidden,contexts.data<float>()+row*c.hidden,s.used+row+1,
+                    [&](int t){return keys_.data()+offsets[t];},
+                    [&](int t){return values_.data()+offsets[t];});
             }
-            x=tinyinfer::ops::add(x,linear(contexts,p+"self_attn.o_proj.weight"));
-            auto normalized=rms(x,weights_->get(p+"post_attention_layernorm.weight"),c.rms_epsilon);
-            auto gate=linear(normalized,p+"mlp.gate_proj.weight"),up=linear(normalized,p+"mlp.up_proj.weight");
-            for(std::size_t i=0;i<gate.numel();++i){const float a=gate.at(i);gate.at(i)=(a/(1+std::exp(-a)))*up.at(i);}
-            x=tinyinfer::ops::add(x,linear(gate,p+"mlp.down_proj.weight"));
+            x=finish_layer(x,contexts,p);
         }
         auto normalized=rms(x.narrow(0,n-1,1),weights_->get("model.norm.weight"),c.rms_epsilon);
         auto logits=linear(normalized,"lm_head.weight");std::vector<float> result(logits.data<float>(),logits.data<float>()+c.vocabulary);
         for(float v:result)if(!std::isfinite(v))throw std::runtime_error("nonfinite logits");
         append.commit();return result;
+    }
+    DecodeBatch prepare_decode_batch(const std::vector<DecodeRow>& rows) override{
+        const auto& c=config();
+        const auto n=static_cast<std::int64_t>(rows.size());
+        const int kv=c.kv_width(),dim=c.head_dimension();
+        Tensor x({n,c.hidden});
+        const auto* embedding=weights_->get("model.embed_tokens.weight").data<float>();
+        std::vector<const PagedSequence*> histories;
+        for(std::size_t i=0;i<rows.size();++i){
+            const auto& [id,token]=rows[i];
+            if(token<0||token>=c.vocabulary)throw std::invalid_argument("invalid decode token");
+            histories.push_back(&kv_.sequence(id));
+            std::copy_n(embedding+std::size_t(token)*c.hidden,c.hidden,x.data<float>()+i*c.hidden);
+        }
+        // Only new KV lives in scratch. The engine commits each row in scheduler
+        // order after computation, so COW, publication and release stay ordered.
+        std::vector<Tensor> keys,values;
+        for(int layer=0;layer<c.layers;++layer){
+            const auto p="model.layers."+std::to_string(layer)+".";
+            auto [q,k,v]=project_qkv(x,p);
+            Tensor contexts({n,c.hidden});
+            for(std::size_t i=0;i<rows.size();++i){
+                const auto& history=*histories[i];
+                auto qr=q.narrow(0,i,1),kr=k.narrow(0,i,1);
+                rope(qr,c.heads,dim,history.used,c.rope_theta);
+                rope(kr,c.kv_heads,dim,history.used,c.rope_theta);
+                std::vector<std::size_t> offsets(history.used);
+                for(int t=0;t<history.used;++t)offsets[t]=kv_.offset(history,layer,t);
+                attention(qr.data<float>(),contexts.data<float>()+i*c.hidden,history.used+1,
+                    [&](int t){return t==history.used?kr.data<float>():keys_.data()+offsets[t];},
+                    [&](int t){return t==history.used?v.data<float>()+i*kv:values_.data()+offsets[t];});
+            }
+            keys.push_back(std::move(k));values.push_back(std::move(v));
+            x=finish_layer(x,contexts,p);
+        }
+        auto logits=linear(rms(x,weights_->get("model.norm.weight"),c.rms_epsilon),"lm_head.weight");
+        return [this,rows,keys=std::move(keys),values=std::move(values),logits=std::move(logits),kv]
+               (std::size_t index){
+            const auto& [id,token]=rows.at(index);
+            auto append=kv_.prepare_append(id,{token});
+            copy_tail(append);
+            const auto& s=append.sequence();
+            const float* start=logits.data<float>()+index*config().vocabulary;
+            std::vector<float> result(start,start+config().vocabulary);
+            for(float v:result)if(!std::isfinite(v))throw std::runtime_error("nonfinite logits");
+            for(int layer=0;layer<config().layers;++layer){
+                auto offset=kv_.offset(s,layer,s.used);
+                std::copy_n(keys[layer].data<float>()+index*kv,kv,keys_.data()+offset);
+                std::copy_n(values[layer].data<float>()+index*kv,kv,values_.data()+offset);
+            }
+            append.commit();return result;
+        };
+    }
+private:
+    void copy_tail(KVManager::Append& append){
+        if(append.tail_copy())++costs_.cow_pages;
+        {CostTimer timer(cost_timing_&&bool(append.tail_copy()),costs_.cow_copy_ns);
+        append.copy_shared_tail([&](std::size_t destination,std::size_t source,std::size_t count){
+            std::copy_n(keys_.data()+source,count,keys_.data()+destination);
+            std::copy_n(values_.data()+source,count,values_.data()+destination);
+            costs_.cow_bytes+=2*count*sizeof(float);
+        });}
+        if(cost_timing_&&append.tail_copy())++costs_.cow_timed_copies;
     }
     void release(const RequestId& id) override{
         kv_.release(id);}

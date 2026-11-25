@@ -5,7 +5,7 @@
 #include <set>
 
 namespace miniprefix {
-struct EngineConfig { int max_batch_size=2,token_budget=32,prefill_chunk=16,context=512; };
+struct EngineConfig { int max_batch_size=2,token_budget=32,prefill_chunk=16,context=512; bool batch_decode=true; };
 struct EngineStepStats {
     std::size_t prefix_reused_tokens=0,prefill_tokens=0,decode_tokens=0;
 };
