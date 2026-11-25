@@ -16,6 +16,7 @@ int serve(Engine& engine,std::istream& in,std::ostream& out){
             switch(command.kind){
             case Kind::Submit:engine.submit(std::move(command.request));ok(out);break;
             case Kind::Step:engine.step();events(out,engine.poll_events());break;
+            case Kind::BatchStats:batch_stats(out,engine.last_batch_stats());break;
             case Kind::StepStats:step_stats(out,engine.last_step_stats());break;
             case Kind::Cancel:engine.cancel(std::to_string(command.id));events(out,engine.poll_events());break;
             case Kind::ClearPrefix:diagnostic.clear_prefix();ok(out);break;

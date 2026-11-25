@@ -27,6 +27,7 @@ Command parse(const std::string& line){
         Command c{op=="CANCEL"?Kind::Cancel:(op=="CACHE"?Kind::Cache:Kind::Release)};c.id=integer(in);return c;
     }
     if(op=="STEP")return {Kind::Step};
+    if(op=="BATCH_STATS")return {Kind::BatchStats};
     if(op=="STEP_STATS")return {Kind::StepStats};
     if(op=="CLEAR_PREFIX")return {Kind::ClearPrefix};
     if(op=="COST_STATS")return {Kind::CostStats};

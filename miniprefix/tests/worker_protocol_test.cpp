@@ -17,6 +17,7 @@ void parsing(){
         {"FORWARD 1 131073","invalid token count"},{"FORWARD 1 -1","invalid token count"}};
     for(const auto& item:errors){bool caught=false;try{protocol::parse(item.first);}
         catch(const std::invalid_argument& e){caught=true;assert(e.what()==item.second);}assert(caught);}
+    assert(protocol::parse("BATCH_STATS").kind==protocol::Kind::BatchStats);
     assert(protocol::parse("COST_STATS").kind==protocol::Kind::CostStats);
     assert(protocol::parse("COST_TIMING 1").id==1);
     auto c=protocol::parse(" \tSUBMIT +1 2 -1 2 0 3 trailing ignored\r");
@@ -31,11 +32,12 @@ void encoding(){
     protocol::logits(out,{0.125F,1.23456789F,-0.0F});
     protocol::events(out,{{"1",3,std::nullopt,{}},{"2",std::nullopt,FinishReason::Error,"not on wire"}});
     protocol::events(out,{});protocol::step_stats(out,{4,3,2});
+    protocol::batch_stats(out,{{{SchedulePhase::Decode,2,2},{SchedulePhase::Prefill,3,7}},1,2});
     protocol::stats(out,RunnerStats{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25});
     protocol::cost_stats(out,CostStats{1,2,3,4,5,6,7,8});
     protocol::error(out,"bad input");
     assert(out.str()=="READY MINIPREFIX 3 8 2 16 cuda\nOK\nOK 4\nOK 0.125 1.23456788 -0\n"
-        "OK 2 1 3 -1 2 -1 3\nOK 0\nOK 4 3 2\n"
+        "OK 2 1 3 -1 2 -1 3\nOK 0\nOK 4 3 2\nOK 1 2 2 1 2 2 0 3 7\n"
         "OK 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25\nOK 1 2 3 4 5 6 7 8\nERROR bad input\n");
 }
 class Runner final:public ModelRunner {

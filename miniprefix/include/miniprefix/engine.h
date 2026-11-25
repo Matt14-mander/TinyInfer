@@ -9,6 +9,11 @@ struct EngineConfig { int max_batch_size=2,token_budget=32,prefill_chunk=16,cont
 struct EngineStepStats {
     std::size_t prefix_reused_tokens=0,prefill_tokens=0,decode_tokens=0;
 };
+struct ComputeGroup {SchedulePhase phase;std::size_t requests,token_rows;};
+struct BatchStepStats {
+    std::vector<ComputeGroup> groups;
+    std::size_t budget_splits=0,prefix_restore_splits=0;
+};
 class Engine {
 public:
     Engine(std::unique_ptr<ModelRunner>,EngineConfig);
@@ -21,6 +26,7 @@ public:
     bool idle() const;
     bool failed() const;
     ModelRunner& runner(){return *runner_;}
+    const BatchStepStats& last_batch_stats() const{return batch_stats_;}
     const EngineStepStats& last_step_stats() const{return step_stats_;}
 private:
     struct State{Request request;std::size_t prefilled=0,kv_block_tokens=0;std::vector<TokenId> output;bool resident=false,finished=false;};
@@ -29,6 +35,7 @@ private:
     std::deque<State> waiting_;std::vector<State> active_;std::set<RequestId> seen_;
     std::vector<GenerationEvent> events_;bool failed_=false;
     EngineStepStats step_stats_;
+    BatchStepStats batch_stats_;
     void restore_prefix(State&);
     void terminal(State&,FinishReason,std::optional<TokenId> token=std::nullopt,
                   const std::string& error="",TerminalCleanup cleanup=TerminalCleanup::ReleaseSequence);

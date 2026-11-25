@@ -79,6 +79,17 @@ class NativeEngine:
     def step(self):
         return self._events(self._command(["STEP"]))
 
+    def last_batch_stats(self):
+        values = self._command(["BATCH_STATS"])
+        if len(values) < 3 or len(values) != 3 + 3 * values[2]:
+            raise RuntimeError("invalid compute group count")
+        groups = []
+        for phase, requests, rows in zip(values[3::3], values[4::3], values[5::3]):
+            if phase not in (0, 1) or requests < 1 or rows < requests:
+                raise RuntimeError("invalid compute group")
+            groups.append(dict(phase=("prefill", "decode")[phase], requests=requests, token_rows=rows))
+        return dict(budget_splits=values[0], prefix_restore_splits=values[1], groups=groups)
+
     def last_step_stats(self):
         values = self._command(["STEP_STATS"])
         if len(values) != 3:
