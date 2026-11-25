@@ -18,13 +18,15 @@ target GPU architecture for 80. Use the pinned FP32 export documented in
 cmake -S . -B build-device -DCMAKE_BUILD_TYPE=Release -DTINYINFER_BUILD_MINIPREFIX=ON -DTINYINFER_ENABLE_CUDA=ON -DTINYINFER_CUDA_REQUIRE_DEVICE=ON -DCMAKE_CUDA_ARCHITECTURES=80
 cmake --build build-device -j4
 ctest --test-dir build-device --output-on-failure
-python3 miniprefix/tools/verify_decode_batch.py build-device/miniprefix/miniprefix_cuda_worker weights/model.mpf --backend cuda
+python3 miniprefix/tools/verify_decode_batch.py build-device/miniprefix/miniprefix_cuda_worker weights/model.mpf --backend cuda --cpu-worker build-device/miniprefix/miniprefix_worker --report cuda-correctness.json
 compute-sanitizer --tool memcheck --leak-check full --target-processes all --error-exitcode 1 python3 miniprefix/tools/verify_decode_batch.py build-device/miniprefix/miniprefix_cuda_worker weights/model.mpf --backend cuda
-nsys profile --trace=cuda,cublas --sample=none --output=decode-pair python3 miniprefix/tools/verify_decode_batch.py build-device/miniprefix/miniprefix_cuda_worker weights/model.mpf --backend cuda
-nsys stats --report cuda_gpu_kern_sum,cuda_gpu_mem_time_sum,cuda_api_sum decode-pair.nsys-rep
+for mode in serial batched; do
+    nsys profile --trace=cuda,cublas --sample=none --output="decode-$mode" python3 miniprefix/tools/verify_decode_batch.py build-device/miniprefix/miniprefix_cuda_worker weights/model.mpf --backend cuda --mode "$mode"
+    nsys stats --report cuda_gpu_kern_sum,cuda_gpu_mem_time_sum,cuda_api_sum "decode-$mode.nsys-rep"
+done
 ```
 
-The replay launches serial then batched workers. Inspect the steady-state
+The correctness report records worker and model hashes and checks both CUDA traces against serial CPU. Each profiler capture runs one mode. Inspect the steady-state
 decode steps separately by process and exclude weight uploads, prefill and
 warm-up when reporting decode costs. Use the kernel timeline for GEMM,
 attention and other kernels, the memory timeline for H2D/D2H/D2D, and the
