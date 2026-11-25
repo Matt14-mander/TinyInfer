@@ -17,6 +17,7 @@ class SchedulePlan {
     SchedulePlan(const std::vector<SchedulePhase>& phases,const SchedulerConfig& config);
 public:
     const std::vector<ScheduledRequest>& order() const;
+    std::size_t remaining() const{return remaining_;}
     bool has_budget() const;
     std::size_t take_input(SchedulePhase phase,std::size_t unprefilled_tokens);
 };

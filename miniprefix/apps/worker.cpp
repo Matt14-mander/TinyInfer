@@ -4,7 +4,7 @@
 #include <iostream>
 using namespace miniprefix;
 int main(int argc,char** argv){try{
-    if(argc<4||argc>11)throw std::invalid_argument("usage: miniprefix_worker MODEL cpu|cuda CONTEXT [BATCH TOKENS CHUNK BLOCK_TOKENS KV_BLOCKS PREFIX_BLOCKS [batched|serial]]");
+    if(argc<4||argc>12)throw std::invalid_argument("usage: miniprefix_worker MODEL cpu|cuda CONTEXT [BATCH TOKENS CHUNK BLOCK_TOKENS KV_BLOCKS PREFIX_BLOCKS [batched|serial [batch-prefill]]]");
     auto weights=ModelWeights::load(argv[1]);const int context=std::stoi(argv[3]);std::unique_ptr<ModelRunner> runner;
     KvCacheConfig kv;if(argc>7)kv.block_tokens=std::stoi(argv[7]);if(argc>8)kv.max_blocks=std::stoi(argv[8]);
     if(argc>9)kv.prefix_cache_blocks=std::stoi(argv[9]);
@@ -16,10 +16,14 @@ int main(int argc,char** argv){try{
     else throw std::invalid_argument("backend unavailable in this build");
     EngineConfig config;config.context=context;if(argc>4)config.max_batch_size=std::stoi(argv[4]);if(argc>5)config.token_budget=std::stoi(argv[5]);if(argc>6)config.prefill_chunk=std::stoi(argv[6]);
     config.batch_decode=backend=="cpu";
-    if(argc==11){
+    if(argc>=11){
         const std::string mode=argv[10];
         if(mode!="batched"&&mode!="serial")throw std::invalid_argument("invalid decode mode");
         config.batch_decode=mode=="batched";
+    }
+    if(argc==12){
+        if(backend!="cpu"||std::string(argv[11])!="batch-prefill")throw std::invalid_argument("invalid prefill mode");
+        config.batch_prefill=true;
     }
     Engine engine(std::move(runner),config);
     protocol::ready(std::cout,weights->config.vocabulary,weights->config.eos,context,backend);

@@ -57,6 +57,8 @@ public:
     // row. Preparing rows must not mutate committed sequence KV.
     using DecodeBatch = std::function<std::vector<float>(std::size_t)>;
     virtual DecodeBatch prepare_decode_batch(const std::vector<DecodeRow>&){return {};}
+    using PrefillChunk = std::pair<RequestId,std::vector<TokenId>>;
+    virtual DecodeBatch prepare_prefill_batch(const std::vector<PrefillChunk>&){return {};}
     virtual void release(const RequestId&)=0;
     virtual void clear()=0;
     virtual RunnerStats stats() const=0;

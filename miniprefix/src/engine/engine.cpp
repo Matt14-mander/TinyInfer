@@ -85,8 +85,10 @@ bool Engine::step(){
             decode_rows.emplace_back(state.request.id,state.output.back());
         }
         auto batch=config_.batch_decode&&decode_rows.size()>1?runner_->prepare_decode_batch(decode_rows):ModelRunner::DecodeBatch{};
-        std::size_t decode_row=0;
-        for(const auto& work:plan.order()){
+        std::size_t decode_row=0,prefill_start=0,prefill_end=0;
+        ModelRunner::DecodeBatch prefill_batch;
+        for(std::size_t index=0;index<plan.order().size();++index){
+            const auto& work=plan.order()[index];
             if(!plan.has_budget())break;auto& s=active_[work.active_index];auto& r=s.request;
             try{
                 if(!s.resident)restore_prefix(s);
@@ -95,7 +97,28 @@ bool Engine::step(){
                 std::vector<TokenId> input;
                 if(!prefilling)input={s.output.back()};
                 else input.assign(r.prompt_token_ids.begin()+s.prefilled,r.prompt_token_ids.begin()+s.prefilled+count);
-                auto logits=(!prefilling&&batch)?batch(decode_row++):runner_->append(r.id,input);
+                if(prefilling&&config_.batch_prefill&&index>=prefill_end&&plan.has_budget()){
+                    // A new admission must see all preceding publications. Only
+                    // look ahead across requests whose prefix was already restored.
+                    std::vector<ModelRunner::PrefillChunk> chunks{{r.id,input}};
+                    auto remaining=plan.remaining();
+                    for(auto j=index+1;j<plan.order().size()&&remaining;++j){
+                        const auto& next=active_[plan.order()[j].active_index];
+                        if(!next.resident)break;
+                        const auto& prompt=next.request.prompt_token_ids;
+                        auto length=std::min({prompt.size()-next.prefilled,remaining,std::size_t(config_.prefill_chunk)});
+                        chunks.emplace_back(next.request.id,std::vector<TokenId>(
+                            prompt.begin()+next.prefilled,prompt.begin()+next.prefilled+length));
+                        remaining-=length;
+                    }
+                    prefill_start=index;
+                    prefill_end=index+chunks.size();
+                    prefill_batch=chunks.size()>1?runner_->prepare_prefill_batch(chunks):ModelRunner::DecodeBatch{};
+                }
+                std::vector<float> logits;
+                if(!prefilling&&batch)logits=batch(decode_row++);
+                else if(prefill_batch&&index<prefill_end)logits=prefill_batch(index-prefill_start);
+                else logits=runner_->append(r.id,input);
                 if(prefilling){s.prefilled+=input.size();step_stats_.prefill_tokens+=input.size();}
                 else step_stats_.decode_tokens+=input.size();
                 if(s.prefilled<r.prompt_token_ids.size())continue;

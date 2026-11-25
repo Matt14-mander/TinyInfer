@@ -157,6 +157,14 @@ void batched_decode(bool cuda){
         same(forward(i),serial->append(rows[i].first,{rows[i].second}));
     for(const auto& row:rows)
         same(batch->append(row.first,{3}),serial->append(row.first,{3}));
+    if(!cuda){
+        std::vector<ModelRunner::PrefillChunk> chunks{{"short",{4,1,6}},{"long",{2,5}}};
+        auto prefill=batch->prepare_prefill_batch(chunks);
+        for(std::size_t i=0;i<chunks.size();++i)
+            same(prefill(i),serial->append(chunks[i].first,chunks[i].second));
+        for(const auto& row:rows)
+            same(batch->append(row.first,{2}),serial->append(row.first,{2}));
+    }
     // Roll back a shared tail on a nonfinite row. Its sibling can still
     // consume the prepared batch and both sequences remain usable.
     for(auto* runner:{batch.get(),serial.get()}){
