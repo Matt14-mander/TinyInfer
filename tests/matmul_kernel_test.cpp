@@ -68,6 +68,19 @@ int main() {
         lhs_t, packed_transposed, packed_transposed_result);
     expect_equal(reference, packed_transposed_result);
 
+    // Strided LHS, multiple K blocks, a fifth row and a partial column block.
+    for (int rows : {4, 5}) {
+        Tensor x({11, rows}), weights({11, 19});
+        for (std::size_t i = 0; i < x.numel(); ++i) x.at(i) = float(int(i % 13) - 6) / 8;
+        for (std::size_t i = 0; i < weights.numel(); ++i) weights.at(i) = float(int(i % 17) - 8) / 4;
+        x.transpose(0, 1);
+        Tensor expected({rows, 19}), actual({rows, 19});
+        tinyinfer::cpu::matmul_reference(x, weights, expected);
+        tinyinfer::cpu::matmul_packed_simd(x, tinyinfer::cpu::PackedMatMulRhs(weights),
+                                           actual, {5, 8, 3});
+        expect_equal(expected, actual);
+    }
+
     const Tensor empty_lhs({2, 0});
     const Tensor empty_rhs({0, 3});
     const auto empty_result = tinyinfer::ops::matmul(empty_lhs, empty_rhs);

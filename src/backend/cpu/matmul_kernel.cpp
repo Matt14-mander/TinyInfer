@@ -286,6 +286,36 @@ void matmul_blocked(const Tensor& lhs, const Tensor& rhs, Tensor& output,
 }
 
 namespace {
+#if defined(__SSE2__) && !defined(__AVX2__)
+// Four token rows share two RHS vectors at each K, keeping eight sums live.
+void accumulate_four_rows(const float* lhs, std::size_t row_stride,
+                          std::size_t inner_stride, const float* rhs,
+                          std::size_t columns, float* output,
+                          std::size_t column_begin, std::size_t column_end,
+                          std::size_t inner_begin, std::size_t inner_end) {
+    for (auto col = column_begin; col < column_end; col += 8) {
+        __m128 low[4], high[4];
+        for (int row = 0; row < 4; ++row) {
+            low[row] = _mm_loadu_ps(output + row * columns + col);
+            high[row] = _mm_loadu_ps(output + row * columns + col + 4);
+        }
+        for (auto k = inner_begin; k < inner_end; ++k) {
+            const auto left = _mm_loadu_ps(rhs + k * columns + col);
+            const auto right = _mm_loadu_ps(rhs + k * columns + col + 4);
+            for (int row = 0; row < 4; ++row) {
+                const auto x = _mm_set1_ps(lhs[row * row_stride + k * inner_stride]);
+                low[row] = _mm_add_ps(low[row], _mm_mul_ps(x, left));
+                high[row] = _mm_add_ps(high[row], _mm_mul_ps(x, right));
+            }
+        }
+        for (int row = 0; row < 4; ++row) {
+            _mm_storeu_ps(output + row * columns + col, low[row]);
+            _mm_storeu_ps(output + row * columns + col + 4, high[row]);
+        }
+    }
+}
+#endif
+
 template <bool Fused>
 void run_packed(const Tensor& lhs, const PackedMatMulRhs& rhs,
                 Tensor& output, MatMulBlockSize block_size, const GemmEpilogue* epilogue) {
@@ -323,7 +353,20 @@ void run_packed(const Tensor& lhs, const PackedMatMulRhs& rhs,
                  inner_block += block_size.inner) {
                 const auto inner_end =
                     std::min(inner_block + block_size.inner, inner);
-                for (std::size_t row = row_block; row < row_end; ++row) {
+                auto row = row_block;
+#if defined(__SSE2__) && !defined(__AVX2__)
+                if constexpr (!Fused) {
+                    if ((rows == 4 || rows == 5) && row_end - row >= 4 &&
+                        (column_end - column_block) % 8 == 0) {
+                        accumulate_four_rows(lhs_data + row * lhs_row_stride,
+                            lhs_row_stride, lhs_inner_stride, rhs_data, columns,
+                            output_data + row * columns, column_block, column_end,
+                            inner_block, inner_end);
+                        row += 4;
+                    }
+                }
+#endif
+                for (; row < row_end; ++row) {
                     const auto* lhs_row = lhs_data + row * lhs_row_stride;
                     auto* output_row = output_data + row * columns;
                     auto column = column_block;

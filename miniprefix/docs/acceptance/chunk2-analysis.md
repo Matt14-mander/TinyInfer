@@ -26,3 +26,33 @@ loop loads RHS vectors separately for each output row. The four-row case can
 reuse each loaded RHS vector for all four tokens while preserving the order of
 each dot product. This is a kernel optimization hypothesis, not proof of the
 historical latency regression.
+
+## Four-row weight reuse
+
+The non-fused SSE2 packed MatMul now loads eight RHS columns once per K for
+four output rows. A fifth row, short column tails and blocks with fewer than
+four rows use the existing loop. The AVX2 and ARM paths are unchanged.
+
+For an isolated 4×576 by 576×1536 FP32 projection (SmolLM2 MLP gate/up shape)
+on the Release CPU build, eight alternating old/new pairs gave median 1273 µs
+before and 269 µs after. Each sample averaged 200 calls after 10 warmups with
+an already packed RHS. This isolates the kernel from scheduler and IPC time.
+
+To reproduce the end-to-end comparison, build and save the Release worker at
+the diagnosis commit and at this revision, then run:
+
+```sh
+python3 miniprefix/benchmarks/compare_small_chunk.py OLD_WORKER NEW_WORKER weights/model.mpf --pairs 4
+```
+
+Both workers use batched prefill and decode with identical seed-17 requests,
+chunk 2, budget 13, cache 16 and identical event traces. Median output throughput
+was 7.49 / 8.05 tok/s and request 0's P95 gap was 420 / 378 ms (old / new).
+Peak worker RSS was 1042.62 / 1042.55 MiB. The new worker led in three of four
+throughput pairs; P95 uses 20 gaps per worker. These single-host results measure
+this optimization on the trace, without attributing the original two-pair
+regression to a single cause. [Raw paired samples](chunk2-optimized.json).
+
+CPU CTest passed 56/56, including four/five rows with a transposed input,
+multiple K blocks and a column tail. The three pressure traces passed against
+serial CPU after the change.
