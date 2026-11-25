@@ -139,6 +139,22 @@ void same(const std::vector<float>& a,const std::vector<float>& b){
     assert(a.size()==b.size());for(std::size_t i=0;i<a.size();++i)assert(std::isfinite(a[i])&&std::abs(a[i]-b[i])<2e-5F);
     assert(std::max_element(a.begin(),a.end())-a.begin()==std::max_element(b.begin(),b.end())-b.begin());
 }
+void batched_decode(){
+    auto w=weights();
+    auto batch=make_cpu_runner(w,16,{4,8,0});
+    auto serial=make_cpu_runner(w,16,{4,8,0});
+    std::vector<ModelRunner::DecodeRow> rows{{"short",4},{"long",7}};
+    for(auto* runner:{batch.get(),serial.get()}){
+        runner->create("short");runner->append("short",{1});
+        runner->create("long");runner->append("long",{2,3,4,5});
+    }
+    auto forward=batch->prepare_decode_batch(rows);
+    assert(batch->stats().forward_tokens==5);
+    for(std::size_t i=0;i<rows.size();++i)
+        same(forward(i),serial->append(rows[i].first,{rows[i].second}));
+    for(const auto& row:rows)
+        same(batch->append(row.first,{3}),serial->append(row.first,{3}));
+}
 void runner(bool cuda){
     auto w=weights();auto make=[&](){
 #ifdef MINIPREFIX_ENABLE_CUDA
@@ -255,6 +271,7 @@ void publication_snapshots(bool cuda){
     assert(r->stats().live_sequences==0&&r->stats().kv_live_blocks==0&&r->stats().block_table_device_bytes==0);
 }
 int main(int argc,char** argv){
+    batched_decode();
     std::cout<<"COW regression started"<<std::endl;
     bool cuda=false,required=false;for(int i=1;i<argc;++i){cuda|=std::string(argv[i])=="--cuda";required|=std::string(argv[i])=="--require-device";}
 #ifdef MINIPREFIX_ENABLE_CUDA

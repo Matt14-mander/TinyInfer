@@ -50,6 +50,11 @@ public:
     virtual void cache_prefix(const RequestId&){}
     virtual void clear_prefix_cache(){}
     virtual std::vector<float> append(const RequestId&,const std::vector<TokenId>&)=0;
+    using DecodeRow = std::pair<RequestId,TokenId>;
+    // Optional precomputation for one scheduler step. Invoke each row once in
+    // order to append its token. Preparing rows must not mutate sequence KV.
+    using DecodeBatch = std::function<std::vector<float>(std::size_t)>;
+    virtual DecodeBatch prepare_decode_batch(const std::vector<DecodeRow>&){return {};}
     virtual void release(const RequestId&)=0;
     virtual void clear()=0;
     virtual RunnerStats stats() const=0;

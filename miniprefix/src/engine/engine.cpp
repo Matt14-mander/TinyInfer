@@ -78,6 +78,14 @@ bool Engine::step(){
         std::vector<SchedulePhase> phases;
         for(const auto& state:active_)phases.push_back(state.output.empty()?SchedulePhase::Prefill:SchedulePhase::Decode);
         auto plan=scheduler_.plan(phases);
+        std::vector<ModelRunner::DecodeRow> decode_rows;
+        for(const auto& work:plan.order()){
+            if(work.phase!=SchedulePhase::Decode||decode_rows.size()==std::size_t(config_.token_budget))break;
+            const auto& state=active_[work.active_index];
+            decode_rows.emplace_back(state.request.id,state.output.back());
+        }
+        auto batch=decode_rows.size()>1?runner_->prepare_decode_batch(decode_rows):ModelRunner::DecodeBatch{};
+        std::size_t decode_row=0;
         for(const auto& work:plan.order()){
             if(!plan.has_budget())break;auto& s=active_[work.active_index];auto& r=s.request;
             try{
@@ -87,7 +95,7 @@ bool Engine::step(){
                 std::vector<TokenId> input;
                 if(!prefilling)input={s.output.back()};
                 else input.assign(r.prompt_token_ids.begin()+s.prefilled,r.prompt_token_ids.begin()+s.prefilled+count);
-                auto logits=runner_->append(r.id,input);
+                auto logits=(!prefilling&&batch)?batch(decode_row++):runner_->append(r.id,input);
                 if(prefilling){s.prefilled+=input.size();step_stats_.prefill_tokens+=input.size();}
                 else step_stats_.decode_tokens+=input.size();
                 if(s.prefilled<r.prompt_token_ids.size())continue;

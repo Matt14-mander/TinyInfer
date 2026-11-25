@@ -34,6 +34,13 @@ class CpuRunner final:public ModelRunner {
         Tensor result({x.shape()[0],static_cast<std::int64_t>(packed->columns())});
         tinyinfer::cpu::matmul_packed_simd(x,*packed,result);return result;
     }
+    struct Qkv {Tensor q,k,v;};
+    Qkv project_qkv(const Tensor& input,const std::string& layer){
+        auto normalized=rms(input,weights_->get(layer+"input_layernorm.weight"),config().rms_epsilon);
+        return {linear(normalized,layer+"self_attn.q_proj.weight"),
+                linear(normalized,layer+"self_attn.k_proj.weight"),
+                linear(normalized,layer+"self_attn.v_proj.weight")};
+    }
 public:
     CpuRunner(std::shared_ptr<ModelWeights> w,int context,KvCacheConfig kv):weights_(std::move(w)),
         kv_(kv,config().layers,config().kv_width(),context,config().vocabulary){
@@ -58,6 +65,27 @@ public:
     void cache_prefix(const RequestId& id) override{kv_.cache_prefix(id);}
     void clear_prefix_cache() override{kv_.clear_prefix_cache();}
     std::vector<float> append(const RequestId& id,const std::vector<TokenId>& tokens) override{
+        return append_projected(id,tokens,nullptr);
+    }
+    DecodeBatch prepare_decode_batch(const std::vector<DecodeRow>& rows) override{
+        const auto width=config().hidden;
+        Tensor input({static_cast<std::int64_t>(rows.size()),width});
+        const auto* embedding=weights_->get("model.embed_tokens.weight").data<float>();
+        for(std::size_t i=0;i<rows.size();++i){
+            auto token=rows[i].second;
+            if(token<0||token>=config().vocabulary)throw std::invalid_argument("invalid decode token");
+            std::copy_n(embedding+std::size_t(token)*width,width,input.data<float>()+i*width);
+        }
+        auto projected=project_qkv(input,"model.layers.0.");
+        return [this,rows,projected=std::move(projected)](std::size_t index){
+            const auto& row=rows.at(index);
+            Qkv slice{projected.q.narrow(0,index,1),projected.k.narrow(0,index,1),
+                      projected.v.narrow(0,index,1)};
+            return append_projected(row.first,{row.second},&slice);
+        };
+    }
+private:
+    std::vector<float> append_projected(const RequestId& id,const std::vector<TokenId>& tokens,Qkv* first){
         auto append=kv_.prepare_append(id,tokens);const auto& s=append.sequence();
         if(append.tail_copy())++costs_.cow_pages;
         {CostTimer timer(cost_timing_&&bool(append.tail_copy()),costs_.cow_copy_ns);
@@ -75,8 +103,7 @@ public:
         std::vector<std::size_t> offsets(s.used+n);
         for(int l=0;l<c.layers;++l){auto p="model.layers."+std::to_string(l)+".";
             for(int t=0;t<s.used+n;++t)offsets[t]=kv_.offset(s,l,t);
-            auto normalized=rms(x,weights_->get(p+"input_layernorm.weight"),c.rms_epsilon);
-            auto q=linear(normalized,p+"self_attn.q_proj.weight"),k=linear(normalized,p+"self_attn.k_proj.weight"),v=linear(normalized,p+"self_attn.v_proj.weight");
+            auto [q,k,v]=(l==0&&first)?std::move(*first):project_qkv(x,p);
             rope(q,c.heads,dim,s.used,c.rope_theta);rope(k,c.kv_heads,dim,s.used,c.rope_theta);
             for(int row=0;row<n;++row){const auto offset=offsets[s.used+row];
                 std::copy_n(k.data<float>()+row*kv,kv,keys_.data()+offset);
@@ -92,7 +119,7 @@ public:
                     contexts.at((row*c.heads+h)*dim+d)=total;}
             }
             x=tinyinfer::ops::add(x,linear(contexts,p+"self_attn.o_proj.weight"));
-            normalized=rms(x,weights_->get(p+"post_attention_layernorm.weight"),c.rms_epsilon);
+            auto normalized=rms(x,weights_->get(p+"post_attention_layernorm.weight"),c.rms_epsilon);
             auto gate=linear(normalized,p+"mlp.gate_proj.weight"),up=linear(normalized,p+"mlp.up_proj.weight");
             for(std::size_t i=0;i<gate.numel();++i){const float a=gate.at(i);gate.at(i)=(a/(1+std::exp(-a)))*up.at(i);}
             x=tinyinfer::ops::add(x,linear(gate,p+"mlp.down_proj.weight"));
