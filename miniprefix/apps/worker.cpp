@@ -15,6 +15,7 @@ int main(int argc,char** argv){try{
 #endif
     else throw std::invalid_argument("backend unavailable in this build");
     EngineConfig config;config.context=context;if(argc>4)config.max_batch_size=std::stoi(argv[4]);if(argc>5)config.token_budget=std::stoi(argv[5]);if(argc>6)config.prefill_chunk=std::stoi(argv[6]);
+    config.batch_decode=backend=="cpu";
     if(argc==11){
         const std::string mode=argv[10];
         if(mode!="batched"&&mode!="serial")throw std::invalid_argument("invalid decode mode");

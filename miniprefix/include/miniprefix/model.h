@@ -52,7 +52,9 @@ public:
     virtual std::vector<float> append(const RequestId&,const std::vector<TokenId>&)=0;
     using DecodeRow = std::pair<RequestId,TokenId>;
     // Optional precomputation for one scheduler step. Invoke each row once in
-    // order to append its token. Preparing rows must not mutate sequence KV.
+    // order to append its token. Rows name distinct resident sequences. Finish
+    // consuming a batch before preparing another or appending to any pending
+    // row. Preparing rows must not mutate committed sequence KV.
     using DecodeBatch = std::function<std::vector<float>(std::size_t)>;
     virtual DecodeBatch prepare_decode_batch(const std::vector<DecodeRow>&){return {};}
     virtual void release(const RequestId&)=0;

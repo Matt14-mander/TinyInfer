@@ -139,9 +139,12 @@ void same(const std::vector<float>& a,const std::vector<float>& b){
     assert(a.size()==b.size());for(std::size_t i=0;i<a.size();++i)assert(std::isfinite(a[i])&&std::abs(a[i]-b[i])<2e-5F);
     assert(std::max_element(a.begin(),a.end())-a.begin()==std::max_element(b.begin(),b.end())-b.begin());
 }
-void batched_decode(){
+void batched_decode(bool cuda){
     auto w=weights();
     auto batch=make_cpu_runner(w,16,{4,8,0});
+#ifdef MINIPREFIX_ENABLE_CUDA
+    if(cuda)batch=make_cuda_runner(w,16,{4,8,0});
+#endif
     auto serial=make_cpu_runner(w,16,{4,8,0});
     std::vector<ModelRunner::DecodeRow> rows{{"short",4},{"long",7}};
     for(auto* runner:{batch.get(),serial.get()}){
@@ -283,7 +286,6 @@ void publication_snapshots(bool cuda){
     assert(r->stats().live_sequences==0&&r->stats().kv_live_blocks==0&&r->stats().block_table_device_bytes==0);
 }
 int main(int argc,char** argv){
-    batched_decode();
     std::cout<<"COW regression started"<<std::endl;
     bool cuda=false,required=false;for(int i=1;i<argc;++i){cuda|=std::string(argv[i])=="--cuda";required|=std::string(argv[i])=="--require-device";}
 #ifdef MINIPREFIX_ENABLE_CUDA
@@ -291,6 +293,7 @@ int main(int argc,char** argv){
 #else
     assert(!cuda);
 #endif
+    batched_decode(cuda);
     metadata();std::cout<<"COW metadata passed"<<std::endl;
     payload(cuda);payload(cuda,true);std::cout<<"COW payload passed"<<std::endl;
     runner(cuda);std::cout<<"COW copy, capacity, rollback, retry and release passed"<<std::endl;
