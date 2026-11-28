@@ -28,3 +28,7 @@ prefix_benefit.py 提供真实模型八请求负载的 off/cold/warm 独立进�
 `capacity.cpp` / `capacity.py` 支持同一原生二进制比较共享准入与 Full/Adaptive 批量空间策略，
 包含混合输入/输出长度、可调公共前缀和页池。主测量关闭成本计时，`--profile` 单独收集诊断，
 协议见[批量工作页与缓存保留](../docs/batch_cache_balance.md)，结果见[验收](../docs/acceptance/batch-cache-balance.md)。
+
+`attention.cu` / `attention.py` 比较原 256-thread 分页 attention 与 warp 版本，覆盖 144 个维度/上下文/批次形状，
+用原 FP32 kernel 和独立 FP64 softmax 校验，并在独立进程内交错计时。CUDA event 统计的是 stream 时间，短 kernel 可能包含提交间隙。
+`miniprefix_attention_bench --check` 只验证正确性，`--quick` 用于 sanitizer 边界子集。实现和验收见[warp attention](../docs/acceptance/warp-attention.md)。

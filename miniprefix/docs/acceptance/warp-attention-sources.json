@@ -1,0 +1,11 @@
+{
+  "base_commit": "89f59a0",
+  "files": {
+    "miniprefix/src/backend/cuda/attention.cuh": "631e6de283fb8e901b953390c96464026e7c9fab4c3fa03680c7a48d056067fa",
+    "miniprefix/src/backend/cuda/llama_runner.cu": "32fd3fd324929e4bb69dd7fe2949eff05848ddc4caecdef97dc3593b52dd30e8",
+    "miniprefix/benchmarks/attention.cu": "d50dfaf7196ad75734e3da889c40ae12c80b8cba046ce69f47fbc3180229c930",
+    "miniprefix/benchmarks/attention.py": "ddb41362f52f6e2e6d67f00a9b567c9e83925242c4160d345d74ec063d215070",
+    "miniprefix/CMakeLists.txt": "0e6a41c8055a624dc5819a8b4ebe8be0b34e5e9ff0f3416ff91cc51013a8b858",
+    "tests/CMakeLists.txt": "f160a01afa888bbe793088245b27d0027b18a0b265fb6d042d8c71ad1a61fc4e"
+  }
+}

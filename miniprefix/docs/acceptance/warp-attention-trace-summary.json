@@ -1,0 +1,429 @@
+{
+  "model_sha256": "fe826f487690854ac806197b60edffc2c76c6c446eede6b188e47763deae7aef",
+  "binary_sha256": {
+    "before": "138058fab9a5d564a895e554e3938b091358fb78ce7260fdb37d4b0ea135c919",
+    "after": "dca75a6c083df70d23b00851da380a48e135e8ebbe9dd25618830986940d9112"
+  },
+  "runs": [
+    {
+      "mode": "greedy",
+      "phase": "prefill32",
+      "calls": 5,
+      "kernels_per_call": 634,
+      "span_ms_median": 19.1364,
+      "append_ms_median": 19.424,
+      "d2h_us_median": 1.6,
+      "d2h_bytes": 16,
+      "greedy_us_median": 47.84,
+      "active_pct": 23.785366349957688,
+      "gap_pct": 76.21463365004232,
+      "gap_p50_us": 2.048,
+      "gap_p95_us": 85.76,
+      "api_late_pct_of_gaps": 19.126121446737752,
+      "unmatched_api": 0,
+      "top_gap_transitions_ms": [
+        [
+          "splitK-reduce -> GEMM",
+          18.741971
+        ],
+        [
+          "GEMM -> splitK-reduce",
+          10.728907
+        ],
+        [
+          "rms -> GEMM",
+          10.275275
+        ]
+      ],
+      "variant": "before",
+      "repeat": 0,
+      "attention_kernels": 30,
+      "attention_us": 449.182
+    },
+    {
+      "mode": "greedy",
+      "phase": "decode4",
+      "calls": 35,
+      "kernels_per_call": 454,
+      "span_ms_median": 16.196679,
+      "append_ms_median": 16.4937,
+      "d2h_us_median": 1.345,
+      "d2h_bytes": 16,
+      "greedy_us_median": 46.848,
+      "active_pct": 26.293198451012397,
+      "gap_pct": 73.7068015489876,
+      "gap_p50_us": 2.432,
+      "gap_p95_us": 90.144,
+      "api_late_pct_of_gaps": 17.49274153356478,
+      "unmatched_api": 0,
+      "top_gap_transitions_ms": [
+        [
+          "GEMM -> GEMM",
+          78.256109
+        ],
+        [
+          "rms -> GEMM",
+          76.688882
+        ],
+        [
+          "swiglu -> GEMM",
+          44.027774
+        ]
+      ],
+      "variant": "before",
+      "repeat": 0,
+      "attention_kernels": 30,
+      "attention_us": 378.748
+    },
+    {
+      "mode": "greedy",
+      "phase": "prefill32",
+      "calls": 5,
+      "kernels_per_call": 634,
+      "span_ms_median": 13.199708,
+      "append_ms_median": 13.3868,
+      "d2h_us_median": 1.312,
+      "d2h_bytes": 16,
+      "greedy_us_median": 50.784,
+      "active_pct": 24.43595698241304,
+      "gap_pct": 75.56404301758695,
+      "gap_p50_us": 1.985,
+      "gap_p95_us": 76.096,
+      "api_late_pct_of_gaps": 19.64281607235348,
+      "unmatched_api": 0,
+      "top_gap_transitions_ms": [
+        [
+          "splitK-reduce -> GEMM",
+          14.055327
+        ],
+        [
+          "GEMM -> splitK-reduce",
+          10.461325
+        ],
+        [
+          "rms -> GEMM",
+          7.888463
+        ]
+      ],
+      "variant": "after",
+      "repeat": 0,
+      "attention_kernels": 30,
+      "attention_us": 160.738
+    },
+    {
+      "mode": "greedy",
+      "phase": "decode4",
+      "calls": 35,
+      "kernels_per_call": 454,
+      "span_ms_median": 12.128517,
+      "append_ms_median": 12.2618,
+      "d2h_us_median": 1.312,
+      "d2h_bytes": 16,
+      "greedy_us_median": 49.28,
+      "active_pct": 32.75239136644196,
+      "gap_pct": 67.24760863355803,
+      "gap_p50_us": 1.984,
+      "gap_p95_us": 60.351,
+      "api_late_pct_of_gaps": 13.900903856024355,
+      "unmatched_api": 0,
+      "top_gap_transitions_ms": [
+        [
+          "rms -> GEMM",
+          55.387837
+        ],
+        [
+          "GEMM -> GEMM",
+          54.99711
+        ],
+        [
+          "swiglu -> GEMM",
+          31.363026
+        ]
+      ],
+      "variant": "after",
+      "repeat": 0,
+      "attention_kernels": 30,
+      "attention_us": 311.579
+    },
+    {
+      "mode": "greedy",
+      "phase": "prefill32",
+      "calls": 5,
+      "kernels_per_call": 634,
+      "span_ms_median": 17.20998,
+      "append_ms_median": 17.5991,
+      "d2h_us_median": 1.6,
+      "d2h_bytes": 16,
+      "greedy_us_median": 46.208,
+      "active_pct": 23.02494701097278,
+      "gap_pct": 76.97505298902722,
+      "gap_p50_us": 1.952,
+      "gap_p95_us": 82.623,
+      "api_late_pct_of_gaps": 20.527280158581366,
+      "unmatched_api": 0,
+      "top_gap_transitions_ms": [
+        [
+          "splitK-reduce -> GEMM",
+          15.738238
+        ],
+        [
+          "GEMM -> splitK-reduce",
+          12.654435
+        ],
+        [
+          "rms -> GEMM",
+          9.048185
+        ]
+      ],
+      "variant": "after",
+      "repeat": 1,
+      "attention_kernels": 30,
+      "attention_us": 145.59799999999998
+    },
+    {
+      "mode": "greedy",
+      "phase": "decode4",
+      "calls": 35,
+      "kernels_per_call": 454,
+      "span_ms_median": 11.439848,
+      "append_ms_median": 11.8238,
+      "d2h_us_median": 1.504,
+      "d2h_bytes": 16,
+      "greedy_us_median": 44.192,
+      "active_pct": 34.67789101172962,
+      "gap_pct": 65.32210898827039,
+      "gap_p50_us": 1.631,
+      "gap_p95_us": 66.176,
+      "api_late_pct_of_gaps": 14.743537280921128,
+      "unmatched_api": 0,
+      "top_gap_transitions_ms": [
+        [
+          "rms -> GEMM",
+          53.206646
+        ],
+        [
+          "GEMM -> GEMM",
+          47.496949
+        ],
+        [
+          "swiglu -> GEMM",
+          25.99397
+        ]
+      ],
+      "variant": "after",
+      "repeat": 1,
+      "attention_kernels": 30,
+      "attention_us": 292.253
+    },
+    {
+      "mode": "greedy",
+      "phase": "prefill32",
+      "calls": 5,
+      "kernels_per_call": 634,
+      "span_ms_median": 8.960826,
+      "append_ms_median": 9.2715,
+      "d2h_us_median": 1.216,
+      "d2h_bytes": 16,
+      "greedy_us_median": 47.552,
+      "active_pct": 37.15008076142736,
+      "gap_pct": 62.84991923857264,
+      "gap_p50_us": 1.472,
+      "gap_p95_us": 50.015,
+      "api_late_pct_of_gaps": 16.05710163284953,
+      "unmatched_api": 0,
+      "top_gap_transitions_ms": [
+        [
+          "splitK-reduce -> GEMM",
+          7.908488
+        ],
+        [
+          "GEMM -> splitK-reduce",
+          6.279934
+        ],
+        [
+          "splitK-reduce -> rms",
+          3.646055
+        ]
+      ],
+      "variant": "before",
+      "repeat": 1,
+      "attention_kernels": 30,
+      "attention_us": 406.077
+    },
+    {
+      "mode": "greedy",
+      "phase": "decode4",
+      "calls": 35,
+      "kernels_per_call": 454,
+      "span_ms_median": 7.061513,
+      "append_ms_median": 7.1698,
+      "d2h_us_median": 1.024,
+      "d2h_bytes": 16,
+      "greedy_us_median": 47.423,
+      "active_pct": 54.90172861615363,
+      "gap_pct": 45.09827138384637,
+      "gap_p50_us": 1.472,
+      "gap_p95_us": 38.944,
+      "api_late_pct_of_gaps": 12.349073476599571,
+      "unmatched_api": 0,
+      "top_gap_transitions_ms": [
+        [
+          "GEMM -> GEMM",
+          22.232899
+        ],
+        [
+          "rms -> GEMM",
+          20.545753
+        ],
+        [
+          "swiglu -> GEMM",
+          9.198131
+        ]
+      ],
+      "variant": "before",
+      "repeat": 1,
+      "attention_kernels": 30,
+      "attention_us": 375.677
+    },
+    {
+      "mode": "greedy",
+      "phase": "prefill32",
+      "calls": 5,
+      "kernels_per_call": 634,
+      "span_ms_median": 10.121297,
+      "append_ms_median": 11.5217,
+      "d2h_us_median": 1.216,
+      "d2h_bytes": 16,
+      "greedy_us_median": 47.328,
+      "active_pct": 36.57337189587659,
+      "gap_pct": 63.42662810412341,
+      "gap_p50_us": 1.6,
+      "gap_p95_us": 38.975,
+      "api_late_pct_of_gaps": 5.395148716828648,
+      "unmatched_api": 0,
+      "top_gap_transitions_ms": [
+        [
+          "splitK-reduce -> GEMM",
+          6.35242
+        ],
+        [
+          "GEMM -> splitK-reduce",
+          5.342556
+        ],
+        [
+          "splitK-reduce -> rms",
+          3.323879
+        ]
+      ],
+      "variant": "after",
+      "repeat": 2,
+      "attention_kernels": 30,
+      "attention_us": 145.12
+    },
+    {
+      "mode": "greedy",
+      "phase": "decode4",
+      "calls": 35,
+      "kernels_per_call": 454,
+      "span_ms_median": 8.452094,
+      "append_ms_median": 8.5952,
+      "d2h_us_median": 1.216,
+      "d2h_bytes": 16,
+      "greedy_us_median": 47.488,
+      "active_pct": 39.08447264981346,
+      "gap_pct": 60.91552735018654,
+      "gap_p50_us": 1.568,
+      "gap_p95_us": 58.815,
+      "api_late_pct_of_gaps": 15.470183508419277,
+      "unmatched_api": 0,
+      "top_gap_transitions_ms": [
+        [
+          "GEMM -> GEMM",
+          42.383278
+        ],
+        [
+          "rms -> GEMM",
+          39.0776
+        ],
+        [
+          "swiglu -> GEMM",
+          19.41119
+        ]
+      ],
+      "variant": "after",
+      "repeat": 2,
+      "attention_kernels": 30,
+      "attention_us": 290.974
+    },
+    {
+      "mode": "greedy",
+      "phase": "prefill32",
+      "calls": 5,
+      "kernels_per_call": 634,
+      "span_ms_median": 15.762756,
+      "append_ms_median": 16.0575,
+      "d2h_us_median": 1.504,
+      "d2h_bytes": 16,
+      "greedy_us_median": 49.312,
+      "active_pct": 27.647713537626366,
+      "gap_pct": 72.35228646237364,
+      "gap_p50_us": 1.888,
+      "gap_p95_us": 94.015,
+      "api_late_pct_of_gaps": 20.360457093670483,
+      "unmatched_api": 0,
+      "top_gap_transitions_ms": [
+        [
+          "splitK-reduce -> GEMM",
+          12.871798
+        ],
+        [
+          "GEMM -> splitK-reduce",
+          11.909911
+        ],
+        [
+          "rms -> GEMM",
+          7.435287
+        ]
+      ],
+      "variant": "before",
+      "repeat": 2,
+      "attention_kernels": 30,
+      "attention_us": 455.868
+    },
+    {
+      "mode": "greedy",
+      "phase": "decode4",
+      "calls": 35,
+      "kernels_per_call": 454,
+      "span_ms_median": 11.150632,
+      "append_ms_median": 11.2903,
+      "d2h_us_median": 1.472,
+      "d2h_bytes": 16,
+      "greedy_us_median": 46.623,
+      "active_pct": 35.791826934181415,
+      "gap_pct": 64.20817306581858,
+      "gap_p50_us": 1.696,
+      "gap_p95_us": 72.736,
+      "api_late_pct_of_gaps": 15.73796833756632,
+      "unmatched_api": 0,
+      "top_gap_transitions_ms": [
+        [
+          "GEMM -> GEMM",
+          50.454353
+        ],
+        [
+          "rms -> GEMM",
+          47.911571
+        ],
+        [
+          "swiglu -> GEMM",
+          21.535954
+        ]
+      ],
+      "variant": "before",
+      "repeat": 2,
+      "attention_kernels": 30,
+      "attention_us": 390.04400000000004
+    }
+  ]
+}

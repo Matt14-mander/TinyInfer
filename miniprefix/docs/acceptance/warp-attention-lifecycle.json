@@ -1,0 +1,32 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "backend": "cpu",
+      "passed": true,
+      "lifecycle": {
+        "waiting": 0,
+        "active": 0,
+        "buffered_events": 0,
+        "event_slots": 0,
+        "tracked_ids": 1,
+        "history_ids": 1
+      },
+      "worker_sha256": "2a08f5fd2096f78d427a7dc5c91b4d30ffc206c2feec0edf17b5a6420ae136af"
+    },
+    {
+      "backend": "cuda",
+      "passed": true,
+      "lifecycle": {
+        "waiting": 0,
+        "active": 0,
+        "buffered_events": 0,
+        "event_slots": 0,
+        "tracked_ids": 1,
+        "history_ids": 1
+      },
+      "worker_sha256": "ed5a6b5d714831c1f4c7188f81e39954792711128de244d65d2c255872462f83"
+    }
+  ],
+  "model_sha256": "fe826f487690854ac806197b60edffc2c76c6c446eede6b188e47763deae7aef"
+}

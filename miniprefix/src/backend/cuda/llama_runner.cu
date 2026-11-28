@@ -1,5 +1,6 @@
 #include "miniprefix/model.h"
 #include "resources.h"
+#include "attention.cuh"
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 #include <math_constants.h>
@@ -44,23 +45,6 @@ __global__ void append_kernel(const float* k,const float* v,float* keys,float* v
         if(tables)table=tables[row];
         const auto offset=((std::size_t(table[token/block_tokens])*layers+layer)*block_tokens+token%block_tokens)*width+i%width;
         keys[offset]=k[i];values[offset]=v[i];}}
-__global__ void attention_kernel(const float* q,const float* k,const float* v,float* out,const int* table,
-                                 int heads,int kvheads,int dim,int start,int layer,int layers,int block_tokens,const int* positions,const int* const* tables){
-    const int row=blockIdx.x,head=blockIdx.y,lane=threadIdx.x,kh=head/(heads/kvheads),length=(positions?positions[row]:start+row)+1;
-    if(tables)table=tables[row];
-    __shared__ float reduction[256];
-    float maximum=-CUDART_INF_F,denom=0,numerator=0;
-    const float query=lane<dim?q[(row*heads+head)*dim+lane]:0;
-    for(int t=0;t<length;++t){
-        const std::size_t offset=(((std::size_t(table[t/block_tokens])*layers+layer)*block_tokens+t%block_tokens)*kvheads+kh)*dim;
-        reduction[lane]=lane<dim?query*k[offset+lane]:0;__syncthreads();
-        for(int step=128;step;step/=2){if(lane<step)reduction[lane]+=reduction[lane+step];__syncthreads();}
-        float score=reduction[0]/sqrtf(float(dim));float next=fmaxf(maximum,score),scale=expf(maximum-next),weight=expf(score-next);
-        denom=denom*scale+weight;if(lane<dim)numerator=numerator*scale+weight*v[offset+lane];maximum=next;
-        __syncthreads();
-    }
-    if(lane<dim)out[(row*heads+head)*dim+lane]=numerator/denom;
-}
 __global__ void swiglu_kernel(float* gate,const float* up,int count){int i=blockIdx.x*blockDim.x+threadIdx.x;if(i<count){float v=gate[i];gate[i]=(v/(1+expf(-v)))*up[i];}}
 // One block per output row. Any nonfinite logit invalidates the whole row.
 __global__ void greedy_kernel(const float* logits,int vocabulary,TokenId* ids){
@@ -133,7 +117,7 @@ class CudaRunner final:public ModelRunner {
             rope_kernel<<<(n*c.kv_width()/2+255)/256,256,0,execution_.stream()>>>(workspace_.k.data,n,c.kv_heads,c.head_dimension(),start,c.rope_theta,positions);
             append_kernel<<<(n*c.kv_width()+255)/256,256,0,execution_.stream()>>>(workspace_.k.data,workspace_.v.data,keys_.data,values_.data,table,
                 n,c.kv_width(),start,l,c.layers,kv_.config().block_tokens,positions,tables);
-            attention_kernel<<<dim3(n,c.heads),256,0,execution_.stream()>>>(workspace_.q.data,keys_.data,values_.data,workspace_.attention.data,table,
+            cuda_detail::launch_attention(n,execution_.stream(),workspace_.q.data,keys_.data,values_.data,workspace_.attention.data,table,
                 c.heads,c.kv_heads,c.head_dimension(),start,l,c.layers,kv_.config().block_tokens,positions,tables);
             linear(workspace_.attention,p+"self_attn.o_proj.weight",workspace_.projection,n,c.hidden,c.hidden);
             rms_kernel<true><<<n,256,0,execution_.stream()>>>(workspace_.x.data,parameter(p+"post_attention_layernorm.weight"),workspace_.norm.data,c.hidden,c.rms_epsilon,nullptr,workspace_.projection.data);

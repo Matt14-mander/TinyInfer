@@ -1,0 +1,2755 @@
+{
+  "header": {
+    "binary_sha256": "6d5b4eea645d4df6e7946084bee269b1eb35e1abd01abbb9860c1c0ea4648b88",
+    "gpu": {
+      "command": [
+        "nvidia-smi",
+        "--query-gpu=name,driver_version,memory.total,pstate,clocks.sm,temperature.gpu,power.draw",
+        "--format=csv,noheader"
+      ],
+      "value": "NVIDIA GeForce RTX 4070 Laptop GPU, 555.97, 8188 MiB, P5, 810 MHz, 61, 9.23 W"
+    },
+    "repeats": 3,
+    "timing": "CUDA event stream time / 20 launches; excludes uploads, oracle, downloads; may include host launch gaps",
+    "shapes": 144,
+    "reference": "pre-optimization 256-thread FP32 kernel and dense FP64 oracle on first/last query rows"
+  },
+  "cells": [
+    {
+      "dim": 4,
+      "length": 1,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 8.8064003,
+      "after_us": 9.06239986,
+      "speedup": 0.9094279845647861,
+      "before_range": [
+        8.24160004,
+        10.8032007
+      ],
+      "after_range": [
+        7.37280035,
+        13.7216005
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 4,
+      "length": 1,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 8.44799995,
+      "after_us": 9.88479996,
+      "speedup": 0.8565340495968652,
+      "before_range": [
+        6.75359964,
+        13.1072006
+      ],
+      "after_range": [
+        7.88479996,
+        13.0559998
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 4,
+      "length": 1,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 8.39680004,
+      "after_us": 10.7007999,
+      "speedup": 0.8851351417335304,
+      "before_range": [
+        6.70720005,
+        13.5872011
+      ],
+      "after_range": [
+        7.5776,
+        15.1552
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 4,
+      "length": 1,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 14.2912006,
+      "after_us": 11.5712004,
+      "speedup": 0.9746835863487191,
+      "before_range": [
+        7.88479996,
+        17.9808006
+      ],
+      "after_range": [
+        8.08959961,
+        22.7327995
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 4,
+      "length": 7,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 9.88160038,
+      "after_us": 8.55040073,
+      "speedup": 1.1377245286139939,
+      "before_range": [
+        9.72800064,
+        11.7423992
+      ],
+      "after_range": [
+        7.68000031,
+        13.9824009
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.3066455e-08
+    },
+    {
+      "dim": 4,
+      "length": 7,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 10.5952005,
+      "after_us": 8.03840065,
+      "speedup": 1.2039474611150303,
+      "before_range": [
+        9.3696003,
+        16.0208015
+      ],
+      "after_range": [
+        7.78239965,
+        17.2031994
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.84626099e-08
+    },
+    {
+      "dim": 4,
+      "length": 7,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 10.1792002,
+      "after_us": 9.7791996,
+      "speedup": 1.0409032043890383,
+      "before_range": [
+        9.83199978,
+        11.8784008
+      ],
+      "after_range": [
+        8.32959938,
+        13.6703997
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.17862896e-08
+    },
+    {
+      "dim": 4,
+      "length": 7,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 13.9776001,
+      "after_us": 9.93279934,
+      "speedup": 1.2010309875040726,
+      "before_range": [
+        11.9295998,
+        14.2848005
+      ],
+      "after_range": [
+        8.03840065,
+        14.643199
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.69309097e-08
+    },
+    {
+      "dim": 4,
+      "length": 33,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 24.1664009,
+      "after_us": 14.7967987,
+      "speedup": 1.6832061465052024,
+      "before_range": [
+        22.5792007,
+        24.9344006
+      ],
+      "after_range": [
+        13.4144001,
+        16.2192001
+      ],
+      "max_difference": 0,
+      "oracle_error": 4.27716682e-08
+    },
+    {
+      "dim": 4,
+      "length": 33,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 36.8975983,
+      "after_us": 16.5888004,
+      "speedup": 2.2242475290738923,
+      "before_range": [
+        35.2256012,
+        38.6912003
+      ],
+      "after_range": [
+        16.0256004,
+        20.7872009
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.14412806e-08
+    },
+    {
+      "dim": 4,
+      "length": 33,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 27.4832001,
+      "after_us": 17.2031994,
+      "speedup": 1.7831324489410976,
+      "before_range": [
+        22.7327995,
+        34.6111984
+      ],
+      "after_range": [
+        12.7488003,
+        19.9680004
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.45122315e-08
+    },
+    {
+      "dim": 4,
+      "length": 33,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 79.3087997,
+      "after_us": 16.1103992,
+      "speedup": 5.437679980021849,
+      "before_range": [
+        78.6304016,
+        87.6031952
+      ],
+      "after_range": [
+        13.8224001,
+        18.534399
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.23567446e-08
+    },
+    {
+      "dim": 4,
+      "length": 128,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 80.128006,
+      "after_us": 41.8303986,
+      "speedup": 1.936881408063173,
+      "before_range": [
+        79.8720016,
+        89.028801
+      ],
+      "after_range": [
+        41.3695984,
+        45.6191978
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.59539391e-06
+    },
+    {
+      "dim": 4,
+      "length": 128,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 141.67041,
+      "after_us": 40.6016006,
+      "speedup": 3.20637169032244,
+      "before_range": [
+        129.382401,
+        144.281601
+      ],
+      "after_range": [
+        40.2943993,
+        44.9984016
+      ],
+      "max_difference": 0,
+      "oracle_error": 9.28457571e-06
+    },
+    {
+      "dim": 4,
+      "length": 128,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 80.2304001,
+      "after_us": 41.4720001,
+      "speedup": 1.936259273080924,
+      "before_range": [
+        79.904007,
+        89.0255966
+      ],
+      "after_range": [
+        41.2672043,
+        45.7215996
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.27051979e-06
+    },
+    {
+      "dim": 4,
+      "length": 128,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 394.286407,
+      "after_us": 45.2607994,
+      "speedup": 8.711432679644627,
+      "before_range": [
+        392.745575,
+        458.956848
+      ],
+      "after_range": [
+        45.1072006,
+        50.368
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.57261346e-06
+    },
+    {
+      "dim": 4,
+      "length": 512,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 327.424011,
+      "after_us": 174.374405,
+      "speedup": 1.993099807279629,
+      "before_range": [
+        311.851196,
+        347.545593
+      ],
+      "after_range": [
+        157.476791,
+        216.985596
+      ],
+      "max_difference": 0,
+      "oracle_error": 9.21173366e-09
+    },
+    {
+      "dim": 4,
+      "length": 512,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 578.047974,
+      "after_us": 155.852798,
+      "speedup": 3.444173059908628,
+      "before_range": [
+        527.718384,
+        601.343994
+      ],
+      "after_range": [
+        155.750397,
+        167.833603
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.04434399e-08
+    },
+    {
+      "dim": 4,
+      "length": 512,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 313.088013,
+      "after_us": 159.180801,
+      "speedup": 1.9668704456387298,
+      "before_range": [
+        312.064026,
+        336.726379
+      ],
+      "after_range": [
+        157.030411,
+        171.519989
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.94475656e-08
+    },
+    {
+      "dim": 4,
+      "length": 512,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 1766.60486,
+      "after_us": 185.804794,
+      "speedup": 9.932066839938571,
+      "before_range": [
+        1759.6416,
+        1847.9104
+      ],
+      "after_range": [
+        177.868805,
+        185.855988
+      ],
+      "max_difference": 0,
+      "oracle_error": 4.93108641e-08
+    },
+    {
+      "dim": 4,
+      "length": 2048,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 1357.67041,
+      "after_us": 644.35199,
+      "speedup": 2.0618196585378747,
+      "before_range": [
+        1328.5376,
+        1359.87195
+      ],
+      "after_range": [
+        638.412781,
+        667.084778
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.18184275e-08
+    },
+    {
+      "dim": 4,
+      "length": 2048,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 2201.29272,
+      "after_us": 670.77124,
+      "speedup": 3.281733903797068,
+      "before_range": [
+        2177.02393,
+        2208.7168
+      ],
+      "after_range": [
+        618.342407,
+        685.567993
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.2629174e-08
+    },
+    {
+      "dim": 4,
+      "length": 2048,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 1311.59045,
+      "after_us": 653.05603,
+      "speedup": 2.004311911797216,
+      "before_range": [
+        1308.92798,
+        1345.02405
+      ],
+      "after_range": [
+        648.192017,
+        670.361633
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.04901422e-08
+    },
+    {
+      "dim": 4,
+      "length": 2048,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 7420.97949,
+      "after_us": 763.9552,
+      "speedup": 9.643455493201696,
+      "before_range": [
+        7367.16797,
+        7472.23047
+      ],
+      "after_range": [
+        745.881592,
+        787.609558
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.77022289e-08
+    },
+    {
+      "dim": 32,
+      "length": 1,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 10.0224009,
+      "after_us": 8.34560013,
+      "speedup": 0.9356855708609925,
+      "before_range": [
+        7.63040018,
+        14.8512011
+      ],
+      "after_range": [
+        7.02560043,
+        15.8719997
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 32,
+      "length": 1,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 8.49919987,
+      "after_us": 13.1583996,
+      "speedup": 0.915553926160943,
+      "before_range": [
+        8.14080048,
+        13.166399
+      ],
+      "after_range": [
+        8.82079983,
+        14.3808012
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 32,
+      "length": 1,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 9.93279934,
+      "after_us": 9.98400021,
+      "speedup": 0.9948717078402386,
+      "before_range": [
+        7.46399975,
+        13.4655991
+      ],
+      "after_range": [
+        6.9119997,
+        13.718399
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 32,
+      "length": 1,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 13.7728014,
+      "after_us": 13.0559998,
+      "speedup": 1.054902084174358,
+      "before_range": [
+        10.9920006,
+        17.5104008
+      ],
+      "after_range": [
+        8.58239937,
+        18.4944
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 32,
+      "length": 7,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 19.2512016,
+      "after_us": 14.1744003,
+      "speedup": 1.1292530338966824,
+      "before_range": [
+        9.57439995,
+        19.5424004
+      ],
+      "after_range": [
+        9.3696003,
+        17.3055992
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.77471507e-08
+    },
+    {
+      "dim": 32,
+      "length": 7,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 13.6127987,
+      "after_us": 8.94560051,
+      "speedup": 1.2591664346522444,
+      "before_range": [
+        11.2639999,
+        16.1791992
+      ],
+      "after_range": [
+        8.70400047,
+        12.9183989
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.21617714e-08
+    },
+    {
+      "dim": 32,
+      "length": 7,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 11.3168001,
+      "after_us": 9.06239986,
+      "speedup": 1.248764154619856,
+      "before_range": [
+        10.7007999,
+        13.9247999
+      ],
+      "after_range": [
+        7.31360006,
+        14.5087996
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.27718754e-08
+    },
+    {
+      "dim": 32,
+      "length": 7,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 13.4144001,
+      "after_us": 9.31839943,
+      "speedup": 1.4395605383488053,
+      "before_range": [
+        12.3392,
+        17.5104008
+      ],
+      "after_range": [
+        8.28479958,
+        12.2479992
+      ],
+      "max_difference": 0,
+      "oracle_error": 4.56043084e-08
+    },
+    {
+      "dim": 32,
+      "length": 33,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 24.9696007,
+      "after_us": 16.1791992,
+      "speedup": 1.5433149929942145,
+      "before_range": [
+        24.8831997,
+        25.281599
+      ],
+      "after_range": [
+        14.8383999,
+        18.8576012
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.0974748e-08
+    },
+    {
+      "dim": 32,
+      "length": 33,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 35.7887993,
+      "after_us": 15.7695999,
+      "speedup": 2.298396968207164,
+      "before_range": [
+        35.7376022,
+        36.2448006
+      ],
+      "after_range": [
+        14.643199,
+        16.4192009
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.63681214e-08
+    },
+    {
+      "dim": 32,
+      "length": 33,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 25.6511993,
+      "after_us": 16.2304001,
+      "speedup": 1.580441587512066,
+      "before_range": [
+        25.028801,
+        26.5216007
+      ],
+      "after_range": [
+        15.9679995,
+        16.281601
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.33470476e-08
+    },
+    {
+      "dim": 32,
+      "length": 33,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 79.6159973,
+      "after_us": 16.7423992,
+      "speedup": 4.785933308769748,
+      "before_range": [
+        79.1039963,
+        80.128006
+      ],
+      "after_range": [
+        15.7695999,
+        17.4032001
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.63909414e-08
+    },
+    {
+      "dim": 32,
+      "length": 128,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 89.7024002,
+      "after_us": 50.3247986,
+      "speedup": 1.7822147449190189,
+      "before_range": [
+        89.6895981,
+        89.8560028
+      ],
+      "after_range": [
+        50.2159996,
+        50.5343971
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.39109846e-05
+    },
+    {
+      "dim": 32,
+      "length": 128,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 136.908798,
+      "after_us": 49.3568001,
+      "speedup": 2.7748964017624793,
+      "before_range": [
+        136.857605,
+        136.960007
+      ],
+      "after_range": [
+        49.2544022,
+        49.4000015
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.60196226e-05
+    },
+    {
+      "dim": 32,
+      "length": 128,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 89.7024002,
+      "after_us": 50.3808022,
+      "speedup": 1.784113907895271,
+      "before_range": [
+        89.7024002,
+        91.5456009
+      ],
+      "after_range": [
+        50.2784042,
+        50.6879959
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.416997e-05
+    },
+    {
+      "dim": 32,
+      "length": 128,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 417.571198,
+      "after_us": 53.6064034,
+      "speedup": 7.789576832531914,
+      "before_range": [
+        411.34082,
+        422.297607
+      ],
+      "after_range": [
+        53.4528008,
+        53.6064034
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.05956182e-05
+    },
+    {
+      "dim": 32,
+      "length": 512,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 362.342407,
+      "after_us": 194.150406,
+      "speedup": 1.8742054768219596,
+      "before_range": [
+        350.976013,
+        387.928009
+      ],
+      "after_range": [
+        193.331207,
+        194.201599
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.49940629e-08
+    },
+    {
+      "dim": 32,
+      "length": 512,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 560.588745,
+      "after_us": 192.70401,
+      "speedup": 2.914646150850727,
+      "before_range": [
+        545.894409,
+        561.664001
+      ],
+      "after_range": [
+        191.846405,
+        241.664017
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.57257274e-08
+    },
+    {
+      "dim": 32,
+      "length": 512,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 350.771179,
+      "after_us": 193.126404,
+      "speedup": 1.8162776903359108,
+      "before_range": [
+        350.454407,
+        350.924805
+      ],
+      "after_range": [
+        192.9216,
+        202.697601
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.26335466e-08
+    },
+    {
+      "dim": 32,
+      "length": 512,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 1837.87524,
+      "after_us": 209.71521,
+      "speedup": 8.666340942272544,
+      "before_range": [
+        1816.57593,
+        1876.32642
+      ],
+      "after_range": [
+        209.612793,
+        238.080002
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.6829459e-08
+    },
+    {
+      "dim": 32,
+      "length": 2048,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 1473.84314,
+      "after_us": 838.348755,
+      "speedup": 1.7550490863223616,
+      "before_range": [
+        1466.26562,
+        1490.48315
+      ],
+      "after_range": [
+        826.521606,
+        849.254395
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.19579465e-08
+    },
+    {
+      "dim": 32,
+      "length": 2048,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 2330.57275,
+      "after_us": 829.491211,
+      "speedup": 2.860131812408081,
+      "before_range": [
+        2288.69116,
+        2395.95532
+      ],
+      "after_range": [
+        814.848022,
+        832.102417
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.2800633e-08
+    },
+    {
+      "dim": 32,
+      "length": 2048,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 1482.39368,
+      "after_us": 847.871948,
+      "speedup": 1.808453256468356,
+      "before_range": [
+        1479.52649,
+        1544.448
+      ],
+      "after_range": [
+        777.62561,
+        854.015991
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.59983246e-08
+    },
+    {
+      "dim": 32,
+      "length": 2048,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 7374.07959,
+      "after_us": 912.998413,
+      "speedup": 8.059500361913553,
+      "before_range": [
+        7358.31104,
+        7642.77734
+      ],
+      "after_range": [
+        911.105652,
+        953.395203
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.47762968e-08
+    },
+    {
+      "dim": 34,
+      "length": 1,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 12.1855993,
+      "after_us": 12.8000002,
+      "speedup": 0.8840386930396519,
+      "before_range": [
+        8.44799995,
+        22.2607994
+      ],
+      "after_range": [
+        6.80959988,
+        25.1807976
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 34,
+      "length": 1,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 7.62880039,
+      "after_us": 7.06559992,
+      "speedup": 1.097858664977078,
+      "before_range": [
+        5.93599987,
+        9.72800064
+      ],
+      "after_range": [
+        6.94880009,
+        8.08160019
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 34,
+      "length": 1,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 8.02079964,
+      "after_us": 8.43200016,
+      "speedup": 0.9512333358399747,
+      "before_range": [
+        5.78080034,
+        8.69759941
+      ],
+      "after_range": [
+        5.73440027,
+        18.6879997
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 34,
+      "length": 1,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 5.63199997,
+      "after_us": 6.75839996,
+      "speedup": 1.0587880190535786,
+      "before_range": [
+        5.61920023,
+        10.9024
+      ],
+      "after_range": [
+        5.30720043,
+        7.47520065
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 34,
+      "length": 7,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 8.9951992,
+      "after_us": 7.47040033,
+      "speedup": 1.1832461626000557,
+      "before_range": [
+        8.38399982,
+        11.5712004
+      ],
+      "after_range": [
+        7.21920013,
+        9.7791996
+      ],
+      "max_difference": 0,
+      "oracle_error": 4.14423458e-08
+    },
+    {
+      "dim": 34,
+      "length": 7,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 11.1616001,
+      "after_us": 9.87680054,
+      "speedup": 1.0634146132789268,
+      "before_range": [
+        8.96000004,
+        11.1616001
+      ],
+      "after_range": [
+        8.44000053,
+        10.4960003
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.69400852e-08
+    },
+    {
+      "dim": 34,
+      "length": 7,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 11.2559996,
+      "after_us": 10.6496,
+      "speedup": 1.1730769042968752,
+      "before_range": [
+        10.2399998,
+        12.4927998
+      ],
+      "after_range": [
+        8.53600025,
+        13.6191998
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.58501927e-08
+    },
+    {
+      "dim": 34,
+      "length": 7,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 12.8000002,
+      "after_us": 10.3823996,
+      "speedup": 1.4054554401855233,
+      "before_range": [
+        12.8000002,
+        14.592
+      ],
+      "after_range": [
+        7.61760044,
+        10.6496
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.96939667e-08
+    },
+    {
+      "dim": 34,
+      "length": 33,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 24.7840004,
+      "after_us": 16.7936001,
+      "speedup": 1.475800319908773,
+      "before_range": [
+        24.7647991,
+        25.1904011
+      ],
+      "after_range": [
+        16.6912003,
+        18.7904015
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.22356517e-08
+    },
+    {
+      "dim": 34,
+      "length": 33,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 35.8911972,
+      "after_us": 16.4864006,
+      "speedup": 2.1750001765442013,
+      "before_range": [
+        35.6352005,
+        36.0864029
+      ],
+      "after_range": [
+        16.3839989,
+        22.7840004
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.96113641e-08
+    },
+    {
+      "dim": 34,
+      "length": 33,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 24.9855995,
+      "after_us": 16.9472008,
+      "speedup": 1.4743201425925159,
+      "before_range": [
+        24.8703995,
+        30.5152016
+      ],
+      "after_range": [
+        16.7936001,
+        29.2959995
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.4087728e-08
+    },
+    {
+      "dim": 34,
+      "length": 33,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 79.718399,
+      "after_us": 20.3263988,
+      "speedup": 4.65165147035761,
+      "before_range": [
+        79.3087997,
+        96.6656036
+      ],
+      "after_range": [
+        17.0496006,
+        27.649601
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.3595852e-08
+    },
+    {
+      "dim": 34,
+      "length": 128,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 91.4944,
+      "after_us": 58.0608025,
+      "speedup": 1.5473751162958096,
+      "before_range": [
+        89.6511993,
+        102.3424
+      ],
+      "after_range": [
+        57.9375992,
+        59.7952042
+      ],
+      "max_difference": 0,
+      "oracle_error": 7.77607902e-06
+    },
+    {
+      "dim": 34,
+      "length": 128,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 139.142395,
+      "after_us": 57.0880013,
+      "speedup": 2.437331695478363,
+      "before_range": [
+        139.099213,
+        139.556793
+      ],
+      "after_range": [
+        56.8319931,
+        58.4575996
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.56181344e-05
+    },
+    {
+      "dim": 34,
+      "length": 128,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 90.2144012,
+      "after_us": 59.1296005,
+      "speedup": 1.5350427563189424,
+      "before_range": [
+        89.7535934,
+        91.9552002
+      ],
+      "after_range": [
+        57.9583969,
+        59.9039993
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.45398882e-05
+    },
+    {
+      "dim": 34,
+      "length": 128,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 411.801575,
+      "after_us": 61.2863998,
+      "speedup": 6.719297859620725,
+      "before_range": [
+        402.841614,
+        443.903992
+      ],
+      "after_range": [
+        60.0447998,
+        61.2863998
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.45509787e-05
+    },
+    {
+      "dim": 34,
+      "length": 512,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 402.0224,
+      "after_us": 225.53598,
+      "speedup": 1.7915818509109227,
+      "before_range": [
+        350.291199,
+        410.675201
+      ],
+      "after_range": [
+        224.395218,
+        225.791992
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.09502429e-08
+    },
+    {
+      "dim": 34,
+      "length": 512,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 657.971191,
+      "after_us": 226.598419,
+      "speedup": 2.8926426754007717,
+      "before_range": [
+        632.051147,
+        666.316772
+      ],
+      "after_range": [
+        224.758392,
+        230.348801
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.17853414e-08
+    },
+    {
+      "dim": 34,
+      "length": 512,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 352.051208,
+      "after_us": 239.923187,
+      "speedup": 1.4773794289419804,
+      "before_range": [
+        352.036804,
+        354.457581
+      ],
+      "after_range": [
+        230.484787,
+        250.060791
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.64924876e-08
+    },
+    {
+      "dim": 34,
+      "length": 512,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 1968.07056,
+      "after_us": 250.880005,
+      "speedup": 7.844668848758991,
+      "before_range": [
+        1882.41919,
+        1987.78247
+      ],
+      "after_range": [
+        242.073608,
+        297.31842
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.37699378e-08
+    },
+    {
+      "dim": 34,
+      "length": 2048,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 1530.26562,
+      "after_us": 974.627258,
+      "speedup": 1.5633086161848349,
+      "before_range": [
+        1523.64319,
+        1542.65601
+      ],
+      "after_range": [
+        960.92157,
+        992.512024
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.06234974e-08
+    },
+    {
+      "dim": 34,
+      "length": 2048,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 2412.94238,
+      "after_us": 973.812805,
+      "speedup": 2.4974525468475433,
+      "before_range": [
+        2406.12646,
+        2432.05127
+      ],
+      "after_range": [
+        965.171265,
+        1015.29602
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.38757428e-08
+    },
+    {
+      "dim": 34,
+      "length": 2048,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 1505.0752,
+      "after_us": 1001.09924,
+      "speedup": 1.503422577765617,
+      "before_range": [
+        1462.11841,
+        1518.79675
+      ],
+      "after_range": [
+        963.225586,
+        1011.55682
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.32005587e-08
+    },
+    {
+      "dim": 34,
+      "length": 2048,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 7947.26416,
+      "after_us": 1103.87195,
+      "speedup": 7.354319905157751,
+      "before_range": [
+        7858.47754,
+        8268.03223
+      ],
+      "after_range": [
+        1050.36804,
+        1124.24158
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.70079349e-08
+    },
+    {
+      "dim": 64,
+      "length": 1,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 53.8623962,
+      "after_us": 38.7712021,
+      "speedup": 0.739669402437931,
+      "before_range": [
+        9.16479969,
+        54.937603
+      ],
+      "after_range": [
+        12.3903999,
+        84.0704041
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 64,
+      "length": 1,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 35.6864014,
+      "after_us": 54.9888,
+      "speedup": 0.7998137911720206,
+      "before_range": [
+        11.0079994,
+        43.9808006
+      ],
+      "after_range": [
+        11.2576008,
+        56.1151962
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 64,
+      "length": 1,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 38.7071991,
+      "after_us": 29.1776009,
+      "speedup": 1.015526207255054,
+      "before_range": [
+        16.4304008,
+        55.2448006
+      ],
+      "after_range": [
+        16.1791992,
+        96.9216003
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 64,
+      "length": 1,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 40.3423996,
+      "after_us": 38.8608017,
+      "speedup": 1.0381257677450333,
+      "before_range": [
+        9.76799965,
+        45.5167999
+      ],
+      "after_range": [
+        8.19199944,
+        80.9983978
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 64,
+      "length": 7,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 32.5615997,
+      "after_us": 53.1840019,
+      "speedup": 0.8426356038173823,
+      "before_range": [
+        11.7200003,
+        55.6543999
+      ],
+      "after_range": [
+        9.98400021,
+        66.0480042
+      ],
+      "max_difference": 0,
+      "oracle_error": 8.23921732e-08
+    },
+    {
+      "dim": 64,
+      "length": 7,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 40.2336006,
+      "after_us": 31.3344002,
+      "speedup": 0.9619372080396017,
+      "before_range": [
+        15.9232006,
+        56.2687988
+      ],
+      "after_range": [
+        19.6608009,
+        41.8255997
+      ],
+      "max_difference": 0,
+      "oracle_error": 7.83210006e-08
+    },
+    {
+      "dim": 64,
+      "length": 7,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 29.3887997,
+      "after_us": 18.6367989,
+      "speedup": 1.251318700367498,
+      "before_range": [
+        17.1519985,
+        50.4832039
+      ],
+      "after_range": [
+        8.29440022,
+        40.3440018
+      ],
+      "max_difference": 0,
+      "oracle_error": 7.14598054e-08
+    },
+    {
+      "dim": 64,
+      "length": 7,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 33.1263962,
+      "after_us": 37.5295982,
+      "speedup": 1.0903731255485165,
+      "before_range": [
+        11.9808006,
+        56.8319931
+      ],
+      "after_range": [
+        8.39680004,
+        52.1216011
+      ],
+      "max_difference": 0,
+      "oracle_error": 6.21410726e-08
+    },
+    {
+      "dim": 64,
+      "length": 33,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 36.5568008,
+      "after_us": 31.3344002,
+      "speedup": 1.166666684751157,
+      "before_range": [
+        25.9584007,
+        44.3904037
+      ],
+      "after_range": [
+        17.2544003,
+        42.8927994
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.53076005e-08
+    },
+    {
+      "dim": 64,
+      "length": 33,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 53.0432014,
+      "after_us": 16.9472008,
+      "speedup": 2.181538558228554,
+      "before_range": [
+        36.3008003,
+        78.540802
+      ],
+      "after_range": [
+        16.6399994,
+        52.5312004
+      ],
+      "max_difference": 0,
+      "oracle_error": 4.60838378e-08
+    },
+    {
+      "dim": 64,
+      "length": 33,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 41.4207993,
+      "after_us": 18.0223999,
+      "speedup": 1.4737624270356995,
+      "before_range": [
+        25.343998,
+        64.3024063
+      ],
+      "after_range": [
+        17.1968002,
+        51.9168015
+      ],
+      "max_difference": 0,
+      "oracle_error": 5.70955396e-08
+    },
+    {
+      "dim": 64,
+      "length": 33,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 80.8448029,
+      "after_us": 19.1919994,
+      "speedup": 4.212422125232038,
+      "before_range": [
+        79.2575989,
+        83.1488037
+      ],
+      "after_range": [
+        17.6128006,
+        59.5456009
+      ],
+      "max_difference": 0,
+      "oracle_error": 5.92594906e-08
+    },
+    {
+      "dim": 64,
+      "length": 128,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 93.1327972,
+      "after_us": 65.1264038,
+      "speedup": 1.5372988778334078,
+      "before_range": [
+        91.1360016,
+        112.383995
+      ],
+      "after_range": [
+        59.2832031,
+        71.423996
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.25663253e-05
+    },
+    {
+      "dim": 64,
+      "length": 128,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 147.456009,
+      "after_us": 64.3583984,
+      "speedup": 2.408669569332029,
+      "before_range": [
+        137.727997,
+        156.825592
+      ],
+      "after_range": [
+        60.6719971,
+        65.1088028
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.25663253e-05
+    },
+    {
+      "dim": 64,
+      "length": 128,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 94.1567993,
+      "after_us": 59.3919983,
+      "speedup": 1.5812553383771464,
+      "before_range": [
+        91.0848007,
+        97.9456024
+      ],
+      "after_range": [
+        58.6240005,
+        59.5456009
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.48671098e-05
+    },
+    {
+      "dim": 64,
+      "length": 128,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 415.38559,
+      "after_us": 69.0688019,
+      "speedup": 6.5698741258701485,
+      "before_range": [
+        401.971191,
+        492.492828
+      ],
+      "after_range": [
+        61.1840019,
+        94.1056061
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.48671098e-05
+    },
+    {
+      "dim": 64,
+      "length": 512,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 359.116791,
+      "after_us": 241.868805,
+      "speedup": 1.5273411407708972,
+      "before_range": [
+        353.228821,
+        392.553589
+      ],
+      "after_range": [
+        231.270416,
+        249.548798
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.77500477e-08
+    },
+    {
+      "dim": 64,
+      "length": 512,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 721.812866,
+      "after_us": 256.460815,
+      "speedup": 2.7999817232491844,
+      "before_range": [
+        664.57605,
+        749.662415
+      ],
+      "after_range": [
+        239.462402,
+        257.791992
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.89640773e-08
+    },
+    {
+      "dim": 64,
+      "length": 512,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 409.753601,
+      "after_us": 295.475189,
+      "speedup": 1.5839542994589642,
+      "before_range": [
+        378.060791,
+        468.019196
+      ],
+      "after_range": [
+        224.71199,
+        324.198395
+      ],
+      "max_difference": 0,
+      "oracle_error": 5.81932475e-08
+    },
+    {
+      "dim": 64,
+      "length": 512,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 2047.7439,
+      "after_us": 263.321594,
+      "speedup": 8.174800734344636,
+      "before_range": [
+        1931.62231,
+        2152.60156
+      ],
+      "after_range": [
+        243.094391,
+        308.019226
+      ],
+      "max_difference": 0,
+      "oracle_error": 6.83785967e-08
+    },
+    {
+      "dim": 64,
+      "length": 2048,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 1707.87854,
+      "after_us": 1035.36646,
+      "speedup": 1.6495401444624738,
+      "before_range": [
+        1587.70728,
+        1724.62085
+      ],
+      "after_range": [
+        942.950378,
+        1097.82397
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.38882504e-08
+    },
+    {
+      "dim": 64,
+      "length": 2048,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 2513.35693,
+      "after_us": 1050.19995,
+      "speedup": 2.3834369818394396,
+      "before_range": [
+        2472.19189,
+        2526.0542
+      ],
+      "after_range": [
+        997.478394,
+        1059.83679
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.48849559e-08
+    },
+    {
+      "dim": 64,
+      "length": 2048,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 1586.12476,
+      "after_us": 1003.65607,
+      "speedup": 1.580346901105276,
+      "before_range": [
+        1530.31677,
+        1731.17444
+      ],
+      "after_range": [
+        984.412781,
+        1015.91046
+      ],
+      "max_difference": 0,
+      "oracle_error": 5.47163941e-08
+    },
+    {
+      "dim": 64,
+      "length": 2048,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 8297.11426,
+      "after_us": 1167.25757,
+      "speedup": 7.045701606444555,
+      "before_range": [
+        8028.67188,
+        8996.85352
+      ],
+      "after_range": [
+        1141.7937,
+        1276.92798
+      ],
+      "max_difference": 0,
+      "oracle_error": 5.39948486e-08
+    },
+    {
+      "dim": 128,
+      "length": 1,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 14.5408001,
+      "after_us": 15.2576008,
+      "speedup": 1.0151866663186373,
+      "before_range": [
+        10.4815998,
+        24.7856007
+      ],
+      "after_range": [
+        10.3248005,
+        22.2719994
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 128,
+      "length": 1,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 10.2399998,
+      "after_us": 10.592,
+      "speedup": 0.9125001417236425,
+      "before_range": [
+        7.47520065,
+        30.7200012
+      ],
+      "after_range": [
+        8.19199944,
+        38.8767967
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 128,
+      "length": 1,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 9.55840015,
+      "after_us": 14.3871994,
+      "speedup": 0.8565721825541799,
+      "before_range": [
+        9.16479969,
+        27.4432011
+      ],
+      "after_range": [
+        10.7007999,
+        32.0383987
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 128,
+      "length": 1,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 11.4175997,
+      "after_us": 24.0032005,
+      "speedup": 0.8510865290651553,
+      "before_range": [
+        8.74400043,
+        20.4288006
+      ],
+      "after_range": [
+        8.55040073,
+        45.9776001
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 128,
+      "length": 7,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 29.0239983,
+      "after_us": 10.7519999,
+      "speedup": 1.7496140528642443,
+      "before_range": [
+        10.4335995,
+        29.2863979
+      ],
+      "after_range": [
+        7.62239981,
+        16.5888004
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.07079566e-07
+    },
+    {
+      "dim": 128,
+      "length": 7,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 18.1759987,
+      "after_us": 12.6975994,
+      "speedup": 1.2912088272653066,
+      "before_range": [
+        12.0319996,
+        35.1231995
+      ],
+      "after_range": [
+        9.31839943,
+        39.0143967
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.20499209e-07
+    },
+    {
+      "dim": 128,
+      "length": 7,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 12.2368002,
+      "after_us": 10.5984001,
+      "speedup": 1.071356043773603,
+      "before_range": [
+        10.1375999,
+        13.1056004
+      ],
+      "after_range": [
+        9.46240044,
+        34.3552017
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.2834275e-07
+    },
+    {
+      "dim": 128,
+      "length": 7,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 15.0015993,
+      "after_us": 8.90880013,
+      "speedup": 1.4329267748050363,
+      "before_range": [
+        12.0319996,
+        15.6000004
+      ],
+      "after_range": [
+        8.39680004,
+        17.7663994
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.17704785e-07
+    },
+    {
+      "dim": 128,
+      "length": 33,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 29.8351994,
+      "after_us": 24.1664009,
+      "speedup": 1.1042614858462887,
+      "before_range": [
+        25.4463997,
+        40.7551994
+      ],
+      "after_range": [
+        23.4496002,
+        36.9071999
+      ],
+      "max_difference": 0,
+      "oracle_error": 9.32478374e-08
+    },
+    {
+      "dim": 128,
+      "length": 33,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 37.8335991,
+      "after_us": 27.079998,
+      "speedup": 1.3971049443947523,
+      "before_range": [
+        37.632,
+        39.1503983
+      ],
+      "after_range": [
+        19.097599,
+        33.4751968
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.48124214e-07
+    },
+    {
+      "dim": 128,
+      "length": 33,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 25.5903988,
+      "after_us": 19.9039993,
+      "speedup": 1.2856913032548187,
+      "before_range": [
+        25.2416019,
+        28.8768005
+      ],
+      "after_range": [
+        19.4560013,
+        25.6000004
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.16613732e-07
+    },
+    {
+      "dim": 128,
+      "length": 33,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 80.476799,
+      "after_us": 20.1728001,
+      "speedup": 3.9893717580634727,
+      "before_range": [
+        80.1792068,
+        80.9472046
+      ],
+      "after_range": [
+        18.4320011,
+        22.4768009
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.39971923e-07
+    },
+    {
+      "dim": 128,
+      "length": 128,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 90.3680038,
+      "after_us": 61.017601,
+      "speedup": 1.481948041675228,
+      "before_range": [
+        90.3616028,
+        94.3440018
+      ],
+      "after_range": [
+        60.9791985,
+        62.5151978
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.48386683e-05
+    },
+    {
+      "dim": 128,
+      "length": 128,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 140.287994,
+      "after_us": 61.235199,
+      "speedup": 2.2984951841178796,
+      "before_range": [
+        140.236786,
+        140.74881
+      ],
+      "after_range": [
+        60.9791985,
+        61.8495979
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.49245805e-05
+    },
+    {
+      "dim": 128,
+      "length": 128,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 90.8799973,
+      "after_us": 60.6719971,
+      "speedup": 1.4902953820849258,
+      "before_range": [
+        90.4191971,
+        91.8015976
+      ],
+      "after_range": [
+        60.6719971,
+        63.0143967
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.20455575e-05
+    },
+    {
+      "dim": 128,
+      "length": 128,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 405.350403,
+      "after_us": 65.8944016,
+      "speedup": 6.20941120189596,
+      "before_range": [
+        403.705597,
+        463.052795
+      ],
+      "after_range": [
+        65.2800064,
+        67.1103973
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.91885963e-05
+    },
+    {
+      "dim": 128,
+      "length": 512,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 443.076813,
+      "after_us": 238.32959,
+      "speedup": 1.8838427224061591,
+      "before_range": [
+        361.164825,
+        549.990417
+      ],
+      "after_range": [
+        235.19841,
+        240.128006
+      ],
+      "max_difference": 0,
+      "oracle_error": 4.43663905e-08
+    },
+    {
+      "dim": 128,
+      "length": 512,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 607.487976,
+      "after_us": 237.875198,
+      "speedup": 2.5079638483369755,
+      "before_range": [
+        596.582397,
+        679.772827
+      ],
+      "after_range": [
+        236.646393,
+        244.819183
+      ],
+      "max_difference": 0,
+      "oracle_error": 4.18565325e-08
+    },
+    {
+      "dim": 128,
+      "length": 512,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 432.43515,
+      "after_us": 238.182404,
+      "speedup": 1.8254094783749069,
+      "before_range": [
+        416.358459,
+        580.505615
+      ],
+      "after_range": [
+        236.897614,
+        238.998383
+      ],
+      "max_difference": 0,
+      "oracle_error": 7.15450081e-08
+    },
+    {
+      "dim": 128,
+      "length": 512,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 2068.78711,
+      "after_us": 267.515198,
+      "speedup": 7.456933419193698,
+      "before_range": [
+        1933.40979,
+        2183.67993
+      ],
+      "after_range": [
+        259.276794,
+        346.619202
+      ],
+      "max_difference": 0,
+      "oracle_error": 7.55155634e-08
+    },
+    {
+      "dim": 128,
+      "length": 2048,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 1587.81445,
+      "after_us": 1074.83044,
+      "speedup": 1.4264890284413285,
+      "before_range": [
+        1528.72156,
+        1650.94397
+      ],
+      "after_range": [
+        1071.66724,
+        1201.45923
+      ],
+      "max_difference": 0,
+      "oracle_error": 4.01656136e-08
+    },
+    {
+      "dim": 128,
+      "length": 2048,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 2518.78394,
+      "after_us": 1090.91846,
+      "speedup": 2.3707215898299725,
+      "before_range": [
+        2452.94092,
+        2644.52661
+      ],
+      "after_range": [
+        961.382446,
+        1115.49438
+      ],
+      "max_difference": 0,
+      "oracle_error": 4.00961458e-08
+    },
+    {
+      "dim": 128,
+      "length": 2048,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 1610.54407,
+      "after_us": 1079.96167,
+      "speedup": 1.4811073618936865,
+      "before_range": [
+        1599.53918,
+        1612.08325
+      ],
+      "after_range": [
+        1059.328,
+        1112.77917
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.51758156e-07
+    },
+    {
+      "dim": 128,
+      "length": 2048,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 8334.63867,
+      "after_us": 1240.01282,
+      "speedup": 6.721413307646288,
+      "before_range": [
+        8217.99805,
+        8479.16992
+      ],
+      "after_range": [
+        1124.91528,
+        1309.38892
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.45529731e-07
+    },
+    {
+      "dim": 256,
+      "length": 1,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 21.2416,
+      "after_us": 20.0704002,
+      "speedup": 0.9918366713088327,
+      "before_range": [
+        12.4415998,
+        25.0880013
+      ],
+      "after_range": [
+        12.5440006,
+        24.2175999
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 256,
+      "length": 1,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 12.4960003,
+      "after_us": 10.8543997,
+      "speedup": 1.0022026775312498,
+      "before_range": [
+        9.42080021,
+        23.2960014
+      ],
+      "after_range": [
+        9.42080021,
+        23.2448006
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 256,
+      "length": 1,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 10.9055996,
+      "after_us": 10.0864,
+      "speedup": 0.9004803675123314,
+      "before_range": [
+        6.9119997,
+        21.2960014
+      ],
+      "after_range": [
+        8.65279961,
+        23.649601
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 256,
+      "length": 1,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 28.6208,
+      "after_us": 23.2879982,
+      "speedup": 0.9600551392478863,
+      "before_range": [
+        6.04160023,
+        35.6864014
+      ],
+      "after_range": [
+        7.47520065,
+        37.1711998
+      ],
+      "max_difference": 0,
+      "oracle_error": 0
+    },
+    {
+      "dim": 256,
+      "length": 7,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 11.5712004,
+      "after_us": 11.7248001,
+      "speedup": 1.0372671315532633,
+      "before_range": [
+        8.55040073,
+        22.3744011
+      ],
+      "after_range": [
+        8.2432003,
+        18.0720005
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.23033046e-08
+    },
+    {
+      "dim": 256,
+      "length": 7,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 12.6975994,
+      "after_us": 10.2735996,
+      "speedup": 1.2359445466416659,
+      "before_range": [
+        10.0864,
+        13.8688002
+      ],
+      "after_range": [
+        9.31839943,
+        11.2080002
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.68404829e-08
+    },
+    {
+      "dim": 256,
+      "length": 7,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 28.9279995,
+      "after_us": 18.1759987,
+      "speedup": 1.083832186658227,
+      "before_range": [
+        9.26719952,
+        46.8479996
+      ],
+      "after_range": [
+        8.55040073,
+        30.8736
+      ],
+      "max_difference": 0,
+      "oracle_error": 4.05200893e-08
+    },
+    {
+      "dim": 256,
+      "length": 7,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 15.6992006,
+      "after_us": 12.0319996,
+      "speedup": 1.3011968600796828,
+      "before_range": [
+        15.6560001,
+        15.7647991
+      ],
+      "after_range": [
+        10.9424,
+        12.3903999
+      ],
+      "max_difference": 0,
+      "oracle_error": 4.09028636e-08
+    },
+    {
+      "dim": 256,
+      "length": 33,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 25.9584007,
+      "after_us": 20.0016003,
+      "speedup": 1.3777173992077656,
+      "before_range": [
+        25.4368019,
+        48.5391998
+      ],
+      "after_range": [
+        18.8416004,
+        23.1343994
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.62504529e-08
+    },
+    {
+      "dim": 256,
+      "length": 33,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 36.4032021,
+      "after_us": 22.6303997,
+      "speedup": 1.6085973991877835,
+      "before_range": [
+        36.2495995,
+        38.8976021
+      ],
+      "after_range": [
+        19.4015999,
+        29.6959991
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.32270936e-08
+    },
+    {
+      "dim": 256,
+      "length": 33,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 26.6239986,
+      "after_us": 20.3263988,
+      "speedup": 1.2795184014592884,
+      "before_range": [
+        26.0080013,
+        26.9824009
+      ],
+      "after_range": [
+        19.6096001,
+        25.3951988
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.42181502e-08
+    },
+    {
+      "dim": 256,
+      "length": 33,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 81.8175964,
+      "after_us": 23.7999992,
+      "speedup": 3.4377142500072018,
+      "before_range": [
+        80.8448029,
+        82.3296051
+      ],
+      "after_range": [
+        20.6847992,
+        25.1904011
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.72314791e-08
+    },
+    {
+      "dim": 256,
+      "length": 128,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 92.1087952,
+      "after_us": 65.5215988,
+      "speedup": 1.4057775891756779,
+      "before_range": [
+        92.1087952,
+        92.6720047
+      ],
+      "after_range": [
+        65.4847946,
+        65.9456024
+      ],
+      "max_difference": 0,
+      "oracle_error": 5.69041387e-06
+    },
+    {
+      "dim": 256,
+      "length": 128,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 144.179199,
+      "after_us": 65.8944016,
+      "speedup": 2.188034119730135,
+      "before_range": [
+        137.625595,
+        166.604813
+      ],
+      "after_range": [
+        65.7919998,
+        70.7071991
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.03516164e-05
+    },
+    {
+      "dim": 256,
+      "length": 128,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 92.2111969,
+      "after_us": 65.587204,
+      "speedup": 1.4117184370570028,
+      "before_range": [
+        92.1536026,
+        93.6447983
+      ],
+      "after_range": [
+        65.3184052,
+        66.0991974
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.24143881e-06
+    },
+    {
+      "dim": 256,
+      "length": 128,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 500.787201,
+      "after_us": 76.288002,
+      "speedup": 6.682294851730932,
+      "before_range": [
+        428.748779,
+        537.395203
+      ],
+      "after_range": [
+        74.9423981,
+        91.7903976
+      ],
+      "max_difference": 0,
+      "oracle_error": 8.38453285e-06
+    },
+    {
+      "dim": 256,
+      "length": 512,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 443.750397,
+      "after_us": 287.590393,
+      "speedup": 1.5089905697927815,
+      "before_range": [
+        433.971191,
+        455.731201
+      ],
+      "after_range": [
+        253.076782,
+        437.657623
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.30006761e-08
+    },
+    {
+      "dim": 256,
+      "length": 512,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 678.07843,
+      "after_us": 257.433594,
+      "speedup": 2.6127209565866787,
+      "before_range": [
+        642.611206,
+        688.640015
+      ],
+      "after_range": [
+        256.511993,
+        259.529602
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.95331977e-08
+    },
+    {
+      "dim": 256,
+      "length": 512,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 474.512024,
+      "after_us": 355.174377,
+      "speedup": 1.382636559858499,
+      "before_range": [
+        453.376038,
+        546.902466
+      ],
+      "after_range": [
+        343.193604,
+        454.912018
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.31671276e-08
+    },
+    {
+      "dim": 256,
+      "length": 512,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 2092.16797,
+      "after_us": 391.475189,
+      "speedup": 5.333063597715865,
+      "before_range": [
+        2021.68323,
+        2092.79199
+      ],
+      "after_range": [
+        379.084778,
+        493.243225
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.4206854e-08
+    },
+    {
+      "dim": 256,
+      "length": 2048,
+      "requests": 1,
+      "chunk": 1,
+      "before_us": 2087.3728,
+      "after_us": 1554.73914,
+      "speedup": 1.2972022817924298,
+      "before_range": [
+        2016.81116,
+        2088.29443
+      ],
+      "after_range": [
+        1531.75037,
+        1627.13599
+      ],
+      "max_difference": 0,
+      "oracle_error": 9.54978469e-09
+    },
+    {
+      "dim": 256,
+      "length": 2048,
+      "requests": 1,
+      "chunk": 16,
+      "before_us": 2661.01758,
+      "after_us": 1583.51367,
+      "speedup": 1.6804512840107027,
+      "before_range": [
+        2529.17773,
+        2668.44165
+      ],
+      "after_range": [
+        1466.9823,
+        1624.47351
+      ],
+      "max_difference": 0,
+      "oracle_error": 1.1002425e-08
+    },
+    {
+      "dim": 256,
+      "length": 2048,
+      "requests": 4,
+      "chunk": 1,
+      "before_us": 2417.40796,
+      "after_us": 1966.79517,
+      "speedup": 1.2352355534808357,
+      "before_range": [
+        2350.59204,
+        2577.66406
+      ],
+      "after_range": [
+        1902.95044,
+        1984.76794
+      ],
+      "max_difference": 0,
+      "oracle_error": 2.77086334e-08
+    },
+    {
+      "dim": 256,
+      "length": 2048,
+      "requests": 4,
+      "chunk": 16,
+      "before_us": 8774.24609,
+      "after_us": 1968.99829,
+      "speedup": 4.456197922853453,
+      "before_range": [
+        8689.30664,
+        8930.50879
+      ],
+      "after_range": [
+        1959.93591,
+        1981.23511
+      ],
+      "max_difference": 0,
+      "oracle_error": 3.10771327e-08
+    }
+  ]
+}
